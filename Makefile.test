@@ -6,9 +6,6 @@
 BLESS=NO
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
-# How much to sleep before "check" phase on Pleiades with lagging disk
-SLEEP = 0
-
 .NOTPARALLEL:
 
 test_help:
@@ -191,13 +188,15 @@ test_rundir:
 ### FLUX EMERGENCE TEST ###
 
 test_fluxemergence:
+	touch test_fluxemergence.diff
 	@echo "test_fluxemergence_compile..." > test_fluxemergence.diff
 	$(MAKE) test_fluxemergence_compile
-	@echo "test_fluxemergence_rundir..." >> test_fluxemergence.diff
+	@echo "test_fluxemergence_rundir..." > test_fluxemergence.diff
 	$(MAKE) test_fluxemergence_rundir 
-	@echo "test_fluxemergence_run..." >> test_fluxemergence.diff
+	@echo "test_fluxemergence_run..." > test_fluxemergence.diff
 	$(MAKE) test_fluxemergence_run
-	@echo "test_fluxemergence_check..." >> test_fluxemergence.diff
+	@echo "test_fluxemergence_check..." > test_fluxemergence.diff
+	ls -l test_fluxemergence.diff
 	$(MAKE) test_fluxemergence_check
 
 test_fluxemergence_compile:
@@ -240,6 +239,7 @@ test_fluxemergence_check:
 ### SHOCK TUBE TEST ###
 
 test_shocktube:
+	touch test_shocktube.diff
 	@echo "test_shocktube_compile..." > test_shocktube.diff
 	$(MAKE) test_shocktube_compile
 	@echo "test_shocktube_rundir..." > test_shocktube.diff
@@ -247,7 +247,7 @@ test_shocktube:
 	@echo "test_shocktube_run..." > test_shocktube.diff
 	$(MAKE) test_shocktube_run
 	@echo "test_shocktube_check..." > test_shocktube.diff
-	sleep ${SLEEP}
+	ls -l test_shocktube.diff
 	$(MAKE) test_shocktube_check
 
 test_shocktube_compile:
@@ -273,13 +273,15 @@ test_shocktube_check:
 ### TIMEWARP SHOCK TUBE TEST ###
 
 test_timewarp_1d:
+	touch test_timewarp_1d.diff
 	@echo "test_timewarp_1d_compile..." > test_timewarp_1d.diff
 	$(MAKE) test_timewarp_1d_compile
-	@echo "test_timewarp_1d_rundir..." >> test_timewarp_1d.diff
+	@echo "test_timewarp_1d_rundir..." > test_timewarp_1d.diff
 	$(MAKE) test_timewarp_1d_rundir
-	@echo "test_timewarp_1d_run..." >> test_timewarp_1d.diff
+	@echo "test_timewarp_1d_run..." > test_timewarp_1d.diff
 	$(MAKE) test_timewarp_1d_run
-	@echo "test_timewarp_1d_check..." >> test_timewarp_1d.diff
+	@echo "test_timewarp_1d_check..." > test_timewarp_1d.diff
+	ls -l test_timewarp_1d.diff
 	$(MAKE) test_timewarp_1d_check
 
 test_timewarp_1d_compile:
@@ -305,13 +307,15 @@ test_timewarp_1d_check:
 ### TIMEWARP 2D TEST ###
 
 test_timewarp_2d:
+	touch test_timewarp_2d.diff
 	@echo "test_timewarp_2d_compile..." > test_timewarp_2d.diff
 	$(MAKE) test_timewarp_2d_compile
-	@echo "test_timewarp_2d_rundir..." >> test_timewarp_2d.diff
+	@echo "test_timewarp_2d_rundir..." > test_timewarp_2d.diff
 	$(MAKE) test_timewarp_2d_rundir
-	@echo "test_timewarp_2d_run..." >> test_timewarp_2d.diff
+	@echo "test_timewarp_2d_run..." > test_timewarp_2d.diff
 	$(MAKE) test_timewarp_2d_run
-	@echo "test_timewarp_2d_check..." >> test_timewarp_2d.diff
+	@echo "test_timewarp_2d_check..." > test_timewarp_2d.diff
+	ls -l test_timewarp_2d.diff
 	$(MAKE) test_timewarp_2d_check
 
 test_timewarp_2d_compile:
@@ -337,13 +341,15 @@ test_timewarp_2d_check:
 ### ROUND CUBE SHOCK TUBE TEST ###
 
 test_shockround:
+	touch test_shockround.diff
 	@echo "test_shockround_compile..." > test_shockround.diff
 	$(MAKE) test_shockround_compile
-	@echo "test_shockround_rundir..." >> test_shockround.diff
+	@echo "test_shockround_rundir..." > test_shockround.diff
 	$(MAKE) test_shockround_rundir
-	@echo "test_shockround_run..." >> test_shockround.diff
+	@echo "test_shockround_run..." > test_shockround.diff
 	$(MAKE) test_shockround_run
-	@echo "test_shockround_check..." >> test_shockround.diff
+	@echo "test_shockround_check..." > test_shockround.diff
+	ls -l test_shockround.diff
 	$(MAKE) test_shockround_check
 
 test_shockround_compile:
@@ -370,6 +376,7 @@ test_shockround_check:
 ### 1D SHOCK TUBE TEST ###
 
 test_shocktube_1d:
+	touch test_shocktube_1d_gpu.diff
 	@echo "test_shocktube_1d_compile..." > test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_compile
 	@echo "test_shocktube_1d_rundir..." > test_shocktube_1d_gpu.diff
@@ -377,7 +384,7 @@ test_shocktube_1d:
 	@echo "test_shocktube_1d_run..." > test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_run
 	@echo "test_shocktube_1d_check..." > test_shocktube_1d_gpu.diff
-	sleep ${SLEEP}
+	ls -l test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
@@ -406,6 +413,7 @@ test_shocktube_1d_check:
 ### FASTWAVE TEST SIMPLIFIED ###
 
 test_fastwave_2d:
+	touch test_fastwave_2d_gpu.diff
 	@echo "test_fastwave_2d_compile..." > test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_compile
 	@echo "test_fastwave_2d_rundir..." > test_fastwave_2d_gpu.diff
@@ -413,7 +421,7 @@ test_fastwave_2d:
 	@echo "test_fastwave_2d_run..." > test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_run
 	@echo "test_fastwave_2d_check..." > test_fastwave_2d_gpu.diff
-	sleep ${SLEEP}
+	ls -l test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_check
 
 test_fastwave_2d_compile:
@@ -441,6 +449,7 @@ test_fastwave_2d_check:
 ### 2D HEAT CONDUCTION TEST ###
 
 test_heatcond_2d:
+	touch test_heatcond_2d_gpu.diff
 	@echo "test_heatcond_2d_compile..." > test_heatcond_2d_gpu.diff
 	$(MAKE) test_heatcond_2d_compile
 	@echo "test_heatcond_2d_rundir..." > test_heatcond_2d_gpu.diff
@@ -448,7 +457,7 @@ test_heatcond_2d:
 	@echo "test_heatcond_2d_run..." > test_heatcond_2d_gpu.diff
 	$(MAKE) test_heatcond_2d_run
 	@echo "test_heatcond_2d_check..." > test_heatcond_2d_gpu.diff
-	sleep ${SLEEP}
+	ls -l test_heatcond_2d_gpu.diff
 	$(MAKE) test_heatcond_2d_check
 
 test_heatcond_2d_compile:
@@ -477,6 +486,7 @@ test_heatcond_2d_check:
 ### SHOCKRAMP TEST ###
 
 test_shockramp:
+	touch test_shockramp.diff
 	@echo "test_shockramp_compile..." > test_shockramp.diff
 	$(MAKE) test_shockramp_compile
 	@echo "test_shockramp_rundir..." > test_shockramp.diff
@@ -484,6 +494,7 @@ test_shockramp:
 	@echo "test_shockramp_run..." > test_shockramp.diff
 	$(MAKE) test_shockramp_run
 	@echo "test_shockramp_check..." > test_shockramp.diff
+	ls -l test_shockramp.diff
 	$(MAKE) test_shockramp_check
 
 test_shockramp_compile:
@@ -509,6 +520,7 @@ test_shockramp_check:
 ### 3D FAST WAVE TEST ###
 
 test_fastwave:
+	touch test_fastwave_gpu.diff
 	@echo "test_fastwave_compile..." > test_fastwave_gpu.diff
 	$(MAKE) test_fastwave_compile
 	@echo "test_fastwave_rundir..." > test_fastwave_gpu.diff
@@ -516,7 +528,7 @@ test_fastwave:
 	@echo "test_fastwave_run..." > test_fastwave_gpu.diff
 	$(MAKE) test_fastwave_run
 	@echo "test_fastwave_check..." > test_fastwave_gpu.diff
-	sleep ${SLEEP}
+	ls -l test_fastwave_gpu.diff
 	$(MAKE) test_fastwave_check
 
 test_fastwave_compile:
@@ -544,6 +556,7 @@ test_fastwave_check:
 ### 3D BX0 TEST ###
 
 test_bx0:
+	touch test_bx0.diff
 	@echo "test_bx0_compile..." > test_bx0.diff
 	$(MAKE) test_bx0_compile
 	@echo "test_bx0_rundir..." > test_bx0.diff
@@ -551,7 +564,7 @@ test_bx0:
 	@echo "test_bx0_run..." > test_bx0.diff
 	$(MAKE) test_bx0_run
 	@echo "test_bx0_check..." > test_bx0.diff
-	sleep ${SLEEP}
+	ls -l test_bx0.diff
 	$(MAKE) test_bx0_check
 
 test_bx0_compile:
@@ -577,6 +590,7 @@ test_bx0_check:
 ### PART STEADY TEST ###
 
 test_partsteady:
+	touch test_partsteady.diff
 	@echo "test_partsteady_compile..." > test_partsteady.diff
 	$(MAKE) test_partsteady_compile
 	@echo "test_partsteady_rundir..." > test_partsteady.diff
@@ -584,7 +598,7 @@ test_partsteady:
 	@echo "test_partsteady_run..." > test_partsteady.diff
 	$(MAKE) test_partsteady_run
 	@echo "test_partsteady_check..." > test_partsteady.diff
-	sleep ${SLEEP}
+	ls -l test_partsteady.diff
 	$(MAKE) test_partsteady_check
 
 test_partsteady_compile:
@@ -611,6 +625,7 @@ test_partsteady_check:
 ### HALL MHD TEST ###
 
 test_hallmhd:
+	touch test_hallmhd.diff
 	@echo "test_hallmhd_compile..." > test_hallmhd.diff
 	$(MAKE) test_hallmhd_compile
 	@echo "test_hallmhd_rundir..." > test_hallmhd.diff
@@ -618,7 +633,7 @@ test_hallmhd:
 	@echo "test_hallmhd_run..." > test_hallmhd.diff
 	$(MAKE) test_hallmhd_run
 	@echo "test_hallmhd_check..." > test_hallmhd.diff
-	sleep ${SLEEP}
+	ls -l test_hallmhd.diff
 	$(MAKE) test_hallmhd_check
 
 test_hallmhd_compile:
@@ -644,6 +659,7 @@ test_hallmhd_check:
 ### HYBRID TEST ###
 
 test_hybrid:
+	touch test_hybrid.diff
 	@echo "test_hybrid_compile..." > test_hybrid.diff
 	$(MAKE) test_hybrid_compile
 	@echo "test_hybrid_rundir..." > test_hybrid.diff
@@ -651,6 +667,7 @@ test_hybrid:
 	@echo "test_hybrid_run..." > test_hybrid.diff
 	$(MAKE) test_hybrid_run
 	@echo "test_hybrid_check..." > test_hybrid.diff
+	ls -l test_hybrid.diff
 	$(MAKE) test_hybrid_check
 
 test_hybrid_compile:
@@ -677,6 +694,7 @@ test_hybrid_check:
 ### VISCOSITY TEST ###
 
 test_viscosity:
+	touch test_viscosity.diff
 	@echo "test_viscosity_compile..." > test_viscosity.diff
 	$(MAKE) test_viscosity_compile
 	@echo "test_viscosity_rundir..." > test_viscosity.diff
@@ -684,7 +702,7 @@ test_viscosity:
 	@echo "test_viscosity_run..." > test_viscosity.diff
 	$(MAKE) test_viscosity_run
 	@echo "test_viscosity_check..." > test_viscosity.diff
-	sleep ${SLEEP}
+	ls -l test_viscosity.diff
 	$(MAKE) test_viscosity_check
 
 test_viscosity_compile:
@@ -710,6 +728,7 @@ test_viscosity_check:
 ### TWOFLUID MHD TEST ###
 
 test_twofluidmhd:
+	touch test_twofluidmhd.diff
 	@echo "test_twofluidmhd_compile..." > test_twofluidmhd.diff
 	$(MAKE) test_twofluidmhd_compile
 	@echo "test_twofluidmhd_rundir..." > test_twofluidmhd.diff
@@ -717,7 +736,7 @@ test_twofluidmhd:
 	@echo "test_twofluidmhd_run..." > test_twofluidmhd.diff
 	$(MAKE) test_twofluidmhd_run
 	@echo "test_twofluidmhd_check..." > test_twofluidmhd.diff
-	sleep ${SLEEP}
+	ls -l test_twofluidmhd.diff
 	$(MAKE) test_twofluidmhd_check
 
 test_twofluidmhd_compile:
@@ -744,6 +763,7 @@ test_twofluidmhd_check:
 ### MULTI FLUID TEST ###
 
 test_multifluid:
+	touch test_multifluid.diff
 	@echo "test_multifluid_compile..." > test_multifluid.diff
 	$(MAKE) test_multifluid_compile
 	@echo "test_multifluid_rundir..." > test_multifluid.diff
@@ -751,7 +771,7 @@ test_multifluid:
 	@echo "test_multifluid_run..." > test_multifluid.diff
 	$(MAKE) test_multifluid_run
 	@echo "test_multifluid_check..." > test_multifluid.diff
-	sleep ${SLEEP}
+	ls -l test_multifluid.diff
 	$(MAKE) test_multifluid_check
 
 test_multifluid_compile:
@@ -777,6 +797,7 @@ test_multifluid_check:
 ### MAGNETOMETER TEST ###
 
 test_magnetometer:
+	touch test_magnetometer.diff
 	@echo "test_magnetometer_compile..." > test_magnetometer.diff
 	$(MAKE) test_magnetometer_compile
 	@echo "test_magnetometer_rundir..." > test_magnetometer.diff
@@ -784,6 +805,7 @@ test_magnetometer:
 	@echo "test_magnetometer_run..." > test_magnetometer.diff
 	$(MAKE) test_magnetometer_run
 	@echo "test_magnetometer_check..." > test_magnetometer.diff
+	ls -l test_magnetometer.diff
 	$(MAKE) test_magnetometer_check
 
 test_magnetometer_compile:
@@ -822,6 +844,7 @@ test_magnetometer_check:
 ### MULTI ION TEST ###
 
 test_multiion:
+	touch test_multiion.diff
 	@echo "test_multiion_compile..." > test_multiion.diff
 	$(MAKE) test_multiion_compile
 	@echo "test_multiion_rundir..." > test_multiion.diff
@@ -829,7 +852,7 @@ test_multiion:
 	@echo "test_multiion_run..." > test_multiion.diff
 	$(MAKE) test_multiion_run
 	@echo "test_multiion_check..." > test_multiion.diff
-	sleep ${SLEEP}
+	ls -l test_multiion.diff
 	$(MAKE) test_multiion_check
 
 test_multiion_compile:
@@ -855,6 +878,7 @@ test_multiion_check:
 ### NONCONSERVATIVE MHD TEST ###
 
 test_mhdnoncons:
+	touch test_mhdnoncons.diff
 	@echo "test_mhdnoncons_compile..." > test_mhdnoncons.diff
 	$(MAKE) test_mhdnoncons_compile
 	@echo "test_mhdnoncons_rundir..." > test_mhdnoncons.diff
@@ -862,7 +886,7 @@ test_mhdnoncons:
 	@echo "test_mhdnoncons_run..." > test_mhdnoncons.diff
 	$(MAKE) test_mhdnoncons_run
 	@echo "test_mhdnoncons_check..." > test_mhdnoncons.diff
-	sleep ${SLEEP}
+	ls -l test_mhdnoncons.diff
 	$(MAKE) test_mhdnoncons_check
 
 test_mhdnoncons_compile:
@@ -890,6 +914,7 @@ test_mhdnoncons_check:
 ### EQUATION OF STATE AND GODUNOV SOLVER TEST ###
 
 test_eosgodunov:
+	touch test_eosgodunov.diff
 	@echo "test_eosgodunov_compile..." > test_eosgodunov.diff
 	$(MAKE) test_eosgodunov_compile
 	@echo "test_eosgodunov_rundir..." > test_eosgodunov.diff
@@ -897,6 +922,7 @@ test_eosgodunov:
 	@echo "test_eosgodunov_run..." > test_eosgodunov.diff
 	$(MAKE) test_eosgodunov_run
 	@echo "test_eosgodunov_check..." > test_eosgodunov.diff
+	ls -l test_eosgodunov.diff
 	$(MAKE) test_eosgodunov_check
 
 test_eosgodunov_compile:
@@ -923,6 +949,7 @@ test_eosgodunov_check:
 ### LASER PACKAGE TEST ###
 
 test_laserpackage:
+	touch test_laserpackage.diff
 	@echo "test_laserpackage_compile..." > test_laserpackage.diff
 	$(MAKE) test_laserpackage_compile
 	@echo "test_laserpackage_rundir..." > test_laserpackage.diff
@@ -930,6 +957,7 @@ test_laserpackage:
 	@echo "test_laserpackage_run..." > test_laserpackage.diff
 	$(MAKE) test_laserpackage_run
 	@echo "test_laserpackage_check..." > test_laserpackage.diff
+	ls -l test_laserpackage.diff
 	$(MAKE) test_laserpackage_check
 
 test_laserpackage_compile:
@@ -958,6 +986,7 @@ test_laserpackage_check:
 ### GRAY-DIFFUSION TEST ###
 
 test_graydiffusion:
+	touch test_graydiffusion.diff
 	@echo "test_graydiffusion_compile..." > test_graydiffusion.diff
 	$(MAKE) test_graydiffusion_compile
 	@echo "test_graydiffusion_rundir..." > test_graydiffusion.diff
@@ -965,6 +994,7 @@ test_graydiffusion:
 	@echo "test_graydiffusion_run..." > test_graydiffusion.diff
 	$(MAKE) test_graydiffusion_run
 	@echo "test_graydiffusion_check..." > test_graydiffusion.diff
+	ls -l test_graydiffusion.diff
 	$(MAKE) test_graydiffusion_check
 
 test_graydiffusion_compile:
@@ -996,6 +1026,7 @@ test_graydiffusion_check:
 ### AWSOM test on GPU
 
 test_awsom_gpu:
+	touch test_awsom_gpu.diff
 	@echo "test_awsom_gpu_compile..." > test_awsom_gpu.diff
 	$(MAKE) test_awsom_gpu_compile
 	@echo "test_awsom_gpu_rundir..." > test_awsom_gpu.diff
@@ -1003,7 +1034,7 @@ test_awsom_gpu:
 	@echo "test_awsom_gpu_run..." > test_awsom_gpu.diff
 	$(MAKE) test_awsom_gpu_run
 	@echo "test_awsom_gpu_check..." > test_awsom_gpu.diff
-	sleep ${SLEEP}
+	ls -l test_awsom_gpu.diff
 	$(MAKE) test_awsom_gpu_check
 
 # Fails on Pleiades with OpenMP
@@ -1034,6 +1065,7 @@ test_awsom_gpu_check:
 ### AWSOM test on GPU with typical grid size
 
 test_awsom_large_gpu:
+	touch test_awsom_large_gpu.diff
 	@echo "test_awsom_large_gpu_compile..." > test_awsom_large_gpu.diff
 	$(MAKE) test_awsom_large_gpu_compile
 	@echo "test_awsom_large_gpu_rundir..." > test_awsom_large_gpu.diff
@@ -1041,6 +1073,7 @@ test_awsom_large_gpu:
 	@echo "test_awsom_large_gpu_run..." > test_awsom_large_gpu.diff
 	$(MAKE) test_awsom_large_gpu_run
 	@echo "test_awsom_large_gpu_check..." > test_awsom_large_gpu.diff
+	ls -l test_awsom_large_gpu.diff
 	$(MAKE) test_awsom_large_gpu_check
 
 # Fails on Pleiades with OpenMP
@@ -1072,6 +1105,7 @@ test_awsom_large_gpu_check:
 ### AWSOM TEST  WITH CHARGE STATES
 
 test_awsomchargestate:
+	touch test_awsomchargestate.diff
 	@echo "test_awsomchargestate_compile..." > test_awsomchargestate.diff
 	$(MAKE) test_awsomchargestate_compile
 	@echo "test_awsomchargestate_rundir..." > test_awsomchargestate.diff
@@ -1079,6 +1113,7 @@ test_awsomchargestate:
 	@echo "test_awsomchargestate_run..." > test_awsomchargestate.diff
 	$(MAKE) test_awsomchargestate_run
 	@echo "test_awsomchargestate_check..." > test_awsomchargestate.diff
+	ls -l test_awsomchargestate.diff
 	$(MAKE) test_awsomchargestate_check
 
 # Test fails on Pleiades with OpenMP
@@ -1149,6 +1184,7 @@ test_awsomchargestate_check:
 ### MAGNETOFRICTION CODE USING VECTOR MAGNETOGRAM ###
 
 test_bvector:
+	touch test_bvector.diff
 	@echo "test_bvector_compile..." > test_bvector.diff
 	$(MAKE) test_bvector_compile
 	@echo "test_bvector_rundir..." > test_bvector.diff
@@ -1156,7 +1192,7 @@ test_bvector:
 	@echo "test_bvector_run..." > test_bvector.diff
 	$(MAKE) test_bvector_run
 	@echo "test_bvector_check..." > test_bvector.diff
-	sleep ${SLEEP}
+	ls -l test_bvector.diff
 	$(MAKE) test_bvector_check
 
 # Fails on Pleiades with OpenMP
@@ -1185,6 +1221,7 @@ test_bvector_check:
 ### AWSOM TEST WITH NONPOTENTIAL B0local from VECTOR MAGNETOGRAM ###
 
 test_awsom_bvector:
+	touch test_awsom_bvector.diff
 	@echo "test_awsom_bvector_compile..." > test_awsom_bvector.diff
 	$(MAKE) test_awsom_bvector_compile
 	@echo "test_awsom_bvector_rundir..." > test_awsom_bvector.diff
@@ -1192,7 +1229,7 @@ test_awsom_bvector:
 	@echo "test_awsom_bvector_run..." > test_awsom_bvector.diff
 	$(MAKE) test_awsom_bvector_run
 	@echo "test_awsom_bvector_check..." > test_awsom_bvector.diff
-	sleep ${SLEEP}
+	ls -l test_awsom_bvector.diff
 	$(MAKE) test_awsom_bvector_check
 
 # Fails on Pleiades with OpenMP
@@ -1222,6 +1259,7 @@ test_awsom_bvector_check:
 ### AWSOM TEST WITH CMEs
 
 test_awsom:
+	touch test_awsom.diff
 	@echo "test_awsom_compile..." > test_awsom.diff
 	$(MAKE) test_awsom_compile
 	@echo "test_awsom_rundir..." > test_awsom.diff
@@ -1229,6 +1267,7 @@ test_awsom:
 	@echo "test_awsom_run..." > test_awsom.diff
 	$(MAKE) test_awsom_run
 	@echo "test_awsom_check..." > test_awsom.diff
+	ls -l test_awsom.diff
 	$(MAKE) test_awsom_check
 
 # Fails on Pleiades with OpenMP
@@ -1257,6 +1296,7 @@ test_awsom_check:
 ### AWSOM TEST WITH REVERSE FIELD ALGORITHM
 
 test_awsom_signb:
+	touch test_awsom_signb.diff
 	@echo "test_awsom_signb_compile..." > test_awsom_signb.diff
 	$(MAKE) test_awsom_signb_compile
 	@echo "test_awsom_signb_rundir..." > test_awsom_signb.diff
@@ -1264,6 +1304,7 @@ test_awsom_signb:
 	@echo "test_awsom_signb_run..." > test_awsom_signb.diff
 	$(MAKE) test_awsom_signb_run
 	@echo "test_awsom_signb_check..." > test_awsom_signb.diff
+	ls -l test_awsom_signb.diff
 	$(MAKE) test_awsom_signb_check
 
 # Fails on Pleiades with OpenMP
@@ -1292,6 +1333,7 @@ test_awsom_signb_check:
 ### AWSOM-R TEST WITH TD CME
 
 test_awsomr:
+	touch test_awsomr.diff
 	@echo "test_awsomr_compile..." > test_awsomr.diff
 	$(MAKE) test_awsomr_compile
 	@echo "test_awsomr_rundit..." > test_awsomr.diff
@@ -1299,6 +1341,7 @@ test_awsomr:
 	@echo "test_awsomr_run..." > test_awsomr.diff
 	$(MAKE) test_awsomr_run
 	@echo "test_awsomr_check..." > test_awsomr.diff
+	ls -l test_awsomr.diff
 	$(MAKE) test_awsomr_check
 
 test_awsomr_compile:
@@ -1325,6 +1368,7 @@ test_awsomr_check:
 ### AWSOM WITH STITCH TEST
 
 test_stitch:
+	touch test_stitch.diff
 	@echo "test_stitch_compile..." > test_stitch.diff
 	$(MAKE) test_stitch_compile
 	@echo "test_stitch_rundir..." > test_stitch.diff
@@ -1332,6 +1376,7 @@ test_stitch:
 	@echo "test_stitch_run..." > test_stitch.diff
 	$(MAKE) test_stitch_run
 	@echo "test_stitch_check..." > test_stitch.diff
+	ls -l test_stitch.diff
 	$(MAKE) test_stitch_check
 
 # Fails on Pleiades with OpenMP
@@ -1361,6 +1406,7 @@ test_stitch_check:
 ### STANDALONE 2D OUTER HELIOSPHERE TEST ###
 
 test_outerhelio2d:
+	touch test_outerhelio2d.diff
 	@echo "test_outerhelio2d_compile..." > test_outerhelio2d.diff
 	$(MAKE) test_outerhelio2d_compile
 	@echo "test_outerhelio2d_rundir..." > test_outerhelio2d.diff
@@ -1368,6 +1414,7 @@ test_outerhelio2d:
 	@echo "test_outerhelio2d_run..." > test_outerhelio2d.diff
 	$(MAKE) test_outerhelio2d_run
 	@echo "test_outerhelio2d_check..." > test_outerhelio2d.diff
+	ls -l test_outerhelio2d.diff
 	$(MAKE) test_outerhelio2d_check
 
 test_outerhelio2d_compile:
@@ -1406,6 +1453,7 @@ test_outerhelio2d_check:
 ### STANDALONE OUTER HELIOSPHERE TESTS ###
 
 test_outerhelio:
+	touch test_outerhelio.diff
 	@echo "test_outerhelio_compile..." > test_outerhelio.diff
 	$(MAKE) test_outerhelio_compile
 	@echo "test_outerhelio_rundir..." > test_outerhelio.diff
@@ -1413,7 +1461,7 @@ test_outerhelio:
 	@echo "test_outerhelio_run..." > test_outerhelio.diff
 	$(MAKE) test_outerhelio_run
 	@echo "test_outerhelio_check..." > test_outerhelio.diff
-	sleep ${SLEEP}
+	ls -l test_outerhelio.diff
 	$(MAKE) test_outerhelio_check
 
 test_outerhelio_compile:
@@ -1446,6 +1494,7 @@ test_outerhelio_check:
 ### 1D OUTER HELIOSPHERE TEST ###
 
 test_outerhelio_1d:
+	touch test_outerhelio_1d.diff
 	@echo "test_outerhelio_1d_compile..." > test_outerhelio_1d.diff
 	$(MAKE) test_outerhelio_1d_compile
 	@echo "test_outerhelio_1d_rundir..." > test_outerhelio_1d.diff
@@ -1453,7 +1502,7 @@ test_outerhelio_1d:
 	@echo "test_outerhelio_1d_run..." > test_outerhelio_1d.diff
 	$(MAKE) test_outerhelio_1d_run
 	@echo "test_outerhelio_1d_check..." > test_outerhelio_1d.diff
-	sleep ${SLEEP}
+	ls -l test_outerhelio_1d.diff
 	$(MAKE) test_outerhelio_1d_check
 
 test_outerhelio_1d_compile:
@@ -1485,6 +1534,7 @@ test_outerhelioawsom:
 	@($(MAKE) test_outerhelioawsom_restart)
 
 test_outerhelioawsom_start:
+	touch test_outerhelioawsom.diff
 	@echo "test_outerhelioawsom_compile..." > test_outerhelioawsom.diff
 	$(MAKE) test_outerhelioawsom_compile
 	@echo "test_outerhelioawsom_rundir..." > test_outerhelioawsom.diff
@@ -1492,6 +1542,7 @@ test_outerhelioawsom_start:
 	@echo "test_outerhelioawsom_run..." > test_outerhelioawsom.diff
 	$(MAKE) test_outerhelioawsom_run
 	@echo "test_outerhelioawsom_check..." > test_outerhelioawsom.diff
+	ls -l test_outerhelioawsom.diff
 	$(MAKE) test_outerhelioawsom_check
 
 test_outerhelioawsom_compile:
@@ -1518,11 +1569,13 @@ test_outerhelioawsom_check:
 	ls -l test_outerhelioawsom.diff
 
 test_outerhelioawsom_restart:
+	touch test_outerhelioawsom_restart.diff
 	@echo "test_outerhelioawsom_restart_compile..." > test_outerhelioawsom_restart.diff
 	$(MAKE) test_outerhelioawsom_restart_compile
 	@echo "test_outerhelioawsom_restart_run..." > test_outerhelioawsom_restart.diff
 	$(MAKE) test_outerhelioawsom_restart_run
 	@echo "test_outerhelioawsom_restart_check..." > test_outerhelioawsom_restart.diff
+	ls -l test_outerhelioawsom_restart.diff
 	$(MAKE) test_outerhelioawsom_restart_check
 
 test_outerhelioawsom_restart_compile:
@@ -1548,6 +1601,7 @@ test_outerhelioawsom_restart_check:
 ### OUTER HELIOSPHERE TEST WITH PUI ###
 
 test_outerheliopui:
+	touch test_outerheliopui.diff
 	@echo "test_outerheliopui_compile..." > test_outerheliopui.diff
 	$(MAKE) test_outerheliopui_compile
 	@echo "test_outerheliopui_rundir..." > test_outerheliopui.diff
@@ -1555,7 +1609,7 @@ test_outerheliopui:
 	@echo "test_outerheliopui_run..." > test_outerheliopui.diff
 	$(MAKE) test_outerheliopui_run
 	@echo "test_outerheliopui_check..." > test_outerheliopui.diff
-	sleep ${SLEEP}
+	ls -l test_outerheliopui.diff
 	$(MAKE) test_outerheliopui_check
 
 test_outerheliopui_compile:
@@ -1589,6 +1643,7 @@ test_outerheliopui_check:
 ### 1D OUTER HELIOSPHERE TEST WITH PUI ###
 
 test_outerheliopui_1d:
+	touch test_outerheliopui_1d.diff
 	@echo "test_outerheliopui_1d_compile..." > test_outerheliopui_1d.diff
 	$(MAKE) test_outerheliopui_1d_compile
 	@echo "test_outerheliopui_1d_rundir..." > test_outerheliopui_1d.diff
@@ -1596,7 +1651,7 @@ test_outerheliopui_1d:
 	@echo "test_outerheliopui_1d_run..." > test_outerheliopui_1d.diff
 	$(MAKE) test_outerheliopui_1d_run
 	@echo "test_outerheliopui_1d_check..." > test_outerheliopui_1d.diff
-	sleep ${SLEEP}
+	ls -l test_outerheliopui_1d.diff
 	$(MAKE) test_outerheliopui_1d_check
 
 test_outerheliopui_1d_compile:
@@ -1628,6 +1683,7 @@ test_titan:
 	@($(MAKE) test_titan_restart)
 
 test_titan_start:
+	touch test_titan.diff
 	@echo "test_titan_compile..." > test_titan.diff
 	$(MAKE) test_titan_compile
 	@echo "test_titan_rundir..." > test_titan.diff
@@ -1635,6 +1691,7 @@ test_titan_start:
 	@echo "test_titan_run..." > test_titan.diff
 	$(MAKE) test_titan_run
 	@echo "test_titan_check..." > test_titan.diff
+	ls -l test_titan.diff
 	$(MAKE) test_titan_check
 
 test_titan_compile:
@@ -1665,6 +1722,7 @@ test_titan_restart:
 	@echo "test_titan_restart_read..." > test_titan_restart.diff
 	$(MAKE) test_titan_restart_read
 	@echo "test_titan_restart_check..." > test_titan_restart.diff
+	ls -l test_titan_restart.diff
 	$(MAKE) test_titan_restart_check
 
 test_titan_restart_save:
@@ -1697,6 +1755,7 @@ test_mars:
 	@($(MAKE) test_mars_restart)
 
 test_mars_start:
+	touch test_mars.diff
 	@echo "test_mars_compile..." > test_mars.diff
 	$(MAKE) test_mars_compile
 	@echo "test_mars_rundir..." > test_mars.diff
@@ -1704,6 +1763,7 @@ test_mars_start:
 	@echo "test_mars_run..." > test_mars.diff
 	$(MAKE) test_mars_run
 	@echo "test_mars_check..." > test_mars.diff
+	ls -l test_mars.diff
 	$(MAKE) test_mars_check
 
 test_mars_compile:
@@ -1732,6 +1792,7 @@ test_mars_restart:
 	@echo "test_mars_restart_read..." > test_mars_restart.diff
 	$(MAKE) test_mars_restart_read
 	@echo "test_mars_restart_check..." > test_mars_restart.diff
+	ls -l test_mars_restart.diff
 	$(MAKE) test_mars_restart_check
 
 test_mars_restart_save:
@@ -1761,6 +1822,7 @@ test_mars_restart_check:
 # Time-accurate Mars test for CCMC
 
 test_ccmc_mars:
+	touch test_ccmc_mars.diff
 	@echo "test_ccmc_mars_compile..." > test_ccmc_mars.diff
 	$(MAKE) test_ccmc_mars_compile
 	@echo "test_ccmc_mars_rundir..." > test_ccmc_mars.diff
@@ -1768,6 +1830,7 @@ test_ccmc_mars:
 	@echo "test_ccmc_mars_run..." > test_ccmc_mars.diff
 	$(MAKE) test_ccmc_mars_run
 	@echo "test_ccmc_mars_check..." > test_ccmc_mars.diff
+	ls -l test_ccmc_mars.diff
 	$(MAKE) test_ccmc_mars_check
 
 test_ccmc_mars_compile:
@@ -1797,6 +1860,7 @@ test_marsfluids:
 	@($(MAKE) test_marsfluids_restart)
 
 test_marsfluids_start:
+	touch test_marsfluids.diff
 	@echo "test_marsfluids_compile..." > test_marsfluids.diff
 	$(MAKE) test_marsfluids_compile
 	@echo "test_marsfluids_rundir..." > test_marsfluids.diff
@@ -1804,6 +1868,7 @@ test_marsfluids_start:
 	@echo "test_marsfluids_run..." > test_marsfluids.diff
 	$(MAKE) test_marsfluids_run
 	@echo "test_marsfluids_check..." > test_marsfluids.diff
+	ls -l test_marsfluids.diff
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
@@ -1832,6 +1897,7 @@ test_marsfluids_restart:
 	@echo "test_marsfluids_restart_read..." > test_marsfluids_restart.diff
 	$(MAKE) test_marsfluids_restart_read
 	@echo "test_marsfluids_restart_check..." >test_marsfluids_restart.diff
+	ls -l test_marsfluids_restart.diff
 	$(MAKE) test_marsfluids_restart_check
 
 test_marsfluids_restart_save:
@@ -1865,6 +1931,7 @@ test_venus:
 	@($(MAKE) test_venus_restart)
 
 test_venus_start:
+	touch test_venus.diff
 	@echo "test_venus_compile..." > test_venus.diff
 	$(MAKE) test_venus_compile
 	@echo "test_venus_rundir..." > test_venus.diff
@@ -1872,6 +1939,7 @@ test_venus_start:
 	@echo "test_venus_run..." > test_venus.diff
 	$(MAKE) test_venus_run
 	@echo "test_venus_check..." > test_venus.diff
+	ls -l test_venus.diff
 	$(MAKE) test_venus_check
 
 test_venus_compile:
@@ -1900,6 +1968,7 @@ test_venus_restart:
 	@echo "test_venus_restart_read..." > test_venus_restart.diff
 	$(MAKE) test_venus_restart_read
 	@echo "test_venus_restart_check..." > test_venus_restart.diff
+	ls -l test_venus_restart.diff
 	$(MAKE) test_venus_restart_check
 
 test_venus_restart_save:
@@ -1928,6 +1997,7 @@ test_venus_restart_check:
 ### TESTS FOR MODELING SATURN ###
 
 test_saturn:
+	touch test_saturn.diff
 	@echo "test_saturn_compile..." > test_saturn.diff
 	$(MAKE) test_saturn_compile
 	@echo "test_saturn_rundir..." > test_saturn.diff
@@ -1935,6 +2005,7 @@ test_saturn:
 	@echo "test_saturn_run..." > test_saturn.diff
 	$(MAKE) test_saturn_run
 	@echo "test_saturn_check..." > test_saturn.diff
+	ls -l test_saturn.diff
 	$(MAKE) test_saturn_check
 
 test_saturn_compile:
@@ -1960,6 +2031,7 @@ test_saturn_check:
 ### TESTS FOR MODELING JUPITER ###
 
 test_jupiter:
+	touch test_jupiter.diff
 	@echo "test_jupiter_compile..." > test_jupiter.diff
 	$(MAKE) test_jupiter_compile
 	@echo "test_jupiter_rundir..." > test_jupiter.diff
@@ -1967,6 +2039,7 @@ test_jupiter:
 	@echo "test_jupiter_run..." > test_jupiter.diff
 	$(MAKE) test_jupiter_run
 	@echo "test_jupiter_check..." > test_jupiter.diff
+	ls -l test_jupiter.diff
 	$(MAKE) test_jupiter_check
 
 test_jupiter_compile:
@@ -1993,6 +2066,7 @@ test_jupiter_check:
 ### TESTS FOR MODELING MERCURY ###
 
 test_mercurysph:
+	touch test_mercurysph.diff
 	@echo "test_mercurysph_compile..." > test_mercurysph.diff
 	$(MAKE) test_mercurysph_compile
 	@echo "test_mercurysph_rundir..." > test_mercurysph.diff
@@ -2000,6 +2074,7 @@ test_mercurysph:
 	@echo "test_mercurysph_run..." > test_mercurysph.diff
 	$(MAKE) test_mercurysph_run
 	@echo "test_mercurysph_check..." > test_mercurysph.diff
+	ls -l test_mercurysph.diff
 	$(MAKE) test_mercurysph_check
 
 test_mercurysph_compile:
@@ -2030,6 +2105,7 @@ test_mercurysph_check:
 ### TESTS FOR MODELING GANYMEDE ###
 
 test_ganymede:
+	touch test_ganymede.diff
 	@echo "test_ganymede_compile..." > test_ganymede.diff
 	$(MAKE) test_ganymede_compile
 	@echo "test_ganymede_rundir..." > test_ganymede.diff
@@ -2037,6 +2113,7 @@ test_ganymede:
 	@echo "test_ganymede_run..." > test_ganymede.diff
 	$(MAKE) test_ganymede_run
 	@echo "test_ganymede_check..." > test_ganymede.diff
+	ls -l test_ganymede.diff
 	$(MAKE) test_ganymede_check
 
 # Fails on Pleiades with OpenMP
@@ -2068,6 +2145,7 @@ test_ganymede_check:
 ### TESTS FOR MODELING COMET6SP ###
 
 test_comet:
+	touch test_comet.diff
 	@echo "test_comet_compile..." > test_comet.diff
 	$(MAKE) test_comet_compile
 	@echo "test_comet_rundir..." > test_comet.diff
@@ -2075,6 +2153,7 @@ test_comet:
 	@echo "test_comet_run..." > test_comet.diff
 	$(MAKE) test_comet_run
 	@echo "test_comet_check..." > test_comet.diff
+	ls -l test_comet.diff
 	$(MAKE) test_comet_check
 
 test_comet_compile:
@@ -2104,6 +2183,7 @@ test_cometfluids:
 	@($(MAKE) test_cometfluids_restart)
 
 test_cometfluids_start:
+	touch test_cometfluids.diff
 	@echo "test_cometfluids_compile..." > test_cometfluids.diff
 	$(MAKE) test_cometfluids_compile
 	@echo "test_cometfluids_rundir..." > test_cometfluids.diff
@@ -2111,6 +2191,7 @@ test_cometfluids_start:
 	@echo "test_cometfluids_run..." > test_cometfluids.diff
 	$(MAKE) test_cometfluids_run
 	@echo "test_cometfluids_check..." > test_cometfluids.diff
+	ls -l test_cometfluids.diff
 	$(MAKE) test_cometfluids_check
 
 # OpenMP run fails for NAGFOR on 4 cores * 2 threads
@@ -2141,6 +2222,7 @@ test_cometfluids_restart:
 	@echo "test_cometfluids_restart_read..." > test_cometfluids_restart.diff
 	$(MAKE) test_cometfluids_restart_read
 	@echo "test_cometfluids_restart_check..." >test_cometfluids_restart.diff
+	ls -l test_cometfluids_restart.diff
 	$(MAKE) test_cometfluids_restart_check
 
 test_cometfluids_restart_save:
@@ -2168,6 +2250,7 @@ test_cometfluids_restart_check:
 ### TESTS FOR MODELING EARTH WITH CARTESIAN GRID ###
 
 test_earth:
+	touch test_earth_gpu.diff
 	@echo "test_earth_compile..." > test_earth_gpu.diff
 	$(MAKE) test_earth_compile
 	@echo "test_earth_rundir..." > test_earth_gpu.diff
@@ -2175,6 +2258,7 @@ test_earth:
 	@echo "test_earth_run..." > test_earth_gpu.diff
 	$(MAKE) test_earth_run
 	@echo "test_earth_check..." > test_earth_gpu.diff
+	ls -l test_earth_gpu.diff
 	$(MAKE) test_earth_check
 
 test_earth_compile:
@@ -2211,6 +2295,7 @@ test_earth_check:
 ########## Large (same as SWPC V2) test
 
 test_earth_large_gpu:
+	touch test_earth_large_gpu.diff
 	@echo "test_earth_large_gpu_compile..." > test_earth_large_gpu.diff
 	$(MAKE) test_earth_large_gpu_compile
 	@echo "test_earth_large_gpu_rundir..." > test_earth_large_gpu.diff
@@ -2218,6 +2303,7 @@ test_earth_large_gpu:
 	@echo "test_earth_large_gpu_run..." > test_earth_large_gpu.diff
 	$(MAKE) test_earth_large_gpu_run
 	@echo "test_earth_large_gpu_check..." > test_earth_large_gpu.diff
+	ls -l test_earth_large_gpu.diff
 	$(MAKE) test_earth_large_gpu_check
 
 test_earth_large_gpu_compile:
@@ -2248,6 +2334,7 @@ test_earthsph:
 	-@($(MAKE) test_earthsph_start)
 
 test_earthsph_start:
+	touch test_earthsph.diff
 	@echo "test_earthsph_compile..." > test_earthsph.diff
 	$(MAKE) test_earthsph_compile
 	@echo "test_earthsph_rundir..." > test_earthsph.diff
@@ -2255,6 +2342,7 @@ test_earthsph_start:
 	@echo "test_earthsph_run..." > test_earthsph.diff
 	$(MAKE) test_earthsph_run
 	@echo "test_earthsph_check..." > test_earthsph.diff
+	ls -l test_earthsph.diff
 	$(MAKE) test_earthsph_check
 
 # Fails with OpenMP on Pleiades
@@ -2283,6 +2371,7 @@ test_earthsph_check:
 ### TESTS FOR AMR GRID ###
 
 test_amr:
+	touch test_amr.diff
 	@echo "test_amr_compile..." > test_amr.diff
 	$(MAKE) test_amr_compile
 	@echo "test_amr_rundir..." > test_amr.diff
@@ -2290,6 +2379,7 @@ test_amr:
 	@echo "test_amr_run..." > test_amr.diff
 	$(MAKE) test_amr_run
 	@echo "test_amr_check..." > test_amr.diff
+	ls -l test_amr.diff
 	$(MAKE) test_amr_check
 
 test_amr_compile:
@@ -2315,6 +2405,7 @@ test_amr_check:
 ### TESTS FOR SPHERICAL AMR GRID ###
 
 test_amrsph:
+	touch test_amrsph.diff
 	@echo "test_amrsph_compile..." > test_amrsph.diff
 	$(MAKE) test_amrsph_compile
 	@echo "test_amrsph_rundir..." > test_amrsph.diff
@@ -2322,6 +2413,7 @@ test_amrsph:
 	@echo "test_amrsph_run..." > test_amrsph.diff
 	$(MAKE) test_amrsph_run
 	@echo "test_amrsph_check..." > test_amrsph.diff
+	ls -l test_amrsph.diff
 	$(MAKE) test_amrsph_check
 
 test_amrsph_compile:
@@ -2347,6 +2439,7 @@ test_amrsph_check:
 ### TESTS FOR CORRECT 2 BODY PLOT FILES ###
 
 test_2bodyplot:
+	touch test_2bodyplot.diff
 	@echo "test_2bodyplot_compile..." > test_2bodyplot.diff
 	$(MAKE) test_2bodyplot_compile
 	@echo "test_2bodyplot_rundir..." > test_2bodyplot.diff
@@ -2354,6 +2447,7 @@ test_2bodyplot:
 	@echo "test_2bodyplot_run..." > test_2bodyplot.diff
 	$(MAKE) test_2bodyplot_run
 	@echo "test_2bodyplot_check..." > test_2bodyplot.diff
+	ls -l test_2bodyplot.diff
 	$(MAKE) test_2bodyplot_check
 
 test_2bodyplot_compile:
@@ -2389,6 +2483,7 @@ test_2bodyplot_check:
 ### TESTS FOR MODELING MOON IMPACT###
 
 test_moonimpact:
+	touch test_moonimpact.diff
 	@echo "test_moonimpact_compile..." > test_moonimpact.diff
 	$(MAKE) test_moonimpact_compile
 	@echo "test_moonimpact_rundir..." > test_moonimpact.diff
@@ -2396,6 +2491,7 @@ test_moonimpact:
 	@echo "test_moonimpact_run..." > test_moonimpact.diff
 	$(MAKE) test_moonimpact_run
 	@echo "test_moonimpact_check..." > test_moonimpact.diff
+	ls -l test_moonimpact.diff
 	$(MAKE) test_moonimpact_check
 
 test_moonimpact_compile:
@@ -2422,6 +2518,7 @@ test_moonimpact_check:
 ### ALFVEN WAVE TEST FOR SINGLE FLUID MHD WITH ANISOTROPIC PRESSURE ###
 
 test_anisotropic:
+	touch test_anisotropic.diff
 	@echo "test_anisotropic_compile..." > test_anisotropic.diff
 	$(MAKE) test_anisotropic_compile
 	@echo "test_anisotropic_rundir..." > test_anisotropic.diff
@@ -2429,6 +2526,7 @@ test_anisotropic:
 	@echo "test_anisotropic_run..." > test_anisotropic.diff
 	$(MAKE) test_anisotropic_run
 	@echo "test_anisotropic_check..." > test_anisotropic.diff
+	ls -l test_anisotropic.diff
 	$(MAKE) test_anisotropic_check
 
 test_anisotropic_compile:
@@ -2454,6 +2552,7 @@ test_anisotropic_check:
 ### TEST FOR COMET CG HD RUN ###
 
 test_cometCGhd:
+	touch test_cometCGhd.diff
 	@echo "test_cometCGhd_compile..." > test_cometCGhd.diff
 	$(MAKE) test_cometCGhd_compile
 	@echo "test_cometCGhd_rundir..." > test_cometCGhd.diff
@@ -2461,6 +2560,7 @@ test_cometCGhd:
 	@echo "test_cometCGhd_run..." > test_cometCGhd.diff
 	$(MAKE) test_cometCGhd_run
 	@echo "test_cometCGhd_check..." > test_cometCGhd.diff
+	ls -l test_cometCGhd.diff
 	$(MAKE) test_cometCGhd_check
 
 test_cometCGhd_compile:
@@ -2492,6 +2592,7 @@ test_cometCGfluids:
 	-@($(MAKE) test_cometCGfluids_start)
 
 test_cometCGfluids_start:
+	touch test_cometCGfluids.diff
 	@echo "test_cometCGfluids_compile..." > test_cometCGfluids.diff
 	$(MAKE) test_cometCGfluids_compile
 	@echo "test_cometCGfluids_rundir..." > test_cometCGfluids.diff
@@ -2499,6 +2600,7 @@ test_cometCGfluids_start:
 	@echo "test_cometCGfluids_run..." > test_cometCGfluids.diff
 	$(MAKE) test_cometCGfluids_run
 	@echo "test_cometCGfluids_check..." > test_cometCGfluids.diff
+	ls -l test_cometCGfluids.diff
 	$(MAKE) test_cometCGfluids_check
 
 test_cometCGfluids_compile:
@@ -2527,6 +2629,7 @@ test_cometCGfluids_check:
 ### TEST FOR EUROPA TWO ION FLUIDS + ELECTRON PRESSURE ###
 
 test_europa2fluidspe:
+	touch test_europa2fluidspe.diff
 	@echo "test_europa2fluidspe_compile..." > test_europa2fluidspe.diff
 	$(MAKE) test_europa2fluidspe_compile
 	@echo "test_europa2fluidspe_rundir..." > test_europa2fluidspe.diff
@@ -2534,6 +2637,7 @@ test_europa2fluidspe:
 	@echo "test_europa2fluidspe_run..." > test_europa2fluidspe.diff
 	$(MAKE) test_europa2fluidspe_run
 	@echo "test_europa2fluidspe_check..." > test_europa2fluidspe.diff
+	ls -l test_europa2fluidspe.diff
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
@@ -2561,6 +2665,7 @@ test_europa2fluidspe_check:
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
 
 test_europa3fluidspe:
+	touch test_europa3fluidspe.diff
 	@echo "test_europa3fluidspe_compile..." > test_europa3fluidspe.diff
 	$(MAKE) test_europa3fluidspe_compile
 	@echo "test_europa3fluidspe_rundir..." > test_europa3fluidspe.diff
@@ -2568,6 +2673,7 @@ test_europa3fluidspe:
 	@echo "test_europa3fluidspe_run..." > test_europa3fluidspe.diff
 	$(MAKE) test_europa3fluidspe_run
 	@echo "test_europa3fluidspe_check..." > test_europa3fluidspe.diff
+	ls -l test_europa3fluidspe.diff
 	$(MAKE) test_europa3fluidspe_check
 
 # OpenMP randomly fails for nagfor NP=4 NTHREAD=2
@@ -2596,6 +2702,7 @@ test_europa3fluidspe_check:
 ### TEST FOR 2D REGIONS ######################################################
 
 test_region2d:
+	touch test_region2d.diff
 	@echo "test_region2d_compile..." > test_region2d.diff
 	$(MAKE) test_region2d_compile
 	@echo "test_region2d_rundir..." > test_region2d.diff
@@ -2603,6 +2710,7 @@ test_region2d:
 	@echo "test_region2d_run..." > test_region2d.diff
 	$(MAKE) test_region2d_run
 	@echo "test_region2d_check..." > test_region2d.diff
+	ls -l test_region2d.diff
 	$(MAKE) test_region2d_check
 
 test_region2d_compile:
@@ -2644,6 +2752,7 @@ test_region2d_check:
 ### TEST FOR FIVEMOMENT ###
 
 test_fivemoment_alfven:
+	touch test_fivemoment_alfven.diff
 	@echo "test_fivemoment_alfven_compile..." > test_fivemoment_alfven.diff
 	$(MAKE) test_fivemoment_alfven_compile
 	@echo "test_fivemoment_alfven_rundir..." > test_fivemoment_alfven.diff
@@ -2651,6 +2760,7 @@ test_fivemoment_alfven:
 	@echo "test_fivemoment_alfven_run..." > test_fivemoment_alfven.diff
 	$(MAKE) test_fivemoment_alfven_run
 	@echo "test_fivemoment_alfven_check..." > test_fivemoment_alfven.diff
+	ls -l test_fivemoment_alfven.diff
 	$(MAKE) test_fivemoment_alfven_check
 
 test_fivemoment_alfven_compile:
@@ -2674,6 +2784,7 @@ test_fivemoment_alfven_check:
 	ls -l test_fivemoment_alfven.diff
 
 test_fivemoment_shock:
+	touch test_fivemoment_shock.diff
 	@echo "test_fivemoment_shock_compile..." > test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_compile
 	@echo "test_fivemoment_shock_rundir..." > test_fivemoment_shock.diff
@@ -2681,6 +2792,7 @@ test_fivemoment_shock:
 	@echo "test_fivemoment_shock_run..." > test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_run
 	@echo "test_fivemoment_shock_check..." > test_fivemoment_shock.diff
+	ls -l test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_check
 
 test_fivemoment_shock_compile:
@@ -2704,6 +2816,7 @@ test_fivemoment_shock_check:
 	ls -l test_fivemoment_shock.diff
 
 test_fivemoment_langmuir:
+	touch test_fivemoment_langmuir.diff
 	@echo "test_fivemoment_langmuir_compile..." > test_fivemoment_langmuir.diff
 	$(MAKE) test_fivemoment_langmuir_compile
 	@echo "test_fivemoment_langmuir_rundir..." > test_fivemoment_langmuir.diff
@@ -2711,6 +2824,7 @@ test_fivemoment_langmuir:
 	@echo "test_fivemoment_langmuir_run..." > test_fivemoment_langmuir.diff
 	$(MAKE) test_fivemoment_langmuir_run
 	@echo "test_fivemoment_langmuir_check..." > test_fivemoment_langmuir.diff
+	ls -l test_fivemoment_langmuir.diff
 	$(MAKE) test_fivemoment_langmuir_check
 
 test_fivemoment_langmuir_compile:
@@ -2736,6 +2850,7 @@ test_fivemoment_langmuir_check:
 ### TEST FOR L1 to BC PROPAGATION ############################################
 
 test_L1toBC:
+	touch test_L1toBC.diff
 	@echo "test_L1toBC_compile..." > test_L1toBC.diff
 	$(MAKE) test_L1toBC_compile
 	@echo "test_L1toBC_rundir..." > test_L1toBC.diff
@@ -2743,6 +2858,7 @@ test_L1toBC:
 	@echo "test_L1toBC_run..." > test_L1toBC.diff
 	$(MAKE) test_L1toBC_run
 	@echo "test_L1toBC_check..." > test_L1toBC.diff
+	ls -l test_L1toBC.diff
 	$(MAKE) test_L1toBC_check
 
 test_L1toBC_compile:
