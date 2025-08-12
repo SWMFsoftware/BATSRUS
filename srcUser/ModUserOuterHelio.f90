@@ -2724,6 +2724,8 @@ contains
           ! Region 3: only make Pu3 in region before TS
           if(Ne3_ == iFluidProduced_C(i,j,k))then
              ! in Pop III region
+             ! a source gamma*pe/ne*qphoto seems to be missing in
+             ! electron pressure equation. Probably, need to be removed from SW
 	     SourcePh_V(SWHRho_)    = I0xpPh_I(Ne3_)
              SourcePh_V(SWHRhoUx_)  = JxpUxPh_I(Ne3_)
              SourcePh_V(SWHRhoUy_)  = JxpUyPh_I(Ne3_)
