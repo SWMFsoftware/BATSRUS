@@ -8,7 +8,8 @@ module ModReverseField
 
   use BATL_lib, ONLY: test_start, test_stop, nDim, x_, y_, &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
-       Used_GB, Xyz_DGB
+       Xyz_DGB
+  use BATL_tree,   ONLY: Used_GB
   use ModNumConst, ONLY: cDegToRad
   use ModAdvance, ONLY: State_VGB, StateOld_VGB
   use ModB0, ONLY: UseB0, B0_DGB

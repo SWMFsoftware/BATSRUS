@@ -5,7 +5,8 @@ module ModGeometry
 
   use BATL_lib, ONLY: &
        test_start, test_stop,&
-       iProc, Xyz_DGB, CellSize_DB, Used_GB
+       iProc, Xyz_DGB, CellSize_DB
+  use BATL_tree, ONLY: Used_GB
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize

@@ -5,7 +5,8 @@ module ModUpdateState
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
+       iVarTest, iComm, CellVolume_GB, Xyz_DGB
+  use BATL_tree,ONLY: Used_GB
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: UseB0, B0_DGB

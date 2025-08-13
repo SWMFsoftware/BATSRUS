@@ -8,9 +8,10 @@ module ModFaceFlux
        test_start, test_stop, &
        iTest, jTest, kTest, iDimTest, iSideTest, iProc, &
        x_, y_, z_, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim, &
-       Used_GB, IsCartesianGrid, IsCartesian, IsRzGeometry, &
+       IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
        UseHighFDGeometry, correct_face_value
+  use BATL_tree,ONLY: Used_GB
   use ModBatsrusUtility, ONLY: stop_mpi, error_report
   use ModMain, ONLY: UseB, UseB0, cLimit,  UseRadDiffusion, UseHeatConduction
   use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &

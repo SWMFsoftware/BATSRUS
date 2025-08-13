@@ -13,8 +13,8 @@ module ModTimewarp
   use ModPhysics, ONLY: Io2No_V, UnitU_
   use ModPhysicalFLux, ONLY: Normal_D, get_physical_flux
   use ModBatsrusUtility, ONLY: stop_mpi, error_report
-  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK, test_start, test_stop
-
+  use BATL_lib, ONLY: Xyz_DGB, nI, nJ, nK, test_start, test_stop
+  use BATL_tree,ONLY: Used_GB
   implicit none
 
   SAVE
