@@ -193,7 +193,6 @@ contains
 
     ! Set a single element array when generalized radial coordinate
     ! is not used, but still should be set.
-
     !--------------------------------------------------------------------------
     if(allocated(LogRGen_I)) deallocate(LogRGen_I)
     allocate(LogRGen_I(1))
@@ -201,7 +200,6 @@ contains
 
   end subroutine set_gen_radial_grid
   !============================================================================
-
   subroutine set_block_jacobian_cell(iBlock)
 
     use BATL_lib, ONLY: nDim
@@ -245,7 +243,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_jacobian_cell
   !============================================================================
-
   subroutine count_true_cells
 
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, iComm, Used_GB
@@ -268,6 +265,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine count_true_cells
   !============================================================================
-
 end module ModGeometry
 !==============================================================================
