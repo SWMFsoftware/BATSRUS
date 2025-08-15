@@ -15,6 +15,8 @@ contains
   !============================================================================
   subroutine GM_get_ua_region(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
+    ! import temperature, neutral densities and ionization rates
+
     ! This function will be called 3 times :
     !
     ! 1) Count grid cells to be overwritten by UA
@@ -29,7 +31,6 @@ contains
     use ModMain,      ONLY: UaState_VCB
     use ModGeometry,  ONLY: r_GB
     use ModPhysics,   ONLY: No2Si_V, UnitX_, rBody
-    !!! import temp, neutral densities and ionization rates
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -64,7 +65,7 @@ contains
           if(DoCountOnly) CYCLE
 
           if(present(Data_VI))then
-             ! Put Data_VI obtained from UA to source terms of GM
+             ! Put Data_VI obtained from UA into source terms of GM
              ! Temperature, N_CO2, N_O, EUVIonRate_CO2->CO2+, EUVIonRate_O->O+
              UaState_VCB(:5,i,j,k,iBlock) = Data_VI(:5,iPoint)
           else
@@ -81,7 +82,8 @@ contains
   !============================================================================
   subroutine GM_put_from_ua(NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-    use BATL_size, only: nDim
+    use BATL_size, ONLY: nDim
+    use ModUtilities, ONLY: CON_set_do_test
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -91,9 +93,12 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)       ! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_put_from_ua'
     !--------------------------------------------------------------------------
-     if(.not. present(Data_VI))then
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(.not. present(Data_VI))then
         nPoint = 0
         ! get nPoint
         call GM_get_ua_region(NameVar, nVar, nPoint, Pos_DI)
@@ -101,10 +106,19 @@ contains
         if(allocated(Pos_DI)) deallocate(Pos_DI)
         allocate(Pos_DI(nDim,nPoint))
 
+        if(DoTestMe)write(*,*) NameSub, ': nPoint, shape(Pos_DI)=', &
+             nPoint, shape(Pos_DI)
+
         ! get Pos_DI
         call GM_get_ua_region(NameVar, nVar, nPoint, Pos_DI)
 
         RETURN
+     end if
+
+     if(DoTestMe)then
+        write(*,*) NameSub,' nVar, nPoint =', nVar, nPoint
+        write(*,*) NameSub,' shape(Data_VI)=', shape(Data_VI)
+        write(*,*) NameSub,' call GM_get_ua_region'
      end if
 
      ! set variables needed to construct source terms
