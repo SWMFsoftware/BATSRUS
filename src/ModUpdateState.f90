@@ -1240,7 +1240,7 @@ contains
   end subroutine update_te0
   !============================================================================
   subroutine update_check
-    
+
     ! Check updated values for allowed change in density or pressure
 
     use ModMain, ONLY: IsTimeAccurate, Dt, DtFixed, DtFixedOrig, &
@@ -1737,7 +1737,6 @@ contains
     use ModVarIndexes, ONLY: nFluid
     use BATL_lib,  ONLY: Used_GB
 
-    
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
     real:: InvGyroFreq, PparOverLimit, Deltapf, Deltapm

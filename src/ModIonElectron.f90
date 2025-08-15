@@ -288,7 +288,7 @@ contains
     use ModCellGradient,   ONLY: calc_gradient
     use ModCurrent,        ONLY: get_current
     use BATL_lib,          ONLY: Used_GB
-    
+
     real,    intent(inout) :: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in)    :: iMin, iMax, jMin, jMax, kMin, kMax
     integer, intent(in)    :: iBlock

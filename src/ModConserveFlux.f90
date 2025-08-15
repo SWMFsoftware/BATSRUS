@@ -534,7 +534,7 @@ contains
   !============================================================================
   subroutine apply_bn_face_k(kFaceIn, kFaceOut, iBlock)
     use BATL_lib,  ONLY: Used_GB
-    
+
     integer, intent(in):: kFaceIn, kFaceOut, iBlock
 
     integer:: i, j

@@ -357,7 +357,6 @@ contains
     use ModGeometry, ONLY : IsBody_B
     use BATL_lib,  ONLY: Used_GB
 
-
     integer, intent(in) :: iBlock
 
     logical:: DoTest
@@ -448,7 +447,6 @@ contains
     use ModSize
     use ModGeometry, ONLY: IsBody_B
     use BATL_lib,  ONLY: Used_GB
-
 
     integer, intent(in) :: iBlock
 

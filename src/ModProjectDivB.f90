@@ -1485,7 +1485,7 @@ contains
   !============================================================================
   subroutine add2_times_block(a_GB, b_GB, c, d_GB)
     use BATL_lib,  ONLY: Used_GB
-    
+
     ! a_GB = b_GB + c*d_GB for all used blocks, where c is a scalar
 
     ! Arguments
