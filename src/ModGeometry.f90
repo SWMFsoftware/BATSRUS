@@ -5,7 +5,7 @@ module ModGeometry
 
   use BATL_lib, ONLY: &
        test_start, test_stop,&
-       iProc, Xyz_DGB, CellSize_DB, Used_GB
+       iProc, Xyz_DGB, CellSize_DB
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize
@@ -89,14 +89,12 @@ module ModGeometry
 contains
   !============================================================================
   subroutine init_mod_geometry
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_geometry'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(allocated(Used_GB)) RETURN
+    if(allocated(IsBody_B)) RETURN
 
-    allocate(Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(IsBody_B(MaxBlock))
     allocate(IsNoBody_B(MaxBlock))
     allocate(IsBoundary_B(MaxBlock))
@@ -124,7 +122,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(allocated(Used_GB))    deallocate(Used_GB)
     if(allocated(IsBody_B))     deallocate(IsBody_B)
     if(allocated(IsNoBody_B))   deallocate(IsNoBody_B)
     if(allocated(IsBoundary_B)) deallocate(IsBoundary_B)
@@ -251,7 +248,7 @@ contains
 
   subroutine count_true_cells
 
-    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, iComm
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, iComm, Used_GB
     use ModMpi
 
     integer :: iBlock, iError

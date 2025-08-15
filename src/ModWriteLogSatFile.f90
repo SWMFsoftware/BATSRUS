@@ -1959,10 +1959,10 @@ contains
     ! for the processor only.
 
     use ModAdvance,   ONLY: nVar, State_VGB, P_
-    use ModGeometry,  ONLY: IsNoBody_B, Used_GB
+    use ModGeometry,  ONLY: IsNoBody_B
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
          nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
-         IsCartesian, CellVolume_B, CellVolume_GB
+         IsCartesian, CellVolume_B, CellVolume_GB, Used_GB
 
     ! Arguments
     real, intent(out):: Sum_V(nVar)

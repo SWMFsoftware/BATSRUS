@@ -1864,7 +1864,8 @@ contains
 
     use ModMain
     use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
-    use ModGeometry, ONLY: r_GB, Used_GB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib,  ONLY: Used_GB
 
     integer :: iBlock, iBlockImpl
     integer :: i, j, k

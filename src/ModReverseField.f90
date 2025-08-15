@@ -8,7 +8,7 @@ module ModReverseField
 
   use BATL_lib, ONLY: test_start, test_stop, nDim, x_, y_, &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
-       Used_GB, Xyz_DGB
+       Xyz_DGB
   use ModNumConst, ONLY: cDegToRad
   use ModAdvance, ONLY: State_VGB, StateOld_VGB
   use ModB0, ONLY: UseB0, B0_DGB
@@ -93,7 +93,7 @@ contains
   end subroutine set_sign_field
   !============================================================================
   logical function do_reverse_block(iBlock)
-
+    use BATL_lib, ONLY: Used_GB
     ! Return true is magnetic field in block iBlock should be reversed
 
     integer, intent(in):: iBlock

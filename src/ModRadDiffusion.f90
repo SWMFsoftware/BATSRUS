@@ -379,7 +379,7 @@ contains
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
-    use ModGeometry,   ONLY: Used_GB
+    use BATL_lib,      ONLY: Used_GB
     use ModVarIndexes, ONLY: Energy_
     use ModUserInterface ! user_material_properties
 
@@ -1029,7 +1029,7 @@ contains
     use ModMain,         ONLY: nI, nJ, nK
     use ModParallel,     ONLY: DiLevel_EB, Unset_
     use ModNumConst,     ONLY: i_DD
-    use ModGeometry,     ONLY: Used_GB
+    use BATL_lib,        ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1428,7 +1428,7 @@ contains
     use ModMain,     ONLY: nI, nJ, nK, TypeCellBc_I
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvClight
-    use ModGeometry, ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     integer, intent(in) :: nVarImpl
@@ -1684,7 +1684,7 @@ contains
     use ModPhysics,    ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
          No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, InvGammaElectronMinus1
-    use ModGeometry,   ONLY: Used_GB
+    use BATL_lib,      ONLY: Used_GB
     use ModUserInterface ! user_material_properties
 
     integer, intent(in):: iBlock, iBlockSemi

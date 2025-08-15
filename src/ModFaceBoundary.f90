@@ -122,7 +122,7 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
-    use ModGeometry, ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
     integer, intent(in) :: iBlock

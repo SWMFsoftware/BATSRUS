@@ -18,7 +18,6 @@ module ModMultiIon
 
   use ModMultiFluid
   use ModMain, ONLY: UseUserSourceImpl
-  use ModGeometry, ONLY: Used_GB
 
   use ModUserInterface ! user_calc_sources_impl, user_init_point_implicit
 
@@ -107,7 +106,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK, x_, y_
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
     use ModPhysics,  ONLY: Gamma
-    use BATL_lib,    ONLY: Xyz_DGB
+    use BATL_lib,    ONLY: Xyz_DGB, Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -160,7 +159,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC, Efield_DGB, UseTotalIonEnergy
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2
-    use BATL_lib,   ONLY:
+    use BATL_lib,   ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -282,6 +281,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModNumConst,       ONLY: iLeviCivita_III
     use ModSize,           ONLY: MaxDim
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 

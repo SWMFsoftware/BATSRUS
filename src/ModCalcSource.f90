@@ -140,7 +140,7 @@ contains
          UseDivBsource, UseRadDiffusion, UseUserSourceExpl, UseUserSourceImpl
     use ModAdvance
     use ModConservative, ONLY: UseNonConservative
-    use ModGeometry, ONLY: r_GB, rBody2_GB, Used_GB
+    use ModGeometry, ONLY: r_GB, rBody2_GB
     use ModPhysics
     use ModCoordTransform
     use ModElectricField, ONLY: get_efield_in_comoving_frame
@@ -170,7 +170,7 @@ contains
          UseForceFreeB0, rMaxForceFreeB0
     use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_,&
-         correct_face_value
+         correct_face_value, Used_GB
     use ModViscosity, ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source

@@ -174,10 +174,10 @@ contains
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use ModParallel, ONLY : Unset_, DiLevel_EB
-    use ModGeometry, ONLY : Used_GB, IsBody_B
+    use ModGeometry, ONLY : IsBody_B
     use ModPhysics, ONLY: SolarWindUx, SolarWindUy, SolarWindUz, &
          SolarWindBx, SolarWindBy, SolarWindBz
-    use BATL_lib, ONLY: CellFace_DB
+    use BATL_lib, ONLY: CellFace_DB, Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -354,7 +354,9 @@ contains
     use ModSize
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : Used_GB,IsBody_B
+    use ModGeometry, ONLY : IsBody_B
+    use BATL_lib,  ONLY: Used_GB
+
 
     integer, intent(in) :: iBlock
 
@@ -444,7 +446,9 @@ contains
     ! This may have to be generalized later
 
     use ModSize
-    use ModGeometry, ONLY: Used_GB,IsBody_B
+    use ModGeometry, ONLY: IsBody_B
+    use BATL_lib,  ONLY: Used_GB
+
 
     integer, intent(in) :: iBlock
 
@@ -482,10 +486,10 @@ contains
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : IsBody_B, Used_GB
+    use ModGeometry, ONLY : IsBody_B
     use ModIO, ONLY : IsRestart
     use ModPhysics, ONLY : SolarWindBx,SolarWindBy,SolarWindBz
-    use BATL_lib, ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB, Used_GB
 
     integer, intent(in) :: iBlock
 

@@ -256,7 +256,7 @@ contains
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
          UseLowOrderRegion, IsLowOrderOnly_B
-    use ModGeometry,   ONLY: IsNoBody_B, Used_GB, IsBoundary_B
+    use ModGeometry,   ONLY: IsNoBody_B, IsBoundary_B
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModPartSteady, ONLY: UsePartSteady
     use BATL_lib,      ONLY: Unused_BP
@@ -265,7 +265,8 @@ contains
     use ModPIC, ONLY: UsePic, pic_find_active_node, IsActivePicNode_A, &
          DoBalanceActivePicBlock, pic_find_node, IsPicNode_A, DoBalancePicBlock
     use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, &
-         Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell
+         Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell, &
+         Used_GB
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
     use ModUserInterface ! user_action, i_type_block_user

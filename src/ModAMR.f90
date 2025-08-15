@@ -238,7 +238,7 @@ contains
     use ModMain, ONLY : nIJK, MaxBlock, nBlock, nBlockMax, nBlockALL,&
          UseB, DtMax_B, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
-    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, Used_GB, nUsedCell, &
+    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, nUsedCell, &
          count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, SkippedBlock_
@@ -249,7 +249,7 @@ contains
     use ModMpi
     use ModB0, ONLY : B0_DGB
 
-    use BATL_lib,         ONLY: regrid_batl, &
+    use BATL_lib,         ONLY: regrid_batl, Used_GB,&
          iProc, nNode, iTree_IA, nLevelMin, nLevelMax, &
          IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_
 

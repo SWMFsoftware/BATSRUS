@@ -29,7 +29,7 @@ module ModElectricField
 
   use ModAdvance,      ONLY: Efield_DGB
   use ModMain,         ONLY: nStep, UseB
-  use ModGeometry,     ONLY: IsBoundary_B, Used_GB
+  use ModGeometry,     ONLY: IsBoundary_B
   use ModCellBoundary, ONLY: set_cell_boundary, FloatBC_, GradPotBC_
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
@@ -145,7 +145,7 @@ contains
     use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
     use ModCurrent,        ONLY: get_current
-    use BATL_lib,          ONLY: x_, y_, z_
+    use BATL_lib,          ONLY: x_, y_, z_,Used_GB
 
     integer, intent(in):: iBlock
     logical, optional, intent(in) :: DoHallCurrentIn
@@ -223,7 +223,7 @@ contains
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: iRhoIon_I, ChargePerMass_I, nIonFluid
-    use BATL_lib, ONLY: CellVolume_GB
+    use BATL_lib, ONLY: CellVolume_GB, Used_GB
     use ModVarIndexes, ONLY: Bx_, Bz_, nVar
 
     integer, intent(in):: iBlock
@@ -316,7 +316,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
-    use BATL_lib,          ONLY: x_, y_, z_
+    use BATL_lib,          ONLY: x_, y_, z_, Used_GB
 
     integer, intent(in):: iBlock
 
@@ -454,7 +454,7 @@ contains
   end subroutine calc_div_e
   !============================================================================
   subroutine calc_potential
-
+    use BATL_lib, ONLY: Used_GB
     real, allocatable:: Rhs_I(:), Potential_I(:)
 
     integer:: iBlock, i, j, k, n
@@ -556,7 +556,7 @@ contains
     use ModGeometry,   ONLY: IsBody_B, r_GB
     use ModPhysics,    ONLY: rBody
     use ModIeCoupling, ONLY: get_ie_potential
-    use BATL_lib,      ONLY: Xyz_DGB
+    use BATL_lib,      ONLY: Xyz_DGB, Used_GB
 
     ! Fill in ghost cells and boundary cells for the potential
 
@@ -607,7 +607,7 @@ contains
   !============================================================================
 
   subroutine matvec_inductive_e(x_I, y_I, MaxN)
-
+    use BATL_lib, ONLY: Used_GB
     ! Calculate y = Laplace(x)
 
     integer, intent(in):: MaxN

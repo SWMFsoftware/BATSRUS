@@ -8,7 +8,7 @@ module ModFaceFlux
        test_start, test_stop, &
        iTest, jTest, kTest, iDimTest, iSideTest, iProc, &
        x_, y_, z_, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim, &
-       Used_GB, IsCartesianGrid, IsCartesian, IsRzGeometry, &
+       IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
        UseHighFDGeometry, correct_face_value
   use ModBatsrusUtility, ONLY: stop_mpi, error_report
@@ -565,7 +565,7 @@ contains
     subroutine get_flux_x(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IX
-
+      use BATL_lib,   ONLY: Used_GB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       integer:: iFlux
@@ -671,7 +671,7 @@ contains
     subroutine get_flux_y(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IY
-
+      use BATL_lib,   ONLY: Used_GB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iFlux
       integer, parameter:: iGang = 1
@@ -774,7 +774,7 @@ contains
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IZ
-
+      use BATL_lib,   ONLY: Used_GB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iFlux
       integer, parameter:: iGang = 1
@@ -883,7 +883,7 @@ contains
       use ModAdvance, ONLY: State_VGB
       use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUz, iP
       use ModEnergy, ONLY: energy_i
-
+      use BATL_lib,  ONLY: Used_GB
       real, intent(inout):: Flux_V(nFlux)
 
       real :: Coef
@@ -1037,7 +1037,7 @@ contains
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_GB
     use ModSaMhd, ONLY: UseSaMhd, rMinSaMhd
-
+    use BATL_lib, ONLY: Used_GB
     real :: r, XyzFace_D(3)
 
     ! Modify solution depending on the face center radial distance

@@ -526,7 +526,9 @@ contains
     use CON_ray_trace, ONLY: ray_init
     use ModMain
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
-    use ModGeometry, ONLY: r_GB, Used_GB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib,    ONLY: Used_GB
+
 
     ! Indices corresponding to the starting point and directon of traces
     integer :: i, j, k, iBlock, iRay
@@ -1769,7 +1771,7 @@ contains
 
       !------------------------------------------------------------------------
       if(DipoleStrength==0)call get_planet(DipoleStrengthOut=DipoleStrength)
-
+      !write(*,*) 'a',XyzCur_D
       call map_planet_field(tSimulation, XyzCur_D, TypeCoordSystem//' NORM',&
            rIonosphere, x_D, iHemisphere)
 

@@ -128,7 +128,8 @@ contains
          UseDtLimit, DtLimit, rLocalTimeStep, UseUserTimeStep
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, DoUpdate_V
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
+    use ModGeometry, ONLY: IsNoBody_B, rMin_B, r_GB
+    use BATL_lib,  ONLY: Used_GB
     use ModCoronalHeating, ONLY: get_cell_heating
     use ModTurbulence, ONLY: UseAlfvenWaveDissipation
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
@@ -338,14 +339,14 @@ contains
     use ModAdvance,  ONLY: DtMax_CB, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
     use ModB0,       ONLY: B0_DGB
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B
+    use ModGeometry, ONLY: IsNoBody_B
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
     use ModNumConst
     use ModMpi
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB, &
-         MaxNode, nNode, iNode_B, iTimeLevel_A, nTimeLevel
+         MaxNode, nNode, iNode_B, iTimeLevel_A, nTimeLevel, Used_GB
 
     real, intent(in):: TimeSimulationLimit ! Simulation time not to be exceeded
 
@@ -561,7 +562,7 @@ contains
     use ModAdvance,  ONLY: Rho_, p_, &
          State_VGB, StateOld_VGB, DtMax_CB
     use ModPhysics,  ONLY: No2Si_V, UnitT_
-    use ModGeometry, ONLY: Used_GB
+    use BATL_lib,    ONLY: Used_GB
     use ModMpi
 
     integer:: iBlock, i, j, k, iError

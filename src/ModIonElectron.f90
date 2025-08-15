@@ -10,7 +10,6 @@ module ModIonElectron
   use ModMain, ONLY:  UseUserSourceImpl
   use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
-  use ModGeometry, ONLY: Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
   use ModMultiFluid, ONLY: nIonFluid, nTrueIon, ElectronFirst_, &
        iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,   &
@@ -90,7 +89,7 @@ contains
 
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
-
+    use BATL_lib, ONLY: Used_GB
     integer, intent(in) :: iBlock
 
     real:: State_V(nVar), b_D(3)
@@ -288,7 +287,8 @@ contains
     use ModB0,         ONLY: UseB0, B0_DGB
     use ModCellGradient,   ONLY: calc_gradient
     use ModCurrent,        ONLY: get_current
-
+    use BATL_lib,          ONLY: Used_GB
+    
     real,    intent(inout) :: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in)    :: iMin, iMax, jMin, jMax, kMin, kMax
     integer, intent(in)    :: iBlock

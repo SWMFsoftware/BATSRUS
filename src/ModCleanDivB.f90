@@ -30,13 +30,13 @@ contains
     use ModAdvance, ONLY: nVar,State_VGB, Bx_, By_, Bz_,Tmp1_GB,Tmp2_GB,&
          Residual_GB=>Tmp1_GB,Dir_GB=>Tmp2_GB
     use ModAdvance, ONLY:tmp3_blk=>divB1_GB
-    use ModGeometry, ONLY: IsNoBody_B, IsBody_B, Used_GB
+    use ModGeometry, ONLY: IsNoBody_B, IsBody_B
     use ModParallel, ONLY : Unset_, DiLevel_EB
     use ModMpi
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nBlock, MaxBlock, x_, y_, z_, k0_, j0_, nJp1_, nKp1_, &
          Unused_B, CellFace_DB, CellVolume_GB, message_pass_cell, &
-         iProc, nProc, iComm
+         iProc, nProc, iComm, Used_GB
 
     ! Loop variables
     integer::i,j,k,iBlock
@@ -513,9 +513,9 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_
-    use ModGeometry, ONLY: IsBody_B, Used_GB
+    use ModGeometry, ONLY: IsBody_B
     use ModParallel, ONLY: DiLevel_EB, Unset_
-    use BATL_lib, ONLY: CellFace_DB
+    use BATL_lib, ONLY: CellFace_DB, Used_GB
 
     integer,intent(in) :: iBlock
     real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(in)::&

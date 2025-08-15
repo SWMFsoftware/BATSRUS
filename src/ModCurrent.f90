@@ -227,9 +227,9 @@ contains
     ! otherwise use second order scheme when possible.
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B, r_GB
+    use ModGeometry, ONLY: IsNoBody_B, r_GB
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
-         nI, nJ, nK, x_, y_, z_
+         nI, nJ, nK, x_, y_, z_, Used_GB
     use ModParallel, ONLY: DiLevel_EB
     use ModCoordTransform, ONLY: inverse_matrix
 #ifndef _OPENACC

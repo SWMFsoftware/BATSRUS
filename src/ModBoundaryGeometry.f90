@@ -118,12 +118,12 @@ contains
          xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_, solidBc_
     use ModGeometry, ONLY: &
          r_GB, rBody2_GB, rMinBody2_B, IsBody_B, &
-         IsBoundary_B, IsNoBody_B, Used_GB,&
+         IsBoundary_B, IsNoBody_B, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
     use BATL_lib, ONLY: &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
-         nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, &
+         nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, Used_GB,&
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
     use ModAdvance, ONLY: DtMax_CB
     use ModUserInterface ! user_set_boundary_cells
@@ -274,8 +274,8 @@ contains
 
     use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
              nIteration, nOrderProlong, UseOpenACC
-    use ModGeometry, ONLY: Used_GB, IsBody_B
-    use BATL_lib, ONLY: message_pass_cell
+    use ModGeometry, ONLY: IsBody_B
+    use BATL_lib, ONLY: message_pass_cell, Used_GB
 
     integer:: iBlock
     integer:: iGridHere = -1, iDecompositionHere = -1

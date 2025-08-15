@@ -430,8 +430,8 @@ contains
     ! Write info if not.
 
     use ModVarIndexes, ONLY: nVar, NameVar_V,  DefaultState_V
-    use ModGeometry, ONLY: r_GB, Used_GB
-    use BATL_lib, ONLY: nI, nJ, nK, Unused_B, Xyz_DGB, iProc
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: nI, nJ, nK, Unused_B, Xyz_DGB, iProc, Used_GB
     use ModBatsrusUtility, ONLY: stop_mpi
 
     integer, intent(in) :: iBlock

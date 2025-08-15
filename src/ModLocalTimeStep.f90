@@ -318,10 +318,10 @@ contains
 
   subroutine set_local_time_step(TimeSimulationLimit)
 
-    use ModGeometry,   ONLY: Used_GB, IsNoBody_B, CellSize1Min, CellSize1Max
+    use ModGeometry,   ONLY: IsNoBody_B, CellSize1Min, CellSize1Max
     use ModMain,       ONLY: tSimulation, Cfl, DtMax_B
     use ModAdvance,    ONLY: DtMax_CB
-    use BATL_lib,      ONLY: CellSize_DB, Unused_B
+    use BATL_lib,      ONLY: CellSize_DB, Unused_B, Used_GB
     use ModPhysics,    ONLY: No2Si_V, UnitT_, Si2No_V
     use ModMpi
 

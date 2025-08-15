@@ -167,14 +167,14 @@ contains
     ! the unsigned flux) total heating
 
     use ModAdvance,     ONLY: State_VGB, Bz_
-    use ModGeometry,    ONLY: IsNoBody_B, Used_GB, TypeGeometry
+    use ModGeometry,    ONLY: IsNoBody_B, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
     use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, tSimulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi, cTwoPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
          UnitEnergyDens_, rBody
-    use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB, nProc, iComm
+    use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB, nProc, iComm, Used_GB
 
     integer :: i, j, k, iBlock
     integer :: iTheta, iPhi, iError

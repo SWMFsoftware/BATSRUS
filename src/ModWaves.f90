@@ -310,11 +310,10 @@ contains
   subroutine update_wave_group_advection(iBlock)
 
     use ModAdvance,           ONLY: State_VGB, DtMax_CB
-    use ModGeometry,          ONLY: Used_GB
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain,              ONLY: CFL
-    use BATL_lib,             ONLY: Xyz_DGB
+    use BATL_lib,             ONLY: Xyz_DGB, Used_GB
 
     integer,intent(in)    ::iBlock
 
