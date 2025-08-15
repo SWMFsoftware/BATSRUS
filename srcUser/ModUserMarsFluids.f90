@@ -1481,7 +1481,8 @@ contains
 
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY: Xyz_DGB, r_GB, Used_GB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: Xyz_DGB, Used_GB
     use ModPhysics
     use ModNumConst
 

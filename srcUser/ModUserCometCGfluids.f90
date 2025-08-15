@@ -3004,7 +3004,8 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: LowDensityRatio, &
          Si2No_V, No2Si_V, UnitN_, UnitTemperature_, UnitX_, UnitU_
-    use ModGeometry, ONLY: Used_GB, r_GB, xyz_DGB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: Used_GB, Xyz_DGB
 
     integer,intent(in) :: iBlock
 
@@ -3976,10 +3977,13 @@ contains
     ! is fully developed
 
     use ModMain, ONLY: Unused_B
-    use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, &
-         LowDensityRatio, ElectronPressureRatio, SolarWindBx, SolarWindBy, SolarWindBz
-    use ModGeometry, ONLY: Used_GB, r_GB, Xyz_DGB
+    use ModAdvance, ONLY: P_, Pe_, State_VGB
+    use ModPhysics, ONLY: &
+         SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, &
+         LowDensityRatio, ElectronPressureRatio, SolarWindBx, SolarWindBy, &
+         SolarWindBz
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: Used_GB, Xyz_DGB
 
     integer :: i, j, k, iBlock
     real    :: RhoSw, alpha, beta

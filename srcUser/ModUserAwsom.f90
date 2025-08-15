@@ -329,16 +329,17 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModB0,         ONLY: B0_DGB
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use ModB0, ONLY: B0_DGB
     use ModTurbulence, ONLY: UseTurbulentCascade, LperpTimesSqrtB
-    use ModGeometry,   ONLY: Xyz_DGB, r_GB
+    use ModGeometry, ONLY: r_GB
     use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: rBody, GBody, AverageIonCharge
+    use ModPhysics, ONLY: rBody, GBody, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, SignB_, Lperp_
-    use ModSaMhd,       ONLY: UseSaMhd
+    use ModSaMhd, ONLY: UseSaMhd
     use ModWaves, ONLY: UseAlfvenWaves
+    use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
 
@@ -498,16 +499,16 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModAdvance,    ONLY: State_VGB, Tmp1_GB, UseElectronPressure
-    use ModB0,         ONLY: B0_DGB
-    use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
-    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, &
+    use ModAdvance, ONLY: State_VGB, Tmp1_GB, UseElectronPressure
+    use ModB0, ONLY: B0_DGB
+    use ModIO, ONLY: write_myname
+    use ModMain, ONLY: UseB0
+    use ModPhysics, ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, &
          UnitX_, UnitT_, GammaWave
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_, WaveLast_, WaveFirst_, &
          Rho_, RhoUx_, RhoUz_
-    use BATL_lib,      ONLY: integrate_grid, Xyz_DGB
-    use ModGeometry,   ONLY: r_GB
+    use BATL_lib, ONLY: integrate_grid, Unused_B, nBlock, x_, y_, z_, Xyz_DGB
+    use ModGeometry, ONLY: r_GB
     use ModWriteLogSatFile, ONLY: calc_sphere
     use ModCoordTransform, ONLY: cross_product
     use ModCurrent, ONLY: get_current
@@ -712,11 +713,10 @@ contains
     use ModB0, ONLY: set_b0_face
     use ModMultiFluid, ONLY: nIonFluid
     use BATL_lib, ONLY: nDim, nG, MaxDim, FaceNormal_DDFB, CellVolume_GB, &
-         Xyz_DGB
+         Xyz_DGB, Used_GB
     use ModHeatConduction, ONLY: get_heat_flux
     use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass, cTwoPi, &
          cElectronCharge, cEps
-    use ModGeometry, ONLY: Used_GB
     use ModCellGradient, ONLY: calc_divergence
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -999,7 +999,7 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain, ONLY: EEE_get_state_bc
     use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModGeometry, ONLY: TypeGeometry, Xyz_DGB, r_GB
+    use ModGeometry, ONLY: r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
@@ -1011,7 +1011,8 @@ contains
          Si2No_V, rBody, GBody, UnitU_, InvGammaMinus1
     use ModMain, ONLY: nStep, nIteration, tSimulation, IsTimeAccurate
     use ModB0, ONLY: B0_DGB
-    use BATL_lib, ONLY: CellSize_DB, Phi_, Theta_, x_, y_
+    use BATL_lib, ONLY: CellSize_DB, Phi_, Theta_, x_, y_, Xyz_DGB, &
+         TypeGeometry
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst, ONLY: cPi
     use ModIO, ONLY : IsRestart
@@ -1563,8 +1564,7 @@ contains
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
-    use ModGeometry,  ONLY: Xyz_DGB
-    use BATL_lib,     ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, &
+    use BATL_lib,  ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, Xyz_DGB, &
          iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
     integer :: i, j, k, iBlock, iError

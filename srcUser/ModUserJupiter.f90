@@ -43,14 +43,11 @@ module ModUser
 
 contains
   !============================================================================
-  ! =========================================================================
   subroutine user_read_inputs
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
-    ! ---------------------------------------------------------------------
-
     !--------------------------------------------------------------------------
     if (iProc == 0 .and. lVerbose > 0) then
        call write_prefix
@@ -109,15 +106,12 @@ contains
 
   end subroutine user_read_inputs
   !============================================================================
-
-  ! =========================================================================
   subroutine user_action(NameAction)
     ! This routine gets called multiple times during the run and provides
     ! and opportunity to do something.
     ! NameAction identifies where the call is from.
 
     character(len=*), intent(in):: NameAction
-    ! --------------------------------------------------------------------
     character(len=*), parameter:: NameSub = 'user_action'
     !--------------------------------------------------------------------------
     select case(NameAction)
@@ -141,8 +135,6 @@ contains
 
   end subroutine user_action
   !============================================================================
-
-  ! =========================================================================
   subroutine user_calc_sources_expl(iBlock)
 
     use ModAdvance,     ONLY: Source_VC, State_VGB
@@ -165,7 +157,6 @@ contains
     real :: cxsource, nNeutral
     real :: Tfrac = 1.0  ! Ratio of electron-ion temperature
 
-    ! ---------------------------------------------------------------------
     character(len=*), parameter:: NameSub = 'user_calc_sources_expl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -307,8 +298,6 @@ contains
 
   end subroutine user_calc_sources_expl
   !============================================================================
-  ! =========================================================================
-
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -328,7 +317,6 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    ! ---------------------------------------------------------------------
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
     UsePlotVarBody = .true.
@@ -383,8 +371,6 @@ contains
 
   end subroutine user_set_plot_var
   !============================================================================
-  ! =========================================================================
-
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModAdvance,  ONLY: State_VGB
@@ -397,8 +383,6 @@ contains
     integer :: i, j, k, iBlock
 
     real :: userLogNo2Si
-    ! ---------------------------------------------------------------------
-
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -443,12 +427,10 @@ contains
 
   end subroutine user_get_log_var
   !============================================================================
-
   subroutine integrate_shell_volume(resultVolume, var, r1, r2)
 
-    use ModGeometry, ONLY: r_GB, IsNoBody_B, Used_GB
-    use ModMain,     ONLY: Unused_B
-    use BATL_lib,    ONLY: CellVolume_GB
+    use ModGeometry, ONLY: r_GB, IsNoBody_B
+    use BATL_lib, ONLY: CellVolume_GB, Used_GB, Unused_B
 
     real, intent(out) :: resultVolume
     real, intent(in) :: var(1:nI, 1:nJ, 1:nK, 1:nBlock)
@@ -456,7 +438,6 @@ contains
     real, intent(in) :: r2
 
     integer :: i, j, k, iBlock
-    ! -----------------------------------------------------------------
     !--------------------------------------------------------------------------
     resultVolume = 0.0
 
@@ -483,12 +464,6 @@ contains
     end do
   end subroutine integrate_shell_volume
   !============================================================================
-
-!  subroutine integrate_sphere_area_flux(vx, vy, vz, r, resultFlux)
-
-!  end subroutine integrate_sphere_area_flux
-  ! =========================================================================
-
   subroutine user_initial_perturbation
     use ModMain,        ONLY: nBlockMax, Unused_B
     use ModGeometry,    ONLY: r_GB, Xyz_DGB
@@ -501,7 +476,6 @@ contains
     integer :: i, j, k, iBlock
     real :: Hz, Rxy
     real :: uRot_D(3)
-    ! ---------------------------------------------------------------------
     character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
     if (IsRestart) RETURN
@@ -547,7 +521,6 @@ contains
 
   end subroutine user_initial_perturbation
   !============================================================================
-
   subroutine user_set_face_boundary(FBC)
 
     ! Apply user defined face boundary condition
@@ -631,6 +604,5 @@ contains
     end associate
   end subroutine user_set_face_boundary
   !============================================================================
-
 end module ModUser
 !==============================================================================

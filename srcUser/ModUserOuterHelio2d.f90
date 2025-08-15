@@ -2,11 +2,11 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!   used for MSWIM2D Outer Heliosphere model
-!     reference paper DOI: 10.3847/1538-4365/ac67eb
-
 module ModUser
 
+  ! used for MSWIM2D Outer Heliosphere model
+  ! reference paper DOI: 10.3847/1538-4365/ac67eb
+  
   use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock
   use BATL_lib, ONLY: test_start, test_stop, iTest, jTest, kTest, iProcTest, &
        iBlockTest, iVarTest, iProc, IsCylindrical
