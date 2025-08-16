@@ -1011,8 +1011,8 @@ contains
          Si2No_V, rBody, GBody, UnitU_, InvGammaMinus1
     use ModMain, ONLY: nStep, nIteration, tSimulation, IsTimeAccurate
     use ModB0, ONLY: B0_DGB
-    use BATL_lib, ONLY: CellSize_DB, Phi_, Theta_, x_, y_, Xyz_DGB, &
-         TypeGeometry
+    use BATL_lib, ONLY: CellSize_DB, Phi_, Theta_, x_, y_, Xyz_DGB
+    use ModGeometry, ONLY: TypeGeometry
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst, ONLY: cPi
     use ModIO, ONLY : IsRestart
@@ -1066,8 +1066,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 #ifndef _OPENACC
-    if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
-         call CON_stop('Wrong iSide in user_set_cell_boundary')
+    if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') then
+       write(*,*) NameSub, ': iSide, TypeGeometry=', iSide, TypeGeometry
+       call CON_stop(NameSub)
+    end if
 #endif
 
     IsFound = .true.
