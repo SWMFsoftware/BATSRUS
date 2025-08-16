@@ -1300,7 +1300,7 @@ contains
           ! onto the magnetic field, if UseAlignedVelocity=.true.
           ! Reflect the other components.
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
- 
+
           if(UseAlignedVelocity)then
              U   = sum(U_D*BDir_D); U_D = U_D - U*BDir_D
              U   = sign(min(abs(U), UAbsMax), U)
