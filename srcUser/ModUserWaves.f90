@@ -1163,11 +1163,10 @@ contains
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
     use ModMain,     ONLY: tSimulation, TypeCoordSystem
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
-    use ModGeometry, ONLY: &
+    use ModGeometry, ONLY: TypeGeometry, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, r_GB
     use ModVarIndexes
-    use BATL_lib,    ONLY: CoordMax_D, CoordMin_D, Xyz_DGB, &
-         CoordMin_D, CoordMax_D, TypeGeometry
+    use BATL_lib, ONLY: CoordMax_D, CoordMin_D, Xyz_DGB, CoordMin_D, CoordMax_D
 
     integer, intent(in)          :: iBlock, iSide
     character(len=*), intent(in) :: TypeBc
