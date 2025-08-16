@@ -249,24 +249,25 @@ contains
   !============================================================================
   subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
-    use ModMain
+    use ModMain, ONLY: nBlockMax, UseFieldLineThreads, UseLocalTimeStep, &
+         DtMax_B
     use ModImplicit, ONLY: UsePartImplicit, UseSemiImplicit, &
          TypeSemiImplicit, iBlockFromSemi_B, nBlockSemi
     use ModAdvance, ONLY: &
-         State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
+         State_VGB, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
          UseLowOrderRegion, IsLowOrderOnly_B
     use ModGeometry,   ONLY: IsNoBody_B, IsBoundary_B
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModPartSteady, ONLY: UsePartSteady
-    use BATL_lib,      ONLY: Unused_BP
     use ModParallel
     use ModMpi
     use ModPIC, ONLY: UsePic, pic_find_active_node, IsActivePicNode_A, &
          DoBalanceActivePicBlock, pic_find_node, IsPicNode_A, DoBalancePicBlock
     use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, &
-         Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell, &
-         Used_GB
+         Used_, nTimeLevel, iTimeLevel_A, &
+         nBlock, iNode_B, Unused_BP, Used_GB, &
+         regrid_batl, find_test_cell
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
     use ModUserInterface ! user_action, i_type_block_user
