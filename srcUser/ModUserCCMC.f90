@@ -5453,7 +5453,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
     !==========================================================================
     real function minmod(x, y)
       ! This function retursn the _absolute_ value of minmod(x,y)
-      
+
       real, intent(in) :: x, y
       !------------------------------------------------------------------------
       minmod = max(0.0, min(abs(x), sign(1.0, x)*y))
