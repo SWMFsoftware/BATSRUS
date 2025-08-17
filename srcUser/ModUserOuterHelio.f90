@@ -35,7 +35,7 @@ module ModUser
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iProc, nI, nJ, nK, &
-       nBlock, MaxBlock, Unused_B
+       nBlock, MaxBlock, Unused_B, Used_GB, Xyz_DGB
   use ModMain, ONLY: &
        body1_, tSimulation, iStartTime_I
   use ModPhysics,  ONLY: &
@@ -51,7 +51,7 @@ module ModUser
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModAdvance, ONLY: &
        State_VGB,Source_VC, ExtraSource_ICB, Pe_, UseElectronPressure
-  use ModGeometry, ONLY: Xyz_DGB, r_GB, Used_GB
+  use ModGeometry, ONLY: r_GB
   use ModVarIndexes
   use ModMultiFluid
   use ModCurrent, ONLY: get_current

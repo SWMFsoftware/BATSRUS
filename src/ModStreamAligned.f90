@@ -23,7 +23,7 @@ module ModSaMhd
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
   use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, UseSaMhd
-  use ModGeometry, ONLY: r_GB, Used_GB
+  use ModGeometry, ONLY: r_GB
   use ModB0,       ONLY: UseB0, B0_DGB
 
   implicit none
@@ -60,7 +60,7 @@ contains
   end subroutine read_samhd_param
   !============================================================================
   subroutine init_samhd(iBlock)
-
+    use BATL_lib, ONLY: Used_GB
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)
@@ -83,7 +83,7 @@ contains
   end subroutine init_samhd
   !============================================================================
   subroutine update_samhd(iBlock, iStage)
-
+    use BATL_lib, ONLY: Used_GB
     use ModMain,     ONLY: nStage
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k

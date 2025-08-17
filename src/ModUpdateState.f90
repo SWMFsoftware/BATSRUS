@@ -5,7 +5,7 @@ module ModUpdateState
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
+       iVarTest, iComm, CellVolume_GB, Xyz_DGB
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: UseB0, B0_DGB
@@ -244,6 +244,7 @@ contains
          iPIon_I, iSperpion_I, iSparIon_I, &
          nIonFluid, UseNeutralFluid, DoConserveNeutrals
     use ModPui, ONLY: pui_advection_diffusion
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -501,6 +502,7 @@ contains
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
       use ModTimewarp, ONLY: UseTimeWarp, state_to_warp, warp_to_state
+      use BATL_lib,  ONLY: Used_GB
 
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest
@@ -1210,6 +1212,7 @@ contains
     use ModMain,    ONLY: nBlock, Unused_B, UseERadInput
     use ModVarIndexes, ONLY: Te0_
     use ModUserInterface ! user_material_properties
+    use BATL_lib,  ONLY: Used_GB
 
     real:: Te0Si
     integer:: i, j, k, iBlock
@@ -1247,7 +1250,7 @@ contains
          NameVar_V, DefaultState_V
     use ModNumConst, ONLY: cTiny
     use ModMultiIon, ONLY: DoRestrictMultiIon, IsMultiIon_CB
-    use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, nBlock, Unused_B
+    use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, nBlock, Unused_B, Used_GB
     use ModMpi
 
     integer, parameter :: MaxCheck=25, RhoDn_=1, RhoUp_=2, pDn_=3, pUp_=4
@@ -1732,6 +1735,7 @@ contains
          IonMassPerCharge, TauGlobal_I
     use ModMultiFluid, ONLY: select_fluid, iP, iPpar
     use ModVarIndexes, ONLY: nFluid
+    use BATL_lib,  ONLY: Used_GB
 
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
@@ -1864,6 +1868,7 @@ contains
     use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use ModMessagePass,    ONLY: exchange_messages
+    use BATL_lib,  ONLY: Used_GB
 
     integer :: iBlock
 
@@ -1947,7 +1952,7 @@ contains
     ! their mass density weighted average, and/or the ion temperature of the
     ! individual fluids equal to their number density weighted average.
 
-    use BATL_lib,      ONLY: nI, nJ, nK
+    use BATL_lib,      ONLY: nI, nJ, nK, Used_GB
     use ModMultiFluid, ONLY: nIonFluid, iRhoIon_I, &
          iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
          MassIon_I, InvMassIon_I
@@ -2031,7 +2036,7 @@ contains
   subroutine fix_wdiff(iBlock)
 
     use ModVarIndexes, ONLY: WDiff_, WaveFirst_, WaveLast_
-    use BATL_lib, ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: nI, nJ, nK, Used_GB
 
     integer, intent(in) :: iBlock
     integer :: i, j, k

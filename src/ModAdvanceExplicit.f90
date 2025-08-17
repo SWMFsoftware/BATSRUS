@@ -365,10 +365,10 @@ contains
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
          fix_boundary_ghost_cells
     use ModGeometry,   ONLY: Xyz_DGB, rBody2_GB, rMinBody2_B, &
-         Used_GB, IsNoBody_B
+         IsNoBody_B
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModAdvance,    ONLY: State_VGB, nVar
-    use BATL_lib, ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: nI, nJ, nK, Used_GB
 
     integer :: i,j,k
     integer :: iCounter, iNei, jNei, kNei

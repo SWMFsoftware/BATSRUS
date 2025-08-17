@@ -796,7 +796,7 @@ contains
     ! Non-split operator, (almost) explicit ei heat energy exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
-    use ModGeometry,   ONLY: Used_GB
+    use BATL_lib,      ONLY: Used_GB
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, CollisionCoef_II
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
@@ -1703,7 +1703,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, DtMax_CB
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
-    use ModGeometry, ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl
     use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &

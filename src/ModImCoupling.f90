@@ -143,7 +143,8 @@ contains
        allocate(pIm_ICB(nFluid,nI,nJ,nK,nBlock))
        allocate(PeIM_CB(nI,nJ,nK,nBlock))
        allocate(TauCoeffIm_CB(nI,nJ,nK,nBlock))
-       allocate(BminIm_CB(nI,nJ,nK,nBlock))
+       if(UseAnisoPressure) &
+            allocate(BminIm_CB(nI,nJ,nK,nBlock))
        if(DoCoupleImDensity) &
             allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
        if(UseAnisoPressure) &
@@ -205,7 +206,8 @@ contains
        ! Default is negative, which means that do not nudge GM values
        pIm_ICB(:,i,j,k,iBlock)   = -1.0
        PeIM_CB(i,j,k,iBlock)     = -1.0
-       BminIm_CB(i,j,k,iBlock)   = -1.0
+       if(UseAnisoPressure) &
+            BminIm_CB(i,j,k,iBlock)   = -1.0
        if(DoCoupleImDensity) &
             RhoIm_ICB(:,i,j,k,iBlock) = -1.0
        if(UseAnisoPressure) &

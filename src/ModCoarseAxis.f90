@@ -63,8 +63,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, DtMax_CB
-    use ModGeometry, ONLY: Used_GB
-    use BATL_lib, ONLY: CellVolume_GB
+    use BATL_lib, ONLY: CellVolume_GB,Used_GB
     use ModUtilities, ONLY: i_gang
 
     integer, intent(in):: iBlock, iHemisphere

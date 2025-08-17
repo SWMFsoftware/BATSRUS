@@ -187,7 +187,8 @@ contains
   subroutine trace_grid_fast
 
     use ModParallel, ONLY: Unset_, DiLevel_EB
-    use ModGeometry, ONLY: r_GB, rMin_B, Used_GB
+    use ModGeometry, ONLY: r_GB, rMin_B
+    use BATL_lib,  ONLY: Used_GB
     use ModMpi
 
     ! Iteration parameters

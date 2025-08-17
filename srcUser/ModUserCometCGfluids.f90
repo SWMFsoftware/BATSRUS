@@ -1421,19 +1421,19 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_electron_collision_rates
   !============================================================================
-  subroutine user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II, &
-       fie_I,alpha_I,kin_IIII,v_II, ve_II,uElec_D,uIon_DI,Qexc_II,Qion_II, &
+  subroutine user_calc_rates(Ti_I, Te, i, j, k, iBlock, nElec, nIon_I, &
+       fin_II, fii_II, fie_I, Alpha_I, kin_IIII, v_II, ve_II, &
+       uElec_D, uIon_DI, Qexc_II, Qion_II, &
        DoCalcShading, IsIntersectedShapeR, &
-       DoCalcDistance2Fieldline,IsWithinTheRingR)
+       DoCalcDistance2Fieldline, IsWithinTheRingR)
 
     ! calculate all rates not involving electron collisions
 
-    use ModConst,    ONLY: cElectronMass, cProtonMass
-    use ModMain,     ONLY:     &
-         nStep,   tSimulation
+    use ModConst, ONLY: cElectronMass, cProtonMass
+    use ModMain, ONLY: nStep, tSimulation
     use ModGeometry, ONLY: r_GB, Xyz_DGB
 
-    integer,intent(in) :: i,j,k,iBlock
+    integer,intent(in) :: i, j, k, iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
     real,intent(in)    :: Te
     real,intent(in)    :: nElec
@@ -1445,7 +1445,7 @@ contains
     real,intent(out)   :: fin_II(nIonFluid,nNeuFluid)
     real,intent(out)   :: fii_II(nIonFluid,nIonFluid)
     real,intent(out)   :: fie_I(nIonFluid)
-    real,intent(out)   :: alpha_I(nIonFluid)
+    real,intent(out)   :: Alpha_I(nIonFluid)
     real,intent(out)   :: kin_IIII(nIonFluid,nNeuFluid,nNeuFluid,nIonFluid)
     real,intent(out)   :: v_II(nNeuFluid,nIonFluid)
     real,intent(out)   :: ve_II(nNeuFluid,nIonFluid)
@@ -1456,7 +1456,7 @@ contains
 
     real :: Tred, Mred
     real :: DistProjection2, CosAngleTmp, NCol, sigma, J3, log10Te, sqrtTe
-    real, dimension(nNeuFluid,nIonFluid) :: sigma_e
+    real :: Sigma_e(nNeuFluid,nIonFluid)
     integer :: n
     real, save :: ElImpRate_I(nNeuFluid,61)!, ElCrossSect_I(61)
 
@@ -1521,7 +1521,7 @@ contains
 
     ! initialize all collision rates with zero
     fin_II  = 0. ; fii_II  = 0. ; fie_I   = 0. ; kin_IIII = 0.
-    alpha_I = 0. ; v_II    = 0. ; ve_II   = 0.
+    Alpha_I = 0. ; v_II    = 0. ; ve_II   = 0.
     sigma_e = 0. ; Qexc_II = 0. ; Qion_II = 0.
 
     ! Ionization rates (add opacity correction/shadowing when needed)
@@ -1748,32 +1748,32 @@ contains
     ! Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
     ! rate in [m^3/s]
     if (Te < 800.) then
-       alpha_I(H2Op_) = 1E-6*1.57E-5*Te**(-0.569)
+       Alpha_I(H2Op_) = 1E-6*1.57E-5*Te**(-0.569)
     elseif (Te<4000) then
-       alpha_I(H2Op_) = 1E-6*4.73E-5*Te**(-0.74)
+       Alpha_I(H2Op_) = 1E-6*4.73E-5*Te**(-0.74)
     else
-       alpha_I(H2Op_) = 1E-6*1.03E-3*Te**(-1.111)
+       Alpha_I(H2Op_) = 1E-6*1.03E-3*Te**(-1.111)
     end if
 
     ! rate in [m^3/s]
     ! if (Te < 200.) then
-    !    alpha_I(H2Op_) = 1E-6*7E-7*sqrt(300./Te)
+    !    Alpha_I(H2Op_) = 1E-6*7E-7*sqrt(300./Te)
     ! else
-    !    alpha_I(H2Op_) = 2.342*1E-6*7E-7*Te**(0.2553-0.1633*log10(Te))
+    !    Alpha_I(H2Op_) = 2.342*1E-6*7E-7*Te**(0.2553-0.1633*log10(Te))
     ! end if
 
     ! Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    alpha_I(SW_)   = 1E-6*4.8E-12*(250/Te)**0.7
+    Alpha_I(SW_)   = 1E-6*4.8E-12*(250/Te)**0.7
 
     ! Schmidt et al., Comput. Phys. Commun. (1988)
-    ! alpha_I(SW_)   = 1E-6*3.5E-12*(Te/300)**(-0.7)
+    ! Alpha_I(SW_)   = 1E-6*3.5E-12*(Te/300)**(-0.7)
 
     if (DoTest .and. .false.) then
        write(*,*) NameSub
        write(*,*) ' fin_II   =', fin_II
        write(*,*) ' fii_II   =', fii_II
        write(*,*) ' fie_I    =', fie_I
-       write(*,*) ' alpha_I  =', alpha_I
+       write(*,*) ' Alpha_I  =', Alpha_I
        write(*,*) ' kin_IIII =', kin_IIII
        write(*,*) ' v_II     =', v_II
        write(*,*) ' ve_II    =', ve_II
@@ -1789,19 +1789,17 @@ contains
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK,    &
-         nStep, tSimulation, iNewDecomposition
-    use ModAdvance,    ONLY: State_VGB, Source_VC, &
-         Bx_,By_,Bz_, P_
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
-    use ModGeometry,   ONLY: r_GB, Xyz_DGB
-    use ModCurrent,    ONLY: get_current
-    use ModPhysics,    ONLY: Si2No_V, No2Si_V, &
+    use ModMain, ONLY: nI, nJ, nK, nStep, tSimulation, iNewDecomposition
+    use ModAdvance, ONLY: State_VGB, Source_VC, Bx_,By_,Bz_, P_
+    use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
+    use ModGeometry, ONLY: r_GB, Xyz_DGB
+    use ModCurrent, ONLY: get_current
+    use ModPhysics, ONLY: Si2No_V, No2Si_V, &
          UnitEnergyDens_, UnitN_, UnitRho_, UnitU_, UnitP_, UnitT_, &
-         UnitRhoU_, UnitTemperature_, UnitX_,       &
+         UnitRhoU_, UnitTemperature_, UnitX_, &
          ElectronPressureRatio, ElectronCharge
-    use ModVarIndexes,    ONLY: MassFluid_I
-    use ModBlockData,     ONLY: use_block_data, get_block_data, put_block_data
+    use ModVarIndexes, ONLY: MassFluid_I
+    use ModBlockData, ONLY: use_block_data, get_block_data, put_block_data
 
     integer, intent(in) :: iBlock
 
@@ -1821,7 +1819,7 @@ contains
     real, dimension(nIonFluid,nI,nJ,nK):: &
          Ti_IC, uIonElec2_IC, fei_IC, fie_IC, &
          nIon_IC, SRho_IC, SRhoUx_IC, SRhoUy_IC, SRhoUz_IC, SP_IC
-    real, dimension(nIonFluid,nI,nJ,nK):: alpha_IC
+    real, dimension(nIonFluid,nI,nJ,nK):: Alpha_IC
     real, dimension(nIonFluid,nNeuFluid,nI,nJ,nK):: fin_IIC, uIonNeu2_IIC
     real, dimension(nNeuFluid,nI,nJ,nK):: fen_IC, uNeuElec2_IC
     real, dimension(nNeuFluid,nIonFluid) :: Qexc_II, Qion_II
@@ -2062,7 +2060,7 @@ contains
             nElec_C(i,j,k), nIon_IC(1:nIonFluid,i,j,k),&
             fin_IIC(1:nIonFluid,1:nNeuFluid,i,j,k), &
             fii_IIC(1:nIonFluid,1:nIonFluid,i,j,k),fie_IC(1:nIonFluid,i,j,k),&
-            alpha_IC(1:nIonFluid,i,j,k), &
+            Alpha_IC(1:nIonFluid,i,j,k), &
             kin_IIIIC(1:nIonFluid,1:nNeuFluid,1:nNeuFluid,1:nIonFluid,i,j,k),&
             v_IIGB(1:nNeuFluid,1:nIonFluid,i,j,k,iBlock), &
             ve_IIGB(1:nNeuFluid,1:nIonFluid,i,j,k,iBlock),&
@@ -2124,7 +2122,7 @@ contains
 
        ! loss due to recombination
        SRhoTerm_IIC(5,1:nIonFluid,i,j,k) = &
-            -alpha_IC(1:nIonFluid,i,j,k)*(nElec_C(i,j,k)* &
+            -Alpha_IC(1:nIonFluid,i,j,k)*(nElec_C(i,j,k)* &
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitN_)/Si2No_V(UnitT_)) * &
             MassIon_I
 
@@ -2138,20 +2136,20 @@ contains
        do iIonFluid=1,nIonFluid
           fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid) + &
                fii_IIC(1:nIonFluid,iIonFluid,i,j,k)     * &
-               (uIon_DIC(1,iIonFluid,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
+               (uIon_DIC(1,iIonFluid,i,j,k) - uIon_DIC(1,1:nIonFluid,i,j,k))
        end do
 
        ! momentum transfer by ion-neutral collisions
        do iNeuFluid=1,nNeuFluid
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)                   + &
                fin_IIC(1:nIonFluid,iNeuFluid,i,j,k)                       * &
-               (uNeu1_DC(1,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
+               (uNeu1_DC(1,i,j,k) - uIon_DIC(1,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid)  = vAdd_I(1:nIonFluid)                      + &
                v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k)  * &
-               (uNeu1_DC(1,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
+               (uNeu1_DC(1,i,j,k) - uIon_DIC(1,1:nIonFluid,i,j,k))
           veAdd_I(1:nIonFluid) = veAdd_I(1:nIonFluid)                     + &
                ve_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k) * &
-               (uNeu1_DC(1,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
+               (uNeu1_DC(1,i,j,k) - uIon_DIC(1,1:nIonFluid,i,j,k))
        end do
 
        kinAdd_I = 0.
@@ -2165,7 +2163,7 @@ contains
                         nIon_IC(iIonFluid,i,j,k)* &
                         kin_IIIIC(iIonFluid,iNeuFluid,jNeutral,jIonFluid, &
                         i,j,k)*nNeu1_C(i,j,k)*&
-                        (uNeu1_DC(1,i,j,k)-uIon_DIC(1,jIonFluid,i,j,k))
+                        (uNeu1_DC(1,i,j,k) - uIon_DIC(1,jIonFluid,i,j,k))
                 end do
              end do
           end do
@@ -2221,33 +2219,33 @@ contains
        do iIonFluid=1,nIonFluid
           fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid) + &
                fii_IIC(1:nIonFluid,iIonFluid,i,j,k)     * &
-               (uIon_DIC(2,iIonFluid,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
+               (uIon_DIC(2,iIonFluid,i,j,k) - uIon_DIC(2,1:nIonFluid,i,j,k))
        end do
 
        ! ion-neutral collisions
        do iNeuFluid=1,nNeuFluid
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)                   + &
                fin_IIC(1:nIonFluid,iNeuFluid,i,j,k)                       * &
-               (uNeu1_DC(2,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
+               (uNeu1_DC(2,i,j,k) - uIon_DIC(2,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid)  = vAdd_I(1:nIonFluid)                      + &
                v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k)  * &
-               (uNeu1_DC(2,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
+               (uNeu1_DC(2,i,j,k) - uIon_DIC(2,1:nIonFluid,i,j,k))
           veAdd_I(1:nIonFluid) = veAdd_I(1:nIonFluid)                     + &
                ve_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k) * &
-               (uNeu1_DC(2,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
+               (uNeu1_DC(2,i,j,k) - uIon_DIC(2,1:nIonFluid,i,j,k))
        end do
 
        ! addition to individual fluid from charge exchange [1/(m^3*s)]
        kinAdd_I = 0.
-       do iIonFluid=1,nIonFluid
-          do jIonFluid=1,nIonFluid
-             do iNeuFluid=1,nNeuFluid
-                do jNeutral=1,nNeuFluid
+       do iIonFluid = 1, nIonFluid
+          do jIonFluid = 1, nIonFluid
+             do iNeuFluid = 1, nNeuFluid
+                do jNeutral = 1, nNeuFluid
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + &
                         nIon_IC(iIonFluid,i,j,k)* &
                         kin_IIIIC(iIonFluid,iNeuFluid,jNeutral,jIonFluid, &
                         i,j,k)*nNeu1_C(i,j,k)*&
-                        (uNeu1_DC(2,i,j,k)-uIon_DIC(2,jIonFluid,i,j,k))
+                        (uNeu1_DC(2,i,j,k) - uIon_DIC(2,jIonFluid,i,j,k))
                 end do
              end do
           end do
@@ -2272,7 +2270,7 @@ contains
        SRhoUyTerm_IIC(4,1:nIonFluid,i,j,k) = &
             -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitN_)* &
-            (uIon_DIC(2,1:nIonFluid,i,j,k)-uElec_DC(2,i,j,k))* &
+            (uIon_DIC(2,1:nIonFluid,i,j,k) - uElec_DC(2,i,j,k))* &
             Si2No_V(UnitU_)
 
        ! ion-ion collisions
@@ -2303,33 +2301,33 @@ contains
        do iIonFluid=1,nIonFluid
           fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid) + &
                fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&
-               (uIon_DIC(3,iIonFluid,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
+               (uIon_DIC(3,iIonFluid,i,j,k) - uIon_DIC(3,1:nIonFluid,i,j,k))
        end do
 
        ! ion-neutral collisions
        do iNeuFluid=1,nNeuFluid
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)                    + &
                fin_IIC(1:nIonFluid,iNeuFluid,i,j,k)                        * &
-               (uNeu1_DC(3,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
+               (uNeu1_DC(3,i,j,k) - uIon_DIC(3,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid)  = vAdd_I(1:nIonFluid)                       + &
                v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock) * nNeu1_C(i,j,k) * &
-               (uNeu1_DC(3,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
+               (uNeu1_DC(3,i,j,k) - uIon_DIC(3,1:nIonFluid,i,j,k))
           veAdd_I(1:nIonFluid) = veAdd_I(1:nIonFluid)                      + &
                ve_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)* nNeu1_C(i,j,k) * &
-               (uNeu1_DC(3,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
+               (uNeu1_DC(3,i,j,k) - uIon_DIC(3,1:nIonFluid,i,j,k))
        end do
 
        kinAdd_I = 0.
        ! addition to individual fluid from charge exchange [1/(m^3*s)]
-       do iIonFluid=1,nIonFluid
-          do jIonFluid=1,nIonFluid
-             do iNeuFluid=1,nNeuFluid
-                do jNeutral=1,nNeuFluid
+       do iIonFluid = 1, nIonFluid
+          do jIonFluid = 1, nIonFluid
+             do iNeuFluid = 1, nNeuFluid
+                do jNeutral = 1, nNeuFluid
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + &
                         nIon_IC(iIonFluid,i,j,k)* &
                         kin_IIIIC(iIonFluid,iNeuFluid,jNeutral,jIonFluid, &
                         i,j,k) * nNeu1_C(i,j,k)*&
-                        (uNeu1_DC(3,i,j,k)-uIon_DIC(3,jIonFluid,i,j,k))
+                        (uNeu1_DC(3,i,j,k) - uIon_DIC(3,jIonFluid,i,j,k))
                 end do
              end do
           end do
@@ -2354,7 +2352,7 @@ contains
        SRhoUzTerm_IIC(4,1:nIonFluid,i,j,k) = &
             -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitN_)* &
-            (uIon_DIC(3,1:nIonFluid,i,j,k)-uElec_DC(3,i,j,k))* &
+            (uIon_DIC(3,1:nIonFluid,i,j,k) - uElec_DC(3,i,j,k))* &
             Si2No_V(UnitU_)
 
        ! ion-ion collisions
@@ -2387,9 +2385,9 @@ contains
        ! (u_i-u_e)^2 difference in ion and electron speeds qubed [m^2/s^2]
        do iIonFluid=1,nIonFluid
           uIonElec2_IC(iIonFluid,i,j,k) = &
-               (uIon_DIC(1,iIonFluid,i,j,k)-uElec_DC(1,i,j,k))**2 +&
-               (uIon_DIC(2,iIonFluid,i,j,k)-uElec_DC(2,i,j,k))**2+&
-               (uIon_DIC(3,iIonFluid,i,j,k)-uElec_DC(3,i,j,k))**2
+               (uIon_DIC(1,iIonFluid,i,j,k) - uElec_DC(1,i,j,k))**2 +&
+               (uIon_DIC(2,iIonFluid,i,j,k) - uElec_DC(2,i,j,k))**2+&
+               (uIon_DIC(3,iIonFluid,i,j,k) - uElec_DC(3,i,j,k))**2
        end do
 
        ! Sources separated into the terms by
@@ -2415,7 +2413,7 @@ contains
 
        ! lost ions through recombination
        SPTerm_IIC(2,1:nIonFluid,i,j,k) = &
-            -alpha_IC(1:nIonFluid,i,j,k)*nElec_C(i,j,k)/Si2No_V(UnitT_)*&
+            -Alpha_IC(1:nIonFluid,i,j,k)*nElec_C(i,j,k)/Si2No_V(UnitT_)*&
             State_VGB(iPIon_I,i,j,k,iBlock)
 
        ! ion-ion collisions, temperature
@@ -2531,7 +2529,7 @@ contains
        if (UseElectronPressure) then
           ! lost electrons through recombination
           SPeTerm_IC(1,i,j,k) = -sum( &
-               alpha_IC(1:nIonFluid,i,j,k)*nIon_IC(1:nIonFluid,i,j,k)) / &
+               Alpha_IC(1:nIonFluid,i,j,k)*nIon_IC(1:nIonFluid,i,j,k)) / &
                Si2No_V(UnitT_)*State_VGB(Pe_,i,j,k,iBlock)
 
           vAdd_I(1:nIonFluid) = 0.
@@ -2843,8 +2841,8 @@ contains
               fii_IIC(iIonFluid, :, i,j,k)
          write(*,TestFmt1) ' fieSi_I        =', &
               fie_IC(iIonFluid, i,j,k)
-         write(*,TestFmt1) ' alphaSi_II     =', &
-              alpha_IC(iIonFluid,i,j,k)
+         write(*,TestFmt1) ' AlphaSi_II     =', &
+              Alpha_IC(iIonFluid,i,j,k)
          write(*,*) '*****************************************************'
          write(*,TestFmt2) ' Source_VC  (NO, SI, rate)            =', &
               Source_VC(iRhoIon_I(iIonFluid),i,j,k),      &
@@ -2965,7 +2963,7 @@ contains
       write(*,'(a10,i2,a)') ' Electron:'
       write(*,TestFmt1) ' fenSi_II       =', fen_IC(1, i,j,k)
       write(*,TestFmt1) ' feiSi_II       =', fei_IC(:, i,j,k)
-      write(*,TestFmt1) ' alphaSi_II     =', alpha_IC(:,i,j,k)
+      write(*,TestFmt1) ' AlphaSi_II     =', Alpha_IC(:,i,j,k)
       write(*,TestFmt2) ' Source_VC  (NO, SI, rate)           =', &
            Source_VC(Pe_,i,j,k),                      &
            Source_VC(Pe_,i,j,k)                       &
@@ -3004,7 +3002,8 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: LowDensityRatio, &
          Si2No_V, No2Si_V, UnitN_, UnitTemperature_, UnitX_, UnitU_
-    use ModGeometry, ONLY: Used_GB, r_GB, xyz_DGB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: Used_GB, Xyz_DGB
 
     integer,intent(in) :: iBlock
 
@@ -3226,7 +3225,7 @@ contains
     real, intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer :: i, j, k
-    real, dimension(nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: nIon_IG
+    real:: nIon_IG(nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: Te_G, nElec_G
     real :: EtaSi
 
@@ -3310,7 +3309,7 @@ contains
 
     real, save :: KappaCoeffSI = (cBoltzmann/cElectronCharge)**2/cMu
     real :: nElec, EtaSI, TeSI
-    real, dimension(nIonFluid) :: nIon_I
+    real :: nIon_I(nIonFluid)
 
     real :: xmin, xmax, HeatCondFactor, widthmax, widthmin, xMaxyz, xMinyz
 
@@ -3446,8 +3445,8 @@ contains
 
     integer :: i, j, k
     real :: nElec
-    real, dimension(nIonFluid)   :: nIon_I
-    real, dimension(3,nIonFluid) :: uIon_I
+    real :: nIon_I(nIonFluid)
+    real :: uIon_DI(3,nIonFluid)
 
     real, allocatable :: &
          GradXVarX_C(:,:,:), GradXVarY_C(:,:,:), GradXVarZ_C(:,:,:), &
@@ -3529,11 +3528,12 @@ contains
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
-          uIon_I(1,1:nIonFluid) = State_VGB(iRhoUxIon_I,i,j,k,iBlock) / &
+          uIon_DI(1,1:nIonFluid) = State_VGB(iRhoUxIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
           PlotVar_G(i,j,k) = &
-               sum(nIon_I*uIon_I(1,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
+               sum(nIon_I*uIon_DI(1,1:nIonFluid)*ChargeIon_I(1:nIonFluid)) &
+               /nElec
        end do; end do; end do
 
     case('uplusy')
@@ -3542,11 +3542,12 @@ contains
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
-          uIon_I(2,1:nIonFluid) = State_VGB(iRhoUyIon_I,i,j,k,iBlock) / &
+          uIon_DI(2,1:nIonFluid) = State_VGB(iRhoUyIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
           PlotVar_G(i,j,k) = &
-               sum(nIon_I*uIon_I(2,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
+               sum(nIon_I*uIon_DI(2,1:nIonFluid)*ChargeIon_I(1:nIonFluid)) &
+               /nElec
        end do; end do; end do
 
     case('uplusz')
@@ -3555,11 +3556,12 @@ contains
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
-          uIon_I(3,1:nIonFluid) = State_VGB(iRhoUzIon_I,i,j,k,iBlock) / &
+          uIon_DI(3,1:nIonFluid) = State_VGB(iRhoUzIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
           PlotVar_G(i,j,k) = &
-               sum(nIon_I*uIon_I(3,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
+               sum(nIon_I*uIon_DI(3,1:nIonFluid)*ChargeIon_I(1:nIonFluid)) &
+               /nElec
        end do; end do; end do
 
     case('ns')
@@ -3699,10 +3701,12 @@ contains
     ! This is applied as initial conditions and in the upstream boundary
     ! for the semi-implicit heat conduction
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, LowDensityRatio,&
-         ElectronPressureRatio, Io2No_V, UnitTemperature_, &
-         SolarWindBx, SolarWindBy, SolarWindBz, No2Si_V, UnitX_, Si2No_V, UnitU_, UnitN_
-    use ModGeometry, ONLY:Xyz_DGB, r_GB
+    use ModPhysics,  ONLY: &
+         SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, &
+         LowDensityRatio, ElectronPressureRatio, Io2No_V, UnitTemperature_, &
+         SolarWindBx, SolarWindBy, SolarWindBz, UnitX_, UnitU_, UnitN_, &
+         Si2No_V, No2Si_V
+    use ModGeometry, ONLY: Xyz_DGB, r_GB
     use ModVarIndexes, ONLY: MassFluid_I
 
     integer,intent(in) :: i, j, k, iBlock
@@ -3751,11 +3755,12 @@ contains
   end subroutine user_preset_conditions
   !============================================================================
   subroutine user_set_ICs(iBlock)
-    use ModMain,     ONLY:      Body1_
-    use ModAdvance,  ONLY: Pe_, State_VGB
-    use ModPhysics,  ONLY: No2Si_V, UnitRho_, &
-         UnitRhoU_, UnitP_, FaceState_VI, UnitU_
-    use ModGeometry, ONLY: Used_GB
+
+    use ModMain, ONLY: Body1_
+    use ModAdvance, ONLY: Pe_, State_VGB
+    use ModPhysics, ONLY: &
+         No2Si_V, UnitRho_, UnitRhoU_, UnitP_, FaceState_VI, UnitU_
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -3976,13 +3981,16 @@ contains
     ! is fully developed
 
     use ModMain, ONLY: Unused_B
-    use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, &
-         LowDensityRatio, ElectronPressureRatio, SolarWindBx, SolarWindBy, SolarWindBz
-    use ModGeometry, ONLY: Used_GB, r_GB, Xyz_DGB
+    use ModAdvance, ONLY: P_, Pe_, State_VGB
+    use ModPhysics, ONLY: &
+         SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, &
+         LowDensityRatio, ElectronPressureRatio, SolarWindBx, SolarWindBy, &
+         SolarWindBz
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: Used_GB, Xyz_DGB
 
     integer :: i, j, k, iBlock
-    real    :: RhoSw, alpha, beta
+    real    :: RhoSw, Alpha, Beta
     real, dimension(nI,nJ,nK):: TempNeu1_C, nNeu1_C
 
     logical:: DoTest
@@ -4025,28 +4033,28 @@ contains
                      State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed
 
              else if (r_GB(i,j,k,iBlock) <= R1Perturbed) then
-                alpha = (r_GB(i,j,k,iBlock)-R0Perturbed) / &
+                Alpha = (r_GB(i,j,k,iBlock)-R0Perturbed) / &
                      (R1Perturbed-R0Perturbed)
-                beta  = 1-alpha
+                Beta  = 1 - Alpha
                 ! Transition region from near the comet to far away from the
                 ! comet.
                 ! The ion profile is set to be a linear combination between
                 ! the near comet region and far away region.
                 State_VGB(H2OpRho_,i,j,k,iBlock)    = &
-                     State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                     SolarWindRho*LowDensityRatio*alpha
+                     State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbed*Beta + &
+                     SolarWindRho*LowDensityRatio*Alpha
                 State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
-                     State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                     SolarWindRho*LowDensityRatio*SolarWindUx*alpha
+                     State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbed*Beta + &
+                     SolarWindRho*LowDensityRatio*SolarWindUx*Alpha
                 State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
-                     State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                     SolarWindRho*LowDensityRatio*SolarWindUy*alpha
+                     State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbed*Beta + &
+                     SolarWindRho*LowDensityRatio*SolarWindUy*Alpha
                 State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
-                     State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                     SolarWindRho*LowDensityRatio*SolarWindUz*alpha
-                State_VGB(H2OpP_,i,j,k,iBlock)   = &
-                     State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                     SolarWindP*LowDensityRatio*alpha
+                     State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbed*Beta + &
+                     SolarWindRho*LowDensityRatio*SolarWindUz*Alpha
+                State_VGB(H2OpP_,i,j,k,iBlock) = &
+                     State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed*Beta + &
+                     SolarWindP*LowDensityRatio*Alpha
 
              else
                 ! Far away from the comet, both ions are the same as the

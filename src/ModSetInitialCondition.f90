@@ -171,7 +171,6 @@ contains
     use ModMain
     use ModAdvance
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
-    use ModGeometry, ONLY: Used_GB
     use ModIO, ONLY: IsRestart
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, Gamma_I, &
          set_radial_state
@@ -185,7 +184,7 @@ contains
     use ModInitialState, ONLY: get_initial_state
     use ModIonElectron, ONLY: &
          correct_electronfluid_efield , DoCorrectElectronFluid, DoCorrectEfield
-    use BATL_lib, ONLY: Xyz_DGB, IsPeriodic_D
+    use BATL_lib, ONLY: Xyz_DGB, IsPeriodic_D, Used_GB
     use ModUtilities, ONLY: i_gang
 
     integer, intent(in) :: iBlock
@@ -555,10 +554,9 @@ contains
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
     use ModMain,     ONLY: Unused_B, NameThisComp
     use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: Used_GB
     use ModPhysics,  ONLY: OmegaBody
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I
-    use BATL_lib,    ONLY: Xyz_DGB, iProc
+    use BATL_lib,    ONLY: Xyz_DGB, iProc, Used_GB
 
     integer, intent(in):: iSign
     integer, optional, intent(in):: iBlockIn

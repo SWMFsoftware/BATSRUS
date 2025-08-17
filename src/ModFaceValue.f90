@@ -11,7 +11,7 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim
   use ModVarIndexes
-  use ModGeometry, ONLY: Used_GB, IsBody_B
+  use ModGeometry, ONLY: IsBody_B
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion, IsLowOrderOnly_B, UseAdaptiveLowOrder, &
        State_VGB, Primitive_VG,  &
@@ -532,7 +532,7 @@ contains
   end subroutine get_log_limiter_var
   !============================================================================
   subroutine get_face_accurate3d(iSideIn,  iBlock)
-
+    use BATL_lib, ONLY: Used_GB
     integer, intent(in):: iSideIn, iBlock
     integer:: i, j, k
     !--------------------------------------------------------------------------
@@ -783,7 +783,7 @@ contains
   end subroutine get_face_accurate2d
   !============================================================================
   subroutine get_face_tvd(iSideIn, iBlock)
-
+    use BATL_lib, ONLY: Used_GB
     integer,intent(in)::iSideIn, iBlock
     integer:: i, j, k
     !--------------------------------------------------------------------------
@@ -975,7 +975,7 @@ contains
     use ModParallel, ONLY : DiLevel_EB
     use ModViscosity, ONLY: UseArtificialVisco
     use ModSaMhd,  ONLY: UseSaMhd, correct_samhd_face_value
-
+    use BATL_lib,  ONLY: Used_GB
     integer, intent(in):: iBlock
     logical, intent(in):: DoResChangeOnly
     logical, intent(in), optional:: DoMonotoneRestrict
@@ -1661,7 +1661,7 @@ contains
     end subroutine calc_primitives
     !==========================================================================
     subroutine get_facex_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
-
+      use BATL_lib, ONLY: Used_GB
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
@@ -1757,7 +1757,7 @@ contains
     end subroutine get_facex_high
     !==========================================================================
     subroutine get_facey_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
-
+      use BATL_lib, ONLY: Used_GB
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       integer:: iVar, iSort
@@ -1854,7 +1854,7 @@ contains
     end subroutine get_facey_high
     !==========================================================================
     subroutine get_facez_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
-
+      use BATL_lib, ONLY: Used_GB
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       integer:: iVar, iSort
@@ -1999,7 +1999,7 @@ contains
     end subroutine get_facez_first
     !==========================================================================
     subroutine get_facex_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
-
+      use BATL_lib, ONLY: Used_GB
       use ModFieldLineThread, ONLY: UseFieldLineThreads, &
            beta_thread, is_threaded_block
 
@@ -2081,6 +2081,7 @@ contains
     end subroutine get_facex_second
     !==========================================================================
     subroutine get_facey_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      use BATL_lib, ONLY: Used_GB
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::j1, jMinSharp, jMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2142,6 +2143,7 @@ contains
     end subroutine get_facey_second
     !==========================================================================
     subroutine get_facez_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      use BATL_lib, ONLY: Used_GB
       integer,intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::k1, kMinSharp, kMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2769,7 +2771,7 @@ contains
     use ModPhysics, ONLY: Gamma_I
     use ModAdvance, ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
          State_VGB
-    use BATL_lib, ONLY: block_inside_regions, Unused_B
+    use BATL_lib, ONLY: block_inside_regions, Unused_B, Used_GB
 
     ! Set which faces should use low (up to second) order scheme
     ! Set logicals for the current block

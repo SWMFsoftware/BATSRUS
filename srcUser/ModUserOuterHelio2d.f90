@@ -2,15 +2,16 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!   used for MSWIM2D Outer Heliosphere model
-!     reference paper DOI: 10.3847/1538-4365/ac67eb
-
 module ModUser
 
-  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock
-  use BATL_lib, ONLY: test_start, test_stop, iTest, jTest, kTest, iProcTest, &
-       iBlockTest, iVarTest, iProc, IsCylindrical
-  use ModMain, ONLY: body1_, nBlock, Unused_B
+  ! used for MSWIM2D Outer Heliosphere model
+  ! reference paper DOI: 10.3847/1538-4365/ac67eb
+
+  use BATL_lib, ONLY: test_start, test_stop, &
+       iTest, jTest, kTest, iProcTest, iBlockTest, iVarTest, iProc, &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, &
+       Unused_B, Used_GB, Xyz_DGB, IsCylindrical
+  use ModMain, ONLY: body1_
   use ModPhysics, ONLY: Gamma, GammaMinus1, UnitX_, Io2Si_V, Si2Io_V, No2Io_V,&
        No2Si_V, Io2No_V,  NameTecUnit_V, UnitAngle_, UnitDivB_, &
        UnitEnergyDens_, UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, &
@@ -19,7 +20,7 @@ module ModUser
   use ModConst, ONLY: cBoltzmann, cProtonMass
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModAdvance, ONLY: State_VGB, Source_VC, ExtraSource_ICB, nFlux
-  use ModGeometry, ONLY: Xyz_DGB, r_GB, Used_GB
+  use ModGeometry, ONLY: r_GB
   use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
        Bx_, By_, Bz_, p_, Energy_, iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I,&
        nFluid, NameVar_V

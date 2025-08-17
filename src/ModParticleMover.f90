@@ -21,7 +21,6 @@ module ModParticleMover
   use BATL_particles,  ONLY: Particle_I, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
-  use ModGeometry,     ONLY: Used_GB
   use ModNumConst
 
   implicit none
@@ -544,6 +543,7 @@ contains
   end subroutine check_done
   !============================================================================
   subroutine get_state_from_vdf_block(iBlock)
+    use BATL_lib,  ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -611,6 +611,7 @@ contains
   end subroutine get_state_from_vdf
   !============================================================================
   subroutine get_vdf_from_state(iBlock, DoOnScratch)
+    use BATL_lib,  ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     ! If the distribution function is initialized for the

@@ -128,7 +128,7 @@ contains
     ! advection+diffusion in PUI velocity space
 
     use ModAdvance,         ONLY: State_VGB, DtMax_CB
-    use ModGeometry,        ONLY: Used_GB
+    use BATL_lib,        ONLY: Used_GB
     use ModLinearAdvection, ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain,            ONLY: Cfl

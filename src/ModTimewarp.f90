@@ -13,7 +13,7 @@ module ModTimewarp
   use ModPhysics, ONLY: Io2No_V, UnitU_
   use ModPhysicalFLux, ONLY: Normal_D, get_physical_flux
   use ModBatsrusUtility, ONLY: stop_mpi, error_report
-  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK, test_start, test_stop
+  use BATL_lib, ONLY: Xyz_DGB, nI, nJ, nK, test_start, test_stop
 
   implicit none
 
@@ -86,7 +86,7 @@ contains
   end subroutine init_mod_timewarp
   !============================================================================
   subroutine state_to_warp(iBlock, DoStateOldOnly)
-
+    use BATL_lib, ONLY: Used_GB
     ! Convert from StateOld to StateOld - Flux_r/uWarp
     ! If DoStateOldOnly is false, then also do State_VGB
 
@@ -167,7 +167,7 @@ contains
   end subroutine state_to_warp_cell
   !============================================================================
   subroutine warp_to_state(iBlock)
-
+    use BATL_lib, ONLY: Used_GB
     ! Convert from State - uWarp*Flux_x back to State
     ! in State_VGB((:,1:nI,1:nJ,1:nK,nIiBlock)
 

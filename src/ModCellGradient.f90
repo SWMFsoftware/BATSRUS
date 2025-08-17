@@ -9,7 +9,7 @@ module ModCellGradient
        CellSize_DB,  CellFace_DB, FaceNormal_DDFB, CellVolume_GB, &
        IsCartesian, IsCartesianGrid, Unused_B, nBlock, MaxBlock,&
        nDim, jDim_, kDim_, x_, y_, z_, Dim1_, Dim2_, Dim3_
-  use ModGeometry, ONLY: IsBody_B, Used_GB
+  use ModGeometry, ONLY: IsBody_B
   use omp_lib
 
   implicit none
@@ -42,7 +42,8 @@ contains
     ! nG ghost cells.
     ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
 
-    use ModGeometry, ONLY: IsBody_B, Used_GB
+    use ModGeometry, ONLY: IsBody_B
+    use BATL_lib, ONLY: Used_GB
 
     ! Calculate divergence Div_G of Var_DG on a Cartesian grid
 
@@ -195,7 +196,7 @@ contains
   end subroutine calc_divergence
   !============================================================================
   subroutine calc_gradient1(iBlock, Var_G, nG, Grad_DG, UseBodyCellIn)
-
+    use BATL_lib, ONLY: Used_GB
     ! Calculate gradient of Var_G and return it in Grad_DG
     ! Only the physical cells are calculated but Grad_DG can have
     ! nG ghost cells.
@@ -343,7 +344,7 @@ contains
   end subroutine calc_gradient1
   !============================================================================
   subroutine calc_gradient3(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
-
+    use BATL_lib, ONLY: Used_GB
     ! Calculate the
     ! This is an interface to cartesian or gencoord_gradient.
 

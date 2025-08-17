@@ -187,7 +187,7 @@ contains
   subroutine write_restart_files
 
     use ModB0, ONLY: UseB0, add_b0, subtract_b0
-    use ModGeometry, ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModMain, ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
     use ModBuffer, ONLY: save_buffer_restart

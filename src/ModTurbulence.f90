@@ -433,7 +433,8 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
-    use ModGeometry, ONLY: Used_GB, r_GB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: Used_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 

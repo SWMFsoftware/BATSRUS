@@ -271,7 +271,8 @@ contains
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, DtMax_CB, &
          DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
-    use ModGeometry, ONLY: IsNoBody_B, Used_GB
+    use ModGeometry, ONLY: IsNoBody_B
+    use BATL_lib,    ONLY: Used_GB
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V, NameVar_V
     use ModPhysics, ONLY: RhoMin_I

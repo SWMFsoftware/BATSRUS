@@ -298,7 +298,8 @@ contains
     use ModAdvance, ONLY: State_VGB, nVar, DtMax_CB, SignB_, UseSaMhd
     use ModB0, ONLY: set_b0_cell
     use ModPhysics, ONLY: FaceState_VI, rBody2
-    use ModGeometry, ONLY: IsBody_B, IsNoBody_B, Used_GB, rBody2_GB
+    use ModGeometry, ONLY: IsBody_B, IsNoBody_B, rBody2_GB
+    use BATL_lib,  ONLY: Used_GB
     use ModMain, ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
          DtMax_B, IsTimeAccurate, UseDtFixed, Dt
     use ModParallel, ONLY: DiLevel_EB, Unset_
@@ -383,8 +384,8 @@ contains
   subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
        nCell, iCell_II, Weight_I, IsBody)
 
-    use BATL_lib, ONLY: MaxDim, nDim
-    use ModGeometry, ONLY: IsBody_B, Used_GB
+    use BATL_lib, ONLY: MaxDim, nDim, Used_GB
+    use ModGeometry, ONLY: IsBody_B
     ! Interpolation is performed using cells (including ghost) of single block,
     ! its index, iBlock, is provided at the call;
     !

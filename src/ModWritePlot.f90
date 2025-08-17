@@ -29,7 +29,7 @@ contains
 
     use ModMain
     use ModGeometry, ONLY: &
-         XyzMin_D, XyzMax_D, Used_GB, TypeGeometry, LogRGen_I, CellSize1Min
+         XyzMin_D, XyzMax_D, TypeGeometry, LogRGen_I, CellSize1Min
     use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, &
          set_dimensional_factor
     use ModFieldLineThread, ONLY: DoPlotThreads
@@ -53,7 +53,7 @@ contains
     use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
          message_pass_node, message_pass_cell, average_grid_node, &
          find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, &
-         nDim, rRound0, rRound1, SqrtNDim
+         nDim, rRound0, rRound1, SqrtNDim, Used_GB
     use BATL_size, ONLY: nGang
     use ModSpectrum, ONLY: clean_mod_spectrum, spectrum_read_table
 
@@ -900,6 +900,7 @@ contains
   contains
     !==========================================================================
     subroutine plotvar_to_plotvarnodes
+      use BATL_lib,  ONLY: Used_GB
 
       integer:: i2,j2,k2
       integer:: nCell_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
@@ -1011,7 +1012,7 @@ contains
     use ModInterpolate, ONLY: trilinear
     use ModSpectrum, ONLY: spectrum_calc_emission
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
-         iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
+         iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, Used_GB,&
          Xyz_DGB, Xyz_DNB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var

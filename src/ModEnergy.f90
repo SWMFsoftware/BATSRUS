@@ -21,7 +21,7 @@ module ModEnergy
        GammaMinus1_I, InvGammaMinus1_I, GammaMinus1, InvGammaMinus1, &
        InvGammaElectronMinus1, pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: &
-       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, Used_GB
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModSaMhd,     ONLY: UseSaMhd, rMinSaMhd
   use ModGeometry, ONLY: r_GB
 
@@ -46,7 +46,7 @@ module ModEnergy
 contains
   !============================================================================
   subroutine pressure_to_energy(iBlock, State_VGB)
-
+    use BATL_lib, ONLY: Used_GB
     ! Calculate energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
@@ -277,7 +277,7 @@ contains
   end subroutine pressure_to_energy_block
   !============================================================================
   subroutine energy_to_pressure(iBlock, State_VGB)
-
+    use BATL_lib, ONLY: Used_GB
     ! Convert energy to pressure in State_VGB depending on
     ! the value of UseNonConservative and IsConserv_CB
 
@@ -355,7 +355,7 @@ contains
   end subroutine energy_to_pressure
   !============================================================================
   subroutine energy_to_pressure_cell(iBlock, State_VGB)
-
+    use BATL_lib, ONLY: Used_GB
     ! Convert energy to pressure in physical cells of block iBlock of State_VGB
 
     integer, intent(in):: iBlock
