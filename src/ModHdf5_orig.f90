@@ -1170,16 +1170,17 @@ contains
 
   end subroutine write_real_sim_metadata
   !============================================================================
-  subroutine write_integer_plot_metadata(iFileID,nPlotVar,IsCutFile)
+  subroutine write_integer_plot_metadata(iFileID, nPlotVar, IsCutFile)
 
-    use BATL_lib, only : nDimAmr, nLevelMax, IsPeriodic_D
-    use ModMain, only : nStep
+    use BATL_lib, ONLY : nDimAmr, nLevelMax, IsPeriodic_D
+    use ModMain, ONLY : nStep
     use ModGeometry, ONLY : TypeGeometry
+
     integer (HID_T), intent(in) :: iFileID, nPlotVar
     logical, intent(in) :: IsCutFile
 
     integer(HSIZE_T) ::  iData
-    integer :: i,IntMetaData_I(16)
+    integer :: i, IntMetaData_I(16)
     integer, parameter  :: Ffv_ = 1 ! file format version
 
     logical:: DoTest

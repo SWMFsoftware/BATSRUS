@@ -43,7 +43,6 @@ module ModUser
 
 contains
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModReadParam,   ONLY: read_line, read_command, read_var
@@ -66,17 +65,18 @@ contains
        end select
     end do
     call test_stop(NameSub, DoTest)
+
   end subroutine user_read_inputs
   !============================================================================
-
   subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
        DoRefine, IsInside_I, Value_I)
 
     use ModMain,     ONLY: UseBody, UseRotatingBc, nRefineLevel
     use ModPhysics,  ONLY: rBody, rCurrents
     use ModNumConst, ONLY: cPi
+    use ModGeometry, ONLY: TypeGeometry
     use BATL_lib,    ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, &
-         CellSize_DB, CoordMin_DB, TypeGeometry, CoordMin_D, CoordMax_D
+         CellSize_DB, CoordMin_DB, CoordMin_D, CoordMax_D
 
     integer,   intent(in):: iArea        ! area index in BATL_region
     integer,   intent(in):: iBlock         ! block index
@@ -134,9 +134,9 @@ contains
     case('cartesian')
        SizeMax=CellSize_DB(1,iBlock)
        ! Block center coordinates
-       xxx = 0.5*(Xyz_DGB(1,nI,nJ,nK,iBlock)+Xyz_DGB(1,1,1,1,iBlock))!(Xyz_DGB(1,nI,nJ,nK,iBlock)+Xyz_DGB(1,1,1,1,iBlock))
-       yyy = 0.5*(Xyz_DGB(2,nI,nJ,nK,iBlock)+Xyz_DGB(2,1,1,1,iBlock))!(Xyz_DGB(2,nI,nJ,nK,iBlock)+Xyz_DGB(2,1,1,1,iBlock))
-       zzz = 0.5*(Xyz_DGB(3,nI,nJ,nK,iBlock)+Xyz_DGB(3,1,1,1,iBlock))!(Xyz_DGB(3,nI,nJ,nK,iBlock)+Xyz_DGB(3,1,1,1,iBlock))
+       xxx = 0.5*(Xyz_DGB(1,nI,nJ,nK,iBlock) + Xyz_DGB(1,1,1,1,iBlock))
+       yyy = 0.5*(Xyz_DGB(2,nI,nJ,nK,iBlock) + Xyz_DGB(2,1,1,1,iBlock))
+       zzz = 0.5*(Xyz_DGB(3,nI,nJ,nK,iBlock) + Xyz_DGB(3,1,1,1,iBlock))
        RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
        minRblk = sqrt(&
             minmod(xx1,xx2)**2 + minmod(yy1,yy2)**2 + minmod(zz1,zz2)**2)
@@ -144,7 +144,7 @@ contains
             (max(abs(yy1),abs(yy2)))**2 + &
             (max(abs(zz1),abs(zz2)))**2)
        if(UseBody.and.maxRblk<rBody) RETURN
-    case('rlonlat')
+    case('spherical')
        SizeMax=max(CellSize_DB(1,iBlock),CellSize_DB(2,iBlock)*maxRblk)
        minRblk = XyzStart_D(1)-0.5*CellSize_DB(1,iBlock)
        maxRblk = minRblk+nI*CellSize_DB(1,iBlock)
@@ -154,7 +154,7 @@ contains
        yyy=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))*&
             sin(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBlock))
        zzz=RR*cos(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))
-    case('rlonlat_lnr')
+    case('spherical_lnr')
        SizeMax=max(CellSize_DB(1,iBlock)*maxRblk,CellSize_DB(2,iBlock)*maxRblk)
        minRblk =exp( XyzStart_D(1)-0.5*CellSize_DB(1,iBlock))
        maxRblk =exp(nI*CellSize_DB(1,iBlock))*minRblk
@@ -5093,8 +5093,9 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              !  12 Re in Y
 
              if (SizeMax > 0.5 .and. &
-                  (TypeGeometry=='cartesian'.or.xxx>xMinBox+(xMaxBox-xMinBox)*cRefinedTailCutoff).and.&
-                  (xxx < 0. .and. xxx > -SizeMax*28.0)) then
+                  (TypeGeometry == 'cartesian' &
+                  .or. xxx>xMinBox+(xMaxBox-xMinBox)*cRefinedTailCutoff) &
+                  .and.(xxx < 0 .and. xxx > -SizeMax*28)) then
 
                 if (nJ == 4) then
                    tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
@@ -5185,7 +5186,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              !  12 Re in Y
 
              if (SizeMax>0.5 .and.&
-                  (TypeGeometry=='cartesian' &
+                  (TypeGeometry == 'cartesian' &
                   .or. xxx>xMinBox+(xMaxBox-xMinBox)*cRefinedTailCutoff).and. &
                   (xxx<0. .and. xxx>-SizeMax*28.0)) then
                 if (nJ == 4) then
@@ -5252,7 +5253,8 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                 miny = minval(abs(Xyz_DGB(2,1:nI, 1:nJ, 1:nK,iBlock)))
                 minz = minval(abs(Xyz_DGB(3,1:nI, 1:nJ, 1:nK,iBlock)))
              case default
-                call stop_mpi('Specify Refinement: Unknown TypeGeometry'//TypeGeometry)
+                call stop_mpi('Specify Refinement: Unknown TypeGeometry' &
+                     //TypeGeometry)
              end select
 
              ! With 8x8x8 blocks
@@ -5299,7 +5301,8 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                   minx>xMinBox+(xMaxBox-xMinBox)*cRefinedTailCutoff).and.&
                   (minx<0. .and. &
                   minx > -SizeMax*50.0)) then
-                if (miny < 15.0*CellSize_DB(1,iBlock) .and. minz < SizeMax) DoRefine = .true.
+                if (miny < 15*CellSize_DB(1,iBlock) &
+                     .and. minz < SizeMax) DoRefine = .true.
              end if
 
              ! With 8x8x8 blocks
@@ -5311,10 +5314,10 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! cell centers were further away from 0.0 than RCurrents.
              ! Now it checks to see if it is within 1 cell of rcurrents.
              if (minRblk - Rcurrents <= CellSize_DB(1,iBlock)) then
-                if(TypeGeometry=='cartesian')&
+                if(TypeGeometry == 'cartesian')&
                      DoRefine = .true.
-                if(TypeGeometry=='spherical'.or.&
-                     TypeGeometry=='spherical_lnr')&
+                if(TypeGeometry == 'spherical'.or.&
+                     TypeGeometry == 'spherical_lnr')&
                      DoRefine = CellSize_DB(2,iBlock)>cPi/128+1e-6.or.&
                      CellSize_DB(3,iBlock)>cPi/128+1e-6
              end if
@@ -5354,12 +5357,13 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              !    0.125  at lt  19.5
 
              if (SizeMax>0.125 .and.&
-                  (TypeGeometry=='cartesian'.or.xxx>xMinBox+(xMaxBox-xMinBox)*cRefinedTailCutoff).and.&
-                  (xxx<-7. .and. xxx>-SizeMax*50.0-5.0)) then
+                  (TypeGeometry=='cartesian' &
+                  .or.xxx>xMinBox+(xMaxBox-xMinBox)*cRefinedTailCutoff) &
+                  .and. (xxx < -7 .and. xxx > -SizeMax*50 - 5)) then
                 select case(TypeGeometry)
                 case('cartesian')
                    tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
-                        25.*((min(abs(zz1),abs(zz2)))**2))
+                        25*((min(abs(zz1),abs(zz2)))**2))
                 case('spherical')
                    tmpminRblk=min(cos(XyzStart_D(3)-0.5*&
                         CellSize_DB(3,iBlock))**2,cos(XyzStart_D(3)+&
@@ -5367,7 +5371,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                    tmpminRblk=min(sin(XyzStart_D(2)-0.5*&
                         CellSize_DB(2,iBlock))**2,sin(XyzStart_D(2)+&
                         (nJ-0.5)*CellSize_DB(2,iBlock))**2)*(1.0- tmpminRblk)&
-                        + 25.*tmpminRblk
+                        + 25*tmpminRblk
                    tmpminRblk=minRblk*sqrt(tmpminRblk)
                 case default
                    call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
@@ -5447,16 +5451,16 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-    real function minmod(x,y)
-      real, intent(in) :: x,y
+    real function minmod(x, y)
+      ! This function retursn the _absolute_ value of minmod(x,y)
+
+      real, intent(in) :: x, y
       !------------------------------------------------------------------------
-      minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
+      minmod = max(0.0, min(abs(x), sign(1.0, x)*y))
     end function minmod
     !==========================================================================
-
   end subroutine user_specify_region
   !============================================================================
-
 end module ModUser
 !==============================================================================
 
