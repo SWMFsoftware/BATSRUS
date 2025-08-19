@@ -46,7 +46,7 @@ module ModFieldLineThread
      real,pointer :: BDsFaceInvSi_III(:,:,:)
      ! Dimensionless TMax, such that the ingoing heat flux to the TR at this
      ! temperature equals the Poynting flux (which is not realistic and means
-     ! that the input tempreture exceeding TMax assumes that something is
+     ! that the input temperature exceeding TMax assumes that something is
      ! going wrong.
      real,pointer :: TMax_II(:,:)
 
