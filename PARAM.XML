@@ -6356,6 +6356,8 @@ Only useful if the initial condition has a non-trivial analytic form.
       <option name="sat:mars" />
       <option name="sat:sta" />
       <option name="sat:stb" />
+      <option name="sat:solo" />
+      <option name="sat:psp" />
     </part>
   </parameter>
   <if expr="$NameShape !~ /box|user|0/">
