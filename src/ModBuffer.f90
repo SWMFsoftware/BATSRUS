@@ -455,21 +455,15 @@ contains
     else
        write(iFile,'(a)')'#BUFFERGRID'
     end if
-    write(iFile,'(i8,a)')nRBuff, cTab//cTab//'nRBuff'
-    write(iFile,'(i8,a)')nLonBuff, cTab//cTab//'nLonBuff'
-    write(iFile,'(i8,a)')nlatBuff, cTab//cTab//'nLatBuff'
-    write(iFile,'(es22.15,a)') &
-         BufferMin_D(BuffR_), cTab//cTab//'RBuffMin'
-    write(iFile,'(es22.15,a)') &
-         BufferMax_D(BuffR_), cTab//cTab//'RBuffMax'
-    write(iFile,'(a)')'0.0'//&
-         cTab//cTab//cTab//'LonBuffMin'
-    write(iFile,'(a)')'360.0'//&
-         cTab//cTab//cTab//'LonBuffMax'
-    write(iFile,'(a)')'-90.0'//&
-         cTab//cTab//cTab//'LatBuffMin'
-    write(iFile,'(a)')'90.0'//&
-         cTab//cTab//cTab//'LatBuffMax'
+    write(iFile,'(i8,a)') nRBuff, cTab//cTab//'nRBuff'
+    write(iFile,'(i8,a)') nLonBuff, cTab//cTab//'nLonBuff'
+    write(iFile,'(i8,a)') nlatBuff, cTab//cTab//'nLatBuff'
+    write(iFile,'(es22.15,a)') BufferMin_D(BuffR_), cTab//cTab//'RBuffMin'
+    write(iFile,'(es22.15,a)') BufferMax_D(BuffR_), cTab//cTab//'RBuffMax'
+    write(iFile,'(a)') '0.0'//cTab//cTab//cTab//'LonBuffMin'
+    write(iFile,'(a)') '360.0'//cTab//cTab//cTab//'LonBuffMax'
+    write(iFile,'(a)') '-90.0'//cTab//cTab//cTab//'LatBuffMin'
+    write(iFile,'(a)') '90.0'//cTab//cTab//cTab//'LatBuffMax'
     write(iFile,*)
 
   end subroutine write_buffer_restart_header
