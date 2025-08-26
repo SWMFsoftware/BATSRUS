@@ -514,7 +514,7 @@ contains
 
     nCellProc = 0
 
-    if(DoPlotShell) then
+    if(DoPlotShell .or. DoPlotShock) then
        allocate(PlotVar_GVI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar, nGang))
 
        !$acc update device(PlotVar_VGB)
@@ -531,7 +531,11 @@ contains
              end do; end do; end do
           end do
 
-          call set_plot_shell(iBlock, nPlotVar, PlotVar_GVI(:,:,:,:,iGang))
+          if(DoPlotShell) then 
+            call set_plot_shell(iBlock, nPlotVar, PlotVar_GVI(:,:,:,:,iGang))
+          else if(DoPlotShock) then
+             call set_plot_shock(iBlock, nPlotVar, PlotVar_GVI(:,:,:,:,iGang))
+          end if
 
           if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
        end do
@@ -562,9 +566,7 @@ contains
                   NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
           end if
 
-          if(DoPlotShock) then
-             call set_plot_shock(iBlock, nPlotVar, PlotVar_GV)
-          else if (DoPlotBox) then
+         if (DoPlotBox) then
              call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
           else
              select case(TypePlotFormat_I(iFile))

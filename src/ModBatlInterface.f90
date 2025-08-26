@@ -106,7 +106,7 @@ contains
 
     use ModBoundaryGeometry, ONLY: fix_block_geometry
     use ModGeometry, ONLY: &
-         Coord111_DB, r_GB, rMin_B
+         Coord111_DB, r_GB, rMin_B, rMax_B
 
     use ModParallel, ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
 
@@ -234,6 +234,7 @@ contains
     end do; end do; end do
 
     rMin_B(iBlock) = minval(r_GB(:,:,:,iBlock))
+    rMax_B(iBlock) = maxval(r_GB(:,:,:,iBlock))
 
     call fix_block_geometry(iBlock)
 
@@ -245,7 +246,7 @@ contains
        if(IsStaticConservCrit) call select_conservative
 
        !$acc update device(jProc_IEB, jBlock_IEB, DiLevel_EB)
-       !$acc update device(rMin_B, r_GB, Coord111_DB)
+       !$acc update device(rMin_B, rMax_B, r_GB, Coord111_DB)
     endif
 
     call test_stop(NameSub, DoTest, iBlock)
