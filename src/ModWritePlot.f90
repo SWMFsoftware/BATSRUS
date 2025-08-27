@@ -531,7 +531,7 @@ contains
              end do; end do; end do
           end do
 
-          if(DoPlotShell) then 
+          if(DoPlotShell) then
             call set_plot_shell(iBlock, nPlotVar, PlotVar_GVI(:,:,:,:,iGang))
           else if(DoPlotShock) then
              call set_plot_shock(iBlock, nPlotVar, PlotVar_GVI(:,:,:,:,iGang))
