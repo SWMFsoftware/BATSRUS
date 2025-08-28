@@ -4,7 +4,7 @@
 module ModPlotShock
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, nProc, iComm
+       test_start, test_stop, iProc, nProc, iComm, nGang
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
@@ -21,15 +21,19 @@ module ModPlotShock
 
   ! Threshold for Divu*Dx
   real, public :: DivuDxMin = 0.0
+  !$acc declare create(DivuDxMin)
 
   ! Local variables
 
   ! Size of current plot:
   integer :: nR, nLon, nLat
+  !$acc declare create(nR, nLon, nLat)
 
   ! Ranges for current plot:
   real :: dR, dLat, dLon
+  !$acc declare create(dR, dLat, dLon)
   real :: rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax
+  !$acc declare create(rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax)
 
   integer, parameter :: RadiusTransformLinear_ = 1
   integer, parameter :: RadiusTransformLog_ = 2
@@ -38,6 +42,7 @@ module ModPlotShock
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VII(:,:,:)
+  !$acc declare create(PlotVar_VII)
 
 contains
   !============================================================================
@@ -87,15 +92,20 @@ contains
             nLon, nLat, dLon, dLat
     end if
 
+    !$acc update device(nR, nLon, nLat)
+    !$acc update device(dR, dLat, dLon)
+    !$acc update device(rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax)
+
     call test_stop(NameSub, DoTest)
 
   end subroutine init_plot_shock
   !============================================================================
   subroutine set_plot_shock(iBlock, nPlotvar, Plotvar_GV)
+    !$acc routine vector
 
     ! Interpolate the plot variables for block iBlock
     ! onto the shock surface of the plot area.
-    use ModGeometry,    ONLY: rMin_B, r_GB
+    use ModGeometry,    ONLY: rMin_B, rMax_B
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
          xyz_to_coord, IsCartesianGrid
@@ -113,6 +123,8 @@ contains
     real :: XyzPlot_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
+    real :: Tmp
+
     ! Interpolated plot variables
     real :: PlotVar_V(nPlotVar)
     real :: rMin, rMax
@@ -123,12 +135,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    rMax = maxval(r_GB(:,:,:,iBlock))
-    ! Return if block is below the PlotRange
-    if(rMax < rMinPlot) RETURN
-    ! Return if block is above the PlotRange
     rMin = rMin_B(iBlock)
-    if(rMin > rMaxPlot) RETURN
+    rMax = rMax_B(iBlock)
+    ! Return if block is below or above the PlotRange
+    if(rMax < rMinPlot .or. rMin > rMaxPlot) RETURN
 
     ! Limit radial range
     ! rMin = max(rMin, rMinPlot)
@@ -140,16 +150,18 @@ contains
     else
        nR = nI*3
     end if
-    dR = (maxval(r_GB(:,:,:,iBlock)) - rMin)/nR
+    dR = (rMax - rMin)/nR
 
     ! skip blocks with all DivuDx >= DivuDxMin
     if(all(PlotVar_GV(:,:,:,1) >= DivuDxMin)) RETURN
 
+    !$acc loop vector collapse(3) &
+    !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V)
     do k = 1, nLat
-       Lat = LatMin + (k-1)*dLat
        do j = 1, nLon
-          Lon = LonMin + (j-1)*dLon
           do i = 1, nR
+             Lat = LatMin + (k-1)*dLat
+             Lon = LonMin + (j-1)*dLon
              r = rMin + (i-0.5)*dR
              if(r < rMinPlot .or. r > rMaxPlot) CYCLE
              ! Convert to Cartesian coordinates
@@ -174,9 +186,16 @@ contains
              end do
 
              ! 0th plot variable is radius, and next plot variable is DivuDx
-             if(PlotVar_V(1) < PlotVar_VII(1,j,k))then
+             !$acc atomic read
+             Tmp = PlotVar_VII(1,j,k)
+
+             if(PlotVar_V(1) < Tmp)then
+                !$acc atomic write
                 PlotVar_VII(0,j,k) = r
-                PlotVar_VII(1:,j,k) = PlotVar_V
+                do iVar = 1, nPlotVar
+                   !$acc atomic write
+                   PlotVar_VII(iVar,j,k) = PlotVar_V(iVar)
+                end do
              endif
           end do ! r loop
        end do    ! lon loop
@@ -220,6 +239,8 @@ contains
 
     ! Collect results to head node
     ! Allocate variable
+
+    !$acc update host(PlotVar_VII)
 
     if(nProc > 1)then
        allocate(DivuDx_II(nLon,nLat), DivuDxMin_II(nLon,nLat), &

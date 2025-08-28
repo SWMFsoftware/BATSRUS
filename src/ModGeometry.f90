@@ -68,9 +68,9 @@ module ModGeometry
   !$acc declare create(r_GB)
   real, allocatable :: rBody2_GB(:,:,:,:)
 
-  ! Smallest value of r_GB and rBody2_GB within a block
-  real, allocatable :: rMin_B(:)
-  !$acc declare create(rMin_B)
+  ! Smallest/Largest value of r_GB and rBody2_GB within a block
+  real, allocatable :: rMin_B(:), rMax_B(:)
+  !$acc declare create(rMin_B, rMax_B)
   real, allocatable :: rMinBody2_B(:)
 
   ! Added for general r grid in spherical geometry!
@@ -100,6 +100,7 @@ contains
     allocate(IsBoundary_B(MaxBlock))
     allocate(r_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(rMin_B(MaxBlock))
+    allocate(rMax_B(MaxBlock))
     allocate(Coord111_DB(3,MaxBlock))
 
     if(UseBody2)then
@@ -128,6 +129,7 @@ contains
     if(allocated(r_GB))         deallocate(r_GB)
     if(allocated(rBody2_GB))    deallocate(rBody2_GB)
     if(allocated(rMin_B))       deallocate(rMin_B)
+    if(allocated(rMax_B))       deallocate(rMax_B)
     if(allocated(rMinBody2_B))  deallocate(rMinBody2_B)
     if(allocated(LogRGen_I))    deallocate(LogRGen_I)
     if(allocated(Coord111_DB))  deallocate(Coord111_DB)

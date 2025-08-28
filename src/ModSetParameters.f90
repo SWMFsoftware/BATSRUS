@@ -1057,6 +1057,7 @@ contains
                 endif
                 if(TypePlotArea == 'shk') then
                    call read_var('DivuDxMin', DivuDxMin)
+                   !$acc update device(DivuDxMin)
                 else
                    call read_var('TypeCoord', TypeCoordPlot_I(iFile))
                 end if
