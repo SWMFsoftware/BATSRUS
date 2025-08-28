@@ -147,14 +147,6 @@ contains
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
-    UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. .not.DoPlotBox &
-         .and. .not.DoPlotShock .and. (TypePlotFormat_I(iFile) == 'idl')
-
-    if(UseMpiIO) then
-       allocate(nCell_P(0:nProc-1))
-       allocate(nOffset_P(0:nProc-1))
-    end if
-
     PlotVarBody_V = 0.0
     UsePlotVarBody_V = .false.
 
@@ -288,6 +280,14 @@ contains
        iUnit = io_unit_new()
     else
        iUnit = UnitTmp_
+    end if
+
+    ! Should we use MPI-IO?
+    UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. .not.DoPlotBox &
+         .and. .not.DoPlotShock .and. (TypePlotFormat_I(iFile) == 'idl')
+    if(UseMpiIO) then
+       allocate(nCell_P(0:nProc-1))
+       allocate(nOffset_P(0:nProc-1))
     end if
 
     ! Calculate the record length for direct access data files
