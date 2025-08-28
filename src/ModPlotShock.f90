@@ -100,7 +100,7 @@ contains
 
   end subroutine init_plot_shock
   !============================================================================
-  subroutine set_plot_shock(iBlock, nPlotvar, Plotvar_GV)
+  subroutine set_plot_shock(iBlock, nPlotvar, Plotvar_VG)
     !$acc routine vector
 
     ! Interpolate the plot variables for block iBlock
@@ -112,9 +112,9 @@ contains
     use ModCoordTransform, ONLY: rlonlat_to_xyz
 
     ! Arguments
-    integer, intent(in) :: iBlock
-    integer, intent(in) :: nPlotvar
-    real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    integer, intent(in):: iBlock
+    integer, intent(in):: nPlotvar
+    real,    intent(in):: PlotVar_VG(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Local variables
     integer :: i, j, k, iVar
@@ -153,7 +153,7 @@ contains
     dR = (rMax - rMin)/nR
 
     ! skip blocks with all DivuDx >= DivuDxMin
-    if(all(PlotVar_GV(:,:,:,1) >= DivuDxMin)) RETURN
+    if(all(PlotVar_VG(1,:,:,:) >= DivuDxMin)) RETURN
 
     !$acc loop vector collapse(3) &
     !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V)
@@ -178,12 +178,9 @@ contains
              if(any(CoordNorm_D < 0.4999)) CYCLE
              if(any(CoordNorm_D > nIjk_D + 0.5001)) CYCLE
 
-             do iVar = 1, nPlotVar
-                ! Interpolate up to ghost cells.
-                ! compute the interpolated values at the current location
-                PlotVar_V(iVar) = trilinear(PlotVar_GV(:,:,:,iVar),&
-                     MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
-             end do
+             ! Interpolated values at the current location using ghost cells
+             PlotVar_V(1:) = trilinear(PlotVar_VG, &
+                  nPlotVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
 
              ! 0th plot variable is radius, and next plot variable is DivuDx
              !$acc atomic read
