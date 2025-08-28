@@ -147,7 +147,8 @@ contains
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
-    UseMpiIO = DoSaveOneIdlFile
+    UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. .not.DoPlotBox &
+         .and. .not.DoPlotShock .and. (TypePlotFormat_I(iFile) == 'idl')
 
     if(UseMpiIO) then
        allocate(nCell_P(0:nProc-1))
@@ -476,16 +477,13 @@ contains
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
-          if(.not.DoPlotShell .and. .not.DoPlotBox .and. &
-               .not.DoPlotShock .and. TypePlotFormat_I(iFile) == 'idl') then
-             ! Count the number of cells for output in this block.
-             call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
-                  DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
-                  Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
-                  CellSize1, CellSize2, CellSize3, nCellBlock, nOffset, &
-                  UseMpiIOIn=UseMpiIO, DoCountOnlyIn=.true.)
-             nCellProc = nCellProc + nCellBlock
-          end if
+          ! Count the number of cells for output in this block.
+          call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
+               DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
+               Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+               CellSize1, CellSize2, CellSize3, nCellBlock, nOffset, &
+               UseMpiIOIn=UseMpiIO, DoCountOnlyIn=.true.)
+          nCellProc = nCellProc + nCellBlock
        end do
 
        ! Gather the number of cells per processor
