@@ -1028,13 +1028,17 @@ test_awsom_gpu_rundir:
 
 test_awsom_gpu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
-	
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
+
 test_awsom_gpu_check:
 	-@(${DIFFNUM} -a=5e-19 -r=2e-4 -t \
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		Param/CORONA/TestOutput/log_n000001.awsom_gpu \
 		> test_awsom_gpu.diff)
+	-@(${DIFFNUM} -r=1-5 -t \
+		${TESTDIR}/RESULTS/SC/shk*t00000140_*.out \
+		Param/CORONA/TestOutput/shk_awsom_gpu.out \
+		>> test_awsom_gpu.diff)
 	ls -l test_awsom_gpu.diff
 
 ### AWSOM test on GPU with typical grid size

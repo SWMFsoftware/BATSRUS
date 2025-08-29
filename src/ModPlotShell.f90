@@ -140,7 +140,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_plot_shell
   !============================================================================
-  subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
+  subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_VG)
     !$acc routine vector
 #ifndef _OPENACC
     ! Interpolate the plot variables for block iBlock
@@ -156,9 +156,9 @@ contains
     use ModParallel,       ONLY: DiLevel_EB, Unset_
 
     ! Arguments
-    integer, intent(in) :: iBlock
-    integer, intent(in) :: nPlotvar
-    real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    integer, intent(in):: iBlock
+    integer, intent(in):: nPlotvar
+    real,    intent(in):: PlotVar_VG(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Local variables
     integer :: i, j, k, iVar, iDirMin
@@ -252,12 +252,9 @@ contains
                      DimFactor_V(1:nPlotVar)
 #endif
              else
-                do iVar=1, nPlotVar
-                   ! Interpolate up to ghost cells.
-                   PlotVar_VIII(iVar,i,j,k) = &
-                        trilinear(PlotVar_GV(:,:,:,iVar),&
-                        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
-                end do
+                ! Interpolate up to ghost cells.
+                PlotVar_VIII(1:,i,j,k) = trilinear(PlotVar_VG,&
+                     nPlotVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
              end if
 
           end do ! lon loop

@@ -240,6 +240,29 @@ SPHEROMAK		TypeCme
 1.13			ApexHeight
 600			uCme
 
+#SAVEPLOT
+2			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD}			NameVars
+{default}		NamePars
+shk VAR idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-10.0			DivuDxMin [km/s]
+2.0			rMin
+25.0			rMax
+0.			LonMin
+360.			LonMax
+10.			dLon
+-90.			LatMin
+90.			LatMax
+10.			dLat
+{MHD} te ti normx normy normz comprho thetaup thetadn ushk		NameVars
+{default}   	  	NamePars
+
 #STOP
 -1			MaxIteration
 5.0			tSimulationMax
