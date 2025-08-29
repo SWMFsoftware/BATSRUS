@@ -455,7 +455,7 @@ contains
 
           ! Restore State_VGB
           if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
-          
+
           if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
                iFile-plot_,nPlotVar,NamePlotVar_V,PlotVar_GV,PlotVarBody_V)
 
