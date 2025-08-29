@@ -380,9 +380,7 @@ contains
     end if
 
     IsNonCartesianPlot = .not.IsCartesianGrid
-
-    if (DoPlotShell) IsNonCartesianPlot = .true.
-    if (DoPlotShock) IsNonCartesianPlot = .true.
+    if (DoPlotShell .or. DoPlotShock) IsNonCartesianPlot = .true.
     if (DoPlotBox) IsNonCartesianPlot = .false.
 
     ! Logical for hdf plots
@@ -455,6 +453,9 @@ contains
           call set_plotvar(iBlock, iFile - plot_, nPlotVar, NamePlotVar_V, &
                PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
 
+          ! Restore State_VGB
+          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+          
           if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
                iFile-plot_,nPlotVar,NamePlotVar_V,PlotVar_GV,PlotVarBody_V)
 
@@ -510,20 +511,17 @@ contains
 
     nCellProc = 0
 
-    if(DoPlotShell .or. DoPlotShock) then
+    ! Probably DoPlotBox should be here next to DoPlotShell
+    if(DoPlotShell) then
        !$acc update device(PlotVar_VGB)
        !$acc parallel loop gang
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
-          if(DoPlotShell) then
-             call set_plot_shell(iBlock, nPlotVar, PlotVar_VGB(:,:,:,:,iBlock))
-          else if(DoPlotShock) then
-             call set_plot_shock(iBlock, nPlotVar, PlotVar_VGB(:,:,:,:,iBlock))
-          end if
-
-          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+          call set_plot_shell(iBlock, nPlotVar, PlotVar_VGB(:,:,:,:,iBlock))
        end do
        !$acc update host(PlotVar_VIII)
+    elseif(DoPlotShock) then
+       call set_plot_shock(nPlotVar, PlotVar_VGB)
     else
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
@@ -540,6 +538,9 @@ contains
              ! Set plot variable for this block
              call set_plotvar(iBlock, iFile-plot_, nPlotVar, NamePlotVar_V, &
                   PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
+
+             ! Restore State_VGB
+             if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
              ! Dimensionalize plot variables
              if(IsDimensionalPlot_I(iFile)) &
@@ -585,8 +586,6 @@ contains
              CellSizeMin_D(2) = min(CellSizeMin_D(2), CellSize2)
              CellSizeMin_D(3) = min(CellSizeMin_D(3), CellSize3)
           end if
-
-          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
        end do ! Block loop stage i2
     end if
