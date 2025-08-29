@@ -260,7 +260,7 @@ shk VAR idl_ascii		StringPlot
 -90.			LatMin
 90.			LatMax
 10.			dLat
-{MHD} te ti normx normy normz comprho thetaup thetadn ushk		NameVars
+{HD} te ti normx normy normz comprho thetaup thetadn ushk		NameVars
 {default}		NamePars
 
 #STOP
