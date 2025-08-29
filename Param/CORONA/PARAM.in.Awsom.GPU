@@ -261,7 +261,7 @@ shk VAR idl_ascii		StringPlot
 90.			LatMax
 10.			dLat
 {MHD} te ti normx normy normz comprho thetaup thetadn ushk		NameVars
-{default}   	  	NamePars
+{default}		NamePars
 
 #STOP
 -1			MaxIteration
