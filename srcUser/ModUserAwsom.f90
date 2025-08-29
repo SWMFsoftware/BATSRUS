@@ -504,10 +504,11 @@ contains
     use ModIO, ONLY: write_myname
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, &
-         UnitX_, UnitT_, GammaWave
+         UnitX_, UnitT_, UnitTemperature_, GammaWave
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_, WaveLast_, WaveFirst_, &
          Rho_, RhoUx_, RhoUz_
-    use BATL_lib, ONLY: integrate_grid, Unused_B, nBlock, x_, y_, z_, Xyz_DGB
+    use BATL_lib, ONLY: integrate_grid, Unused_B, nBlock, x_, y_, z_, &
+         Xyz_DGB, StringTest, maxval_grid, minval_grid, nProc
     use ModGeometry, ONLY: r_GB
     use ModWriteLogSatFile, ONLY: calc_sphere
     use ModCoordTransform, ONLY: cross_product
@@ -517,7 +518,7 @@ contains
     character(len=10), intent(in) :: TypeVar
     real, optional, intent(in) :: Radius
 
-    integer :: iBlock, i, j, k
+    integer :: iBlock, i, j, k, iLoc_I(5)
     real :: UnitEnergy, Wmajor, Wminor
     real :: FullB_D(3), SignBr, rUnit_D(3), Rho, Ur, Var, Current_D(3), b_D(3)
     logical:: DoTest
@@ -682,7 +683,44 @@ contains
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *UnitEnergy/No2Io_V(UnitT_)
-
+    case('temin')
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1,nK ; do j = 1,nJ ; do i = 1,nI
+             if(UseElectronPressure)then
+                Tmp1_GB(i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock)/&
+                     State_VGB(Rho_,i,j,k,iBlock)
+             else
+                Tmp1_GB(i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/&
+                     State_VGB(Rho_,i,j,k,iBlock)
+             end if
+          enddo; enddo; enddo
+       end do
+       VarValue = TeFraction*minval_grid(Tmp1_GB, iLoc_I=iLoc_I)*No2Io_V(&
+            UnitTemperature_)
+       if(index(StringTest,'show_temin')>0.and.iLoc_I(5)==iProc)&
+            write(*,*)'TeMin, x, y, z=', VarValue, &
+            Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
+       VarValue = VarValue/nProc
+    case('temax')
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1,nK ; do j = 1,nJ ; do i = 1,nI
+             if(UseElectronPressure)then
+                Tmp1_GB(i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock)/&
+                     State_VGB(Rho_,i,j,k,iBlock)
+             else
+                Tmp1_GB(i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/&
+                     State_VGB(Rho_,i,j,k,iBlock)
+             end if
+          enddo; enddo; enddo
+       end do
+       VarValue = TeFraction*maxval_grid(Tmp1_GB, iLoc_I=iLoc_I)*No2Io_V(&
+            UnitTemperature_)
+       if(index(StringTest,'show_temax')>0.and.iLoc_I(5)==iProc)&
+            write(*,*)'TeMax, x, y, z=', VarValue, &
+            Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
+       VarValue = VarValue/nProc
     case default
        VarValue = -7777.
        call write_myname;
