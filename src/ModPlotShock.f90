@@ -79,8 +79,6 @@ contains
 
     ! The 0 element is for the radius.
     allocate(PlotVar_VII(0:nPlotVar,nLon,nLat))
-    PlotVar_VII = 0.0
-    !$acc update device(PlotVar_VII)
 
     if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar= ', iFile, nPlotVar
@@ -149,6 +147,8 @@ contains
     !$acc parallel loop vector gang collapse(2) &
     !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V)
     do iLat = 1, nLat; do iLon = 1, nLon
+       ! Initialize DivUDx to 0
+       PlotVar_VII(:,iLon,iLat) = 0.0
        Lat = LatMin + (iLat - 1)*dLat
        Lon = LonMin + (iLon - 1)*dLon
        !$acc loop seq
@@ -300,7 +300,7 @@ contains
             VarIn_VII = PlotVar_VII)
     end if
 
-    ! Deallocate results arrays:.
+    ! Deallocate results arrays:
     deallocate(PlotVar_VII)
 
     call test_stop(NameSub, DoTest)
