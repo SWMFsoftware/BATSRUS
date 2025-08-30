@@ -146,7 +146,7 @@ contains
     ! Push PlotVar_VGB to GPU
     !$acc update device(nPlotVar, PlotVar_VGB)
 
-    !$acc parallel loop vector collapse(2) independent &
+    !$acc parallel loop vector worker gang collapse(2) independent &
     !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V) &
     !$acc present(nPlotVar, PlotVar_VGB, PlotVar_VII)
     do iLat = 1, nLat; do iLon = 1, nLon
