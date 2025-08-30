@@ -159,7 +159,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           ! Skip blocks with all DivuDx >= DivuDxMin
-          !if(all(PlotVar_VGB(1,:,:,:,iBlock) >= DivuDxMin)) CYCLE
+          ! if(all(PlotVar_VGB(1,:,:,:,iBlock) >= DivuDxMin)) CYCLE
 
           ! Skip blocks below or above the PlotRange
           rMin = rMin_B(iBlock)
