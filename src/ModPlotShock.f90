@@ -3,8 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPlotShock
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, nProc, iComm, nGang
+  use BATL_lib, ONLY: test_start, test_stop, iProc, nProc, iComm, &
+       nI, nJ, nK, nGang, IsCartesianGrid
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
@@ -20,28 +20,30 @@ module ModPlotShock
   public:: write_plot_shock
 
   ! Threshold for Divu*Dx
-  real, public :: DivuDxMin = 0.0
+  real, public:: DivuDxMin = 0.0
   !$acc declare create(DivuDxMin)
 
   ! Local variables
 
   ! Size of current plot:
-  integer :: nR, nLon, nLat
+  integer:: nR, nLon, nLat
   !$acc declare create(nR, nLon, nLat)
 
   ! Ranges for current plot:
-  real :: dR, dLat, dLon
-  !$acc declare create(dR, dLat, dLon)
-  real :: rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax
+  real:: rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax
   !$acc declare create(rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax)
 
-  integer, parameter :: RadiusTransformLinear_ = 1
-  integer, parameter :: RadiusTransformLog_ = 2
-  integer, parameter :: RadiusTransformLog10_ = 3
+  ! Resolution in Lon and Lat
+  real:: dLat, dLon
+  !$acc declare create(dLon, dLat)
+
+  integer, parameter:: RadiusTransformLinear_ = 1
+  integer, parameter:: RadiusTransformLog_ = 2
+  integer, parameter:: RadiusTransformLog10_ = 3
 
   ! Local results container:
   ! Array of values written to file:
-  real, allocatable :: PlotVar_VII(:,:,:)
+  real, allocatable:: PlotVar_VII(:,:,:)
   !$acc declare create(PlotVar_VII)
 
 contains
@@ -60,20 +62,27 @@ contains
     if(allocated(PlotVar_VII)) RETURN
 
     ! Get plot area info from ModIO arrays:
-    dLon     = PlotDx_DI(2,iFile) * cDegtoRad
-    dLat     = PlotDx_DI(3,iFile) * cDegtoRad
+    dLon     = PlotDx_DI(2,iFile)*cDegtoRad
+    dLat     = PlotDx_DI(3,iFile)*cDegtoRad
     rMinPlot = PlotRange_EI(1,iFile)
     rMaxPlot = PlotRange_EI(2,iFile)
-    LonMin = PlotRange_EI(3,iFile) * cDegtoRad
-    LonMax = PlotRange_EI(4,iFile) * cDegtoRad
-    LatMin = PlotRange_EI(5,iFile) * cDegtoRad
-    LatMax = PlotRange_EI(6,iFile) * cDegtoRad
+    LonMin   = PlotRange_EI(3,iFile)*cDegtoRad
+    LonMax   = PlotRange_EI(4,iFile)*cDegtoRad
+    LatMin   = PlotRange_EI(5,iFile)*cDegtoRad
+    LatMax   = PlotRange_EI(6,iFile)*cDegtoRad
 
     ! Set number of points
     nLon = nint((LonMax - LonMin)/dLon) + 1
     nLat = nint((LatMax - LatMin)/dLat) + 1
 
-    ! Ensure dR, dLon and dLat are compatible with the ranges
+    ! Set number of points for the radial search
+    if(IsCartesianGrid)then
+       nR = nI + nJ + nK
+    else
+       nR = nI*3
+    end if
+
+    ! Ensure dLon and dLat are compatible with the ranges
     dLon = (LonMax - LonMin)/max(1, nLon - 1)
     dLat = (LatMax - LatMin)/max(1, nLat - 1)
 
@@ -85,14 +94,13 @@ contains
        write(*,*) NameSub//' Raw PlotDx_DI=   ', PlotDx_DI(:,iFile)
        write(*,*) NameSub//' Raw PlotRange_EI=', PlotRange_EI(:,iFile)
        write(*,*) NameSub//' dLon, dLat =     ', dLon, dLat
-       write(*,*) NameSub//' r, Lon, Lat range = ',  &
-            rMinPlot, rMaxPlot, LonMin,LonMax,LatMin,LatMax
-       write(*,*) NameSub,' nLon, nLat, dLon, dLat = ', &
-            nLon, nLat, dLon, dLat
+       write(*,*) NameSub//' r, Lon, Lat range =',  &
+            rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax
+       write(*,*) NameSub//' nR, nLon, nLat, dLon, dLat =', &
+            nR, nLon, nLat, dLon, dLat
     end if
 
-    !$acc update device(nR, nLon, nLat)
-    !$acc update device(dR, dLat, dLon)
+    !$acc update device(nR, nLon, nLat, dLon, dLat)
     !$acc update device(rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax)
 
     call test_stop(NameSub, DoTest)
@@ -108,25 +116,26 @@ contains
     use ModGeometry,    ONLY: rMin_B, rMax_B
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: Unused_B, CoordMin_DB, nIjk_D, CellSize_DB, &
-         xyz_to_coord, IsCartesianGrid
+         xyz_to_coord
     use ModCoordTransform, ONLY: rlonlat_to_xyz
 
     ! Arguments
     integer, intent(in):: nPlotvar
-    real,    intent(in):: &
+    real, intent(in):: &
          PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iLon, iLat, iR, iBlock
+    integer:: iLon, iLat, iR, iBlock
 
-    real :: r, Lon, Lat
-    real :: XyzPlot_D(3)
-    real :: Coord_D(3), CoordNorm_D(3)
-
-    ! Interpolated plot variables
-    real :: PlotVar_V(nPlotVar)
+    real:: XyzPlot_D(3)
+    real:: Coord_D(3), CoordNorm_D(3)
+    real:: PlotVar_V(nPlotVar)
     !$acc declare create(PlotVar_V, Coord_D, CoordNorm_D, XyzPlot_D)
-    real :: rMin, rMax
+
+    ! Radial search range and step size
+    real:: rMin, rMax, dR
+
+    real:: r, Lon, Lat
 
     ! Check testing for block
     logical:: DoTest
@@ -134,18 +143,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    ! Loop through shock points and interpolate PlotVar
-    if(IsCartesianGrid)then
-       nR = nI + nJ + nK
-    else
-       nR = nI*3
-    end if
-
     ! Push PlotVar_VGB to GPU
-    !$acc update device(PlotVar_VGB)
+    !$acc update device(nPlotVar, PlotVar_VGB)
 
-    !$acc parallel loop vector gang collapse(2) &
-    !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V)
+    !$acc parallel loop vector collapse(2) independent &
+    !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V) &
+    !$acc present(nPlotVar, PlotVar_VGB, PlotVar_VII)
     do iLat = 1, nLat; do iLon = 1, nLon
        ! Initialize DivUDx to 0
        PlotVar_VII(:,iLon,iLat) = 0.0
@@ -156,7 +159,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           ! Skip blocks with all DivuDx >= DivuDxMin
-          if(all(PlotVar_VGB(1,:,:,:,iBlock) >= DivuDxMin)) CYCLE
+          !if(all(PlotVar_VGB(1,:,:,:,iBlock) >= DivuDxMin)) CYCLE
 
           ! Skip blocks below or above the PlotRange
           rMin = rMin_B(iBlock)
@@ -197,7 +200,7 @@ contains
     end do; end do  ! lon lat loops
 
     ! Push back results to CPU
-    ! acc update host(PlotVar_VII)
+    !$acc update host(PlotVar_VII)
 
     call test_stop(NameSub, DoTest, iBlock)
 
@@ -207,22 +210,22 @@ contains
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
-    use ModMain,     ONLY: tSimulation, nStep
+    use ModMain, ONLY: tSimulation, nStep
     use ModPlotFile, ONLY: save_plot_file
     use ModPlotScalars, ONLY: set_plot_scalars
 
-    integer,          intent(in) :: iFile, nPlotvar
-    character(len=*), intent(in) :: NameFile, NameVar_V(nPlotVar), NameUnit
+    integer,          intent(in):: iFile, nPlotvar
+    character(len=*), intent(in):: NameFile, NameVar_V(nPlotVar), NameUnit
 
-    integer :: iVar, iLon, iLat, iError
-    character(len=500) :: NameVar
+    integer:: iVar, iLon, iLat, iError
+    character(len=500):: NameVar
 
-    real, allocatable :: PlotVarWeight_VII(:,:,:)
-    real, allocatable :: DivuDx_II(:,:), DivuDxMin_II(:,:)
+    real, allocatable:: PlotVarWeight_VII(:,:,:)
+    real, allocatable:: DivuDx_II(:,:), DivuDxMin_II(:,:)
 
     ! Equation parameters
     integer, parameter:: MaxParam = 100
-    real              :: Param_I(MaxParam)
+    real:: Param_I(MaxParam)
     character (len=10):: NameParam_I(MaxParam)
     integer:: nParam
 
@@ -238,7 +241,6 @@ contains
     ! Collect results to head node
     ! Allocate variable
 
-    !$acc update host(PlotVar_VII)
     if(nProc > 1)then
        allocate(DivuDx_II(nLon,nLat), DivuDxMin_II(nLon,nLat), &
             PlotVarWeight_VII(0:nPlotVar+1,nLon,nLat))
@@ -273,7 +275,7 @@ contains
     endif
 
     ! Save results to disk
-    if(iProc==0) then
+    if(iProc == 0) then
        ! zero out all variables if DivuDx > DivuDxMin
        do iLat = 1, nLat; do iLon = 1, nLon
           if(PlotVar_VII(1,iLon,iLat) > DivuDxMin) &
@@ -283,9 +285,9 @@ contains
        ! Build a single-line list of variable names.
        NameVar = 'lon lat r'
        do iVar = 1, nPlotVar
-          NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
+          NameVar = trim(NameVar)//' '//NameVar_V(iVar)
        end do
-       NameVar = trim(NameVar)//' '//trim(StringPlotParam_I(iFile))
+       NameVar = trim(NameVar)//' '//StringPlotParam_I(iFile)
        call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
        ! Call save_plot_file to write data to disk.
        call save_plot_file(NameFile, &
