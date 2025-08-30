@@ -69,7 +69,7 @@ contains
     LatMin = PlotRange_EI(5,iFile) * cDegtoRad
     LatMax = PlotRange_EI(6,iFile) * cDegtoRad
 
-    ! Set number of points:
+    ! Set number of points
     nLon = nint((LonMax - LonMin)/dLon) + 1
     nLat = nint((LatMax - LatMin)/dLat) + 1
 
@@ -80,6 +80,7 @@ contains
     ! The 0 element is for the radius.
     allocate(PlotVar_VII(0:nPlotVar,nLon,nLat))
     PlotVar_VII = 0.0
+    !$acc update device(PlotVar_VII)
 
     if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar= ', iFile, nPlotVar
@@ -100,33 +101,33 @@ contains
 
   end subroutine init_plot_shock
   !============================================================================
-  subroutine set_plot_shock(iBlock, nPlotvar, Plotvar_VG)
-    !$acc routine vector
+  subroutine set_plot_shock(nPlotvar, Plotvar_VGB)
 
     ! Interpolate the plot variables for block iBlock
     ! onto the shock surface of the plot area.
+    ! The shock surface is where DivUDx has minimum along the radial direction
+
     use ModGeometry,    ONLY: rMin_B, rMax_B
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
+    use BATL_lib,       ONLY: Unused_B, CoordMin_DB, nIjk_D, CellSize_DB, &
          xyz_to_coord, IsCartesianGrid
     use ModCoordTransform, ONLY: rlonlat_to_xyz
 
     ! Arguments
-    integer, intent(in):: iBlock
     integer, intent(in):: nPlotvar
-    real,    intent(in):: PlotVar_VG(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real,    intent(in):: &
+         PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: i, j, k, iVar
+    integer :: iLon, iLat, iR, iBlock
 
     real :: r, Lon, Lat
     real :: XyzPlot_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
-    real :: Tmp
-
     ! Interpolated plot variables
     real :: PlotVar_V(nPlotVar)
+    !$acc declare create(PlotVar_V, Coord_D, CoordNorm_D, XyzPlot_D)
     real :: rMin, rMax
 
     ! Check testing for block
@@ -135,34 +136,38 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    rMin = rMin_B(iBlock)
-    rMax = rMax_B(iBlock)
-    ! Return if block is below or above the PlotRange
-    if(rMax < rMinPlot .or. rMin > rMaxPlot) RETURN
-
-    ! Limit radial range
-    ! rMin = max(rMin, rMinPlot)
-    ! rMax = min(rMax, rMaxPlot)
-
     ! Loop through shock points and interpolate PlotVar
     if(IsCartesianGrid)then
        nR = nI + nJ + nK
     else
        nR = nI*3
     end if
-    dR = (rMax - rMin)/nR
 
-    ! skip blocks with all DivuDx >= DivuDxMin
-    if(all(PlotVar_VG(1,:,:,:) >= DivuDxMin)) RETURN
+    ! Push PlotVar_VGB to GPU
+    !$acc update device(PlotVar_VGB)
 
-    !$acc loop vector collapse(3) &
+    !$acc parallel loop vector gang collapse(2) &
     !$acc private(XyzPlot_D, Coord_D, CoordNorm_D, PlotVar_V)
-    do k = 1, nLat
-       do j = 1, nLon
-          do i = 1, nR
-             Lat = LatMin + (k-1)*dLat
-             Lon = LonMin + (j-1)*dLon
-             r = rMin + (i-0.5)*dR
+    do iLat = 1, nLat; do iLon = 1, nLon
+       Lat = LatMin + (iLat - 1)*dLat
+       Lon = LonMin + (iLon - 1)*dLon
+       !$acc loop seq
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+
+          ! Skip blocks with all DivuDx >= DivuDxMin
+          if(all(PlotVar_VGB(1,:,:,:,iBlock) >= DivuDxMin)) CYCLE
+
+          ! Skip blocks below or above the PlotRange
+          rMin = rMin_B(iBlock)
+          rMax = rMax_B(iBlock)
+          if(rMax < rMinPlot .or. rMin > rMaxPlot) CYCLE
+
+          ! Loop over radial direction with dR step size
+          dR = (rMax - rMin)/nR
+          !$acc loop seq
+          do iR = 1, nR
+             r = rMin + (iR - 0.5)*dR
              if(r < rMinPlot .or. r > rMaxPlot) CYCLE
              ! Convert to Cartesian coordinates
              call rlonlat_to_xyz(r, Lon, Lat, XyzPlot_D)
@@ -179,24 +184,20 @@ contains
              if(any(CoordNorm_D > nIjk_D + 0.5001)) CYCLE
 
              ! Interpolated values at the current location using ghost cells
-             PlotVar_V(1:) = trilinear(PlotVar_VG, &
+             PlotVar_V = trilinear(PlotVar_VGB(:,:,:,:,iBlock), &
                   nPlotVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
 
              ! 0th plot variable is radius, and next plot variable is DivuDx
-             !$acc atomic read
-             Tmp = PlotVar_VII(1,j,k)
-
-             if(PlotVar_V(1) < Tmp)then
-                !$acc atomic write
-                PlotVar_VII(0,j,k) = r
-                do iVar = 1, nPlotVar
-                   !$acc atomic write
-                   PlotVar_VII(iVar,j,k) = PlotVar_V(iVar)
-                end do
+             if(PlotVar_V(1) < PlotVar_VII(1,iLon,iLat))then
+                PlotVar_VII(0,iLon,iLat)  = r
+                PlotVar_VII(1:,iLon,iLat) = PlotVar_V
              endif
-          end do ! r loop
-       end do    ! lon loop
-    end do       ! lat loop
+          end do    ! r loop
+       end do       ! iBlock loop
+    end do; end do  ! lon lat loops
+
+    ! Push back results to CPU
+    ! acc update host(PlotVar_VII)
 
     call test_stop(NameSub, DoTest, iBlock)
 
@@ -238,7 +239,6 @@ contains
     ! Allocate variable
 
     !$acc update host(PlotVar_VII)
-
     if(nProc > 1)then
        allocate(DivuDx_II(nLon,nLat), DivuDxMin_II(nLon,nLat), &
             PlotVarWeight_VII(0:nPlotVar+1,nLon,nLat))
@@ -247,8 +247,7 @@ contains
        ! Find smallest DivuDx for each lon-lat index
        DivuDx_II = PlotVar_VII(1,:,:)
        call MPI_allreduce(DivuDx_II, DivuDxMin_II, nLon*nLat, MPI_REAL, &
-            MPI_MIN, &
-            iComm, iError)
+            MPI_MIN, iComm, iError)
 
        ! Assign weight 1 to the plot variables at the minimum value
        do iLat = 1, nLat; do iLon = 1, nLon
