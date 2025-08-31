@@ -237,6 +237,29 @@ GL			TypeCme
 0.7			Stretch
 1.13			ApexHeight
 
+#SAVEPLOT
+2			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+25.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD}			NameVars
+{default}		NamePars
+shk VAR idl_ascii		StringPlot
+-1			DnSavePlot
+25.0			DtSavePlot
+-10.0			DivuDxMin [km/s]
+2.0			rMin
+25.0			rMax
+0.			LonMin
+360.			LonMax
+1.0			dLon
+-90.			LatMin
+90.			LatMax
+1.0			dLat
+{HD} te ti normx normy normz comprho thetaup thetadn ushk		NameVars
+{default}		NamePars
+
 #STOP
 -1			MaxIteration
 25.0			tSimulationMax
