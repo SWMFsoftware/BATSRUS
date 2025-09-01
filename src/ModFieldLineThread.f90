@@ -16,10 +16,9 @@ module ModFieldLineThread
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
-  use ModTransitionRegion, ONLY: OpenThread, allocate_thread_arr, &
-       deallocate_thread_arr, nPointThreadMax=>nPointMax, DsThreadMin=>Ds0, &
-       rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
-       iTableTr, set_thread, integrate_emission, read_tr_param
+  use ModTransitionRegion, ONLY: nPointThreadMax=>nPointMax,           &
+       DsThreadMin=>Ds0, rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, &
+       HeatFluxLength_, iTableTr, integrate_emission
 
   implicit none
   SAVE
@@ -159,7 +158,6 @@ module ModFieldLineThread
   public :: get_tr_los_image          ! Correction for TR on LOS images
   public :: is_threaded_block         ! Mark blocks near internal boundary
   public :: beta_thread               ! Accounts for grid sizes in TR and SC
-  public :: thread_heat_flux          ! Conserved heat flux to/from thread
   ! Saves thread state into restart
   public :: save_thread_restart
   ! interface procedure to easy calculate the CME field
@@ -261,12 +259,6 @@ contains
     beta_thread = 2.0  ! TBD!
   end function beta_thread
   !============================================================================
-  subroutine thread_heat_flux(iBlock, HeatFlux_II)
-    integer, intent(in) :: iBlock
-    real, intent(inout) :: HeatFlux_II(1:nJ,1:nK)
-    !--------------------------------------------------------------------------
-  end subroutine thread_heat_flux
-  !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
 
     use ModReadParam, ONLY: read_var
@@ -308,7 +300,8 @@ contains
        ! logical is set to .true.
        call read_var('UsePlanarTriangles', UsePlanarTriangles)
     case('#CHROMOEVAPORATION')
-       call read_tr_param('#CHROMOEVAPORATION')
+       if(iProc==0)write(*,*)&
+            'Command #CHROMOEVAPORATION is not used in this TR model'
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
