@@ -16,7 +16,6 @@ module ModThreadedLC
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
        DoInit_, Done_, Enthalpy_, Heat_, Restart_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
-  use ModTransitionRegion, ONLY: ChromoEvapCoef
   use ModTurbulence,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        ImbalanceMax
   use ModTurbulence,   ONLY: QeRatio
@@ -264,8 +263,7 @@ contains
     ! inner boundary of the global solar corona to the photosphere
 
     use ModAdvance,          ONLY: nJ
-    use ModTransitionRegion, ONLY: HeatCondParSi, &
-         UseChromoEvap, ChromoEvapCoef
+    use ModTransitionRegion, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
