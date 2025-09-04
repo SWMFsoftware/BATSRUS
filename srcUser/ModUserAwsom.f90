@@ -157,7 +157,7 @@ contains
           ! For now negative rStitch means to sticth up to |rStitch|
           DoStitchOneCell = rStitch > 0.0
           rStitch = abs(rStitch)
-          
+
        case("#STITCHREGION") ! input in degrees
           call read_var('UseStitchRegion', UseStitchRegion)
           if(UseStitchRegion)then
