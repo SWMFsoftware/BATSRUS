@@ -84,6 +84,7 @@ contains
 
     use BATL_size, ONLY: nDim
     use ModUtilities, ONLY: CON_set_do_test
+    use ModMain,      ONLY: IsNewUaState
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -122,10 +123,10 @@ contains
      end if
 
      ! set variables needed to construct source terms
+     IsNewUaState = .true.
      call GM_get_ua_region(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   end subroutine GM_put_from_ua
   !============================================================================
-
 end module GM_couple_ua
 !==============================================================================
