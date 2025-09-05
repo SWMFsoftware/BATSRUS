@@ -96,8 +96,8 @@ module ModUser
        Op_H__Hp_O_     =9 ,&! Op+H-->Hp+O
        H_hv__Hp_em_    =10  ! H+hv-->Hp+em
 
-  real, dimension(MaxReactions) :: Rate_I
-  real, dimension(MaxReactions) :: RateDim_I= &
+  real:: Rate_I(MaxReactions)
+  real:: RateDim_I(MaxReactions)= &
        [2.47e-7, 8.89e-8, 1.64e-10, 1.1e-9, &
        9.60e-11, 7.38e-8, 3.1e-7, 5.084e-10, 6.4e-10, 5.58e-8 ]  ! cm^3 s^(-1)
 
@@ -107,8 +107,7 @@ module ModUser
        Op_  =3, &
        CO2p_=4
 
-  real, dimension(MaxSpecies), parameter::  &
-       MassSpecies_I=[1., 32., 16., 44. ]  ! atm
+  real, parameter:: MassSpecies_I(MaxSpecies)=[1., 32., 16., 44.]
 
   !  MassSpecies_I(Hp_)=1	 ! atm
   !  MassSpecies_I(CO2p_)=44     ! atm
@@ -363,34 +362,8 @@ contains
   end subroutine user_calc_sources_impl
   !============================================================================
   subroutine user_sources(iBlock, Source_VC)
-    ! This subroutine is used to calculate sources for the MHD equations. The
-    ! routine is called for each block separately so that the user would
-    ! typically need only to code the source term calculation for a single
-    ! block (in other words inside the the k,j,i loop below). As with all user
-    ! subroutines, the variables declared in ModUser are available here.
-    !
-    ! The user should load the variables:
-    !   Srho_C,SrhoUx_C,SrhoUy_C,SrhoUz_C,SBx_C,SBy_C,SBz_C,SE_C,SP_C
-    ! They are now stored as one variable: S_IC, where
-    ! rho_ : rho, rho_+1:rho_+MaxSpecies: rhoSpecies
-    ! rho_+MaxSpecies+1: rhoUx
-    ! rho_+MaxSpecies+2: rhoUy
-    ! rho_+MaxSpecies+3: rhoUz
-    ! rho_+MaxSpecies+7: P
-    ! rho_+MaxSpecies+8: Energy
-    !
-    ! Note that SE_C(energy) and SP_C(pressure) must both be loaded if the code
-    ! is going to use both the primitive and the conservative MHD equation
-    ! advance (see the USER MANUAL and the DESIGN document). If using only
-    ! primitive SP must be loaded. If using only conservative SE must be
-    ! loaded. The safe approach is to load both.
 
-    ! Variable meanings:
-    !   Srho_C: Source terms for the continuity equation
-    !   SE_C,SP_C: Source terms for the energy (conservative) and pressure
-    !          (primative) equations
-    !   SrhoUx_C,SrhoUy_C,SrhoUz_C: Source terms for the momentum equation
-    !   SBx_C,SBy_C,SBz_C: Source terms for the magnetic field equations
+    ! Set Source_VC source terms for block iBlock
 
     use ModAdvance,  ONLY: State_VGB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
@@ -411,7 +384,6 @@ contains
          B4=-0.0322777
 
     real :: Te_dim, Ti_dim, kTi, kTe
-    real :: S_IC(MaxSpecies+9,nI,nJ,nK)
     real :: X1, X2, X3, X4
     real :: totalIMPNumRho
     integer:: i,j,k,iSpecies
@@ -425,20 +397,15 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    S_IC = 0.0
-
     if(r_GB(1,1,1,iBlock) > rOutNeu) RETURN
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        if (r_GB(i,j,k,iBlock) < Rbody) CYCLE
 
-       inv_rho = 1.00/State_VGB(rho_,i,j,k,iBlock)
-       inv_rho2 = inv_rho*inv_rho
-       uu2 =(State_VGB(Ux_,i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)  &
-            +State_VGB(Uy_,i,j,k,iBlock)*State_VGB(Uy_,i,j,k,iBlock)  &
-            +State_VGB(Uz_,i,j,k,iBlock)*State_VGB(Uz_,i,j,k,iBlock)) &
-            *inv_rho2
+       inv_rho = 1/State_VGB(rho_,i,j,k,iBlock)
+       inv_rho2 = inv_rho**2
+       uu2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*inv_rho2
 
        ReactionRate_I  = 0.0
        CoeffSpecies_II = 0.0
@@ -468,16 +435,16 @@ contains
        Te_dim = kTe*No2Si_V(UnitTemperature_)
        Ti_dim = kTi*No2Si_V(UnitTemperature_)
 
-       !             ReactionRate_I(CO2_hv__CO2p_em_)= &
-       !                  Rate_I(CO2_hv__CO2p_em_)&
-       !                  *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-       !             PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_) &
-       !                  *Productrate
-       !             ReactionRate_I(O_hv__Op_em_)= &
-       !                  Rate_I(O_hv__Op_em_)&
-       !                  *nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-       !             PhoIon_I(Op_)=ReactionRate_I(O_hv__Op_em_) &
-       !                  *Productrate
+       ! ReactionRate_I(CO2_hv__CO2p_em_)= &
+       !      Rate_I(CO2_hv__CO2p_em_)&
+       !      *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+       ! PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_) &
+       !      *Productrate
+       ! ReactionRate_I(O_hv__Op_em_)= &
+       !      Rate_I(O_hv__Op_em_)&
+       !      *nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+       ! PhoIon_I(Op_)=ReactionRate_I(O_hv__Op_em_) &
+       !      *Productrate
 
        ReactionRate_I(H_hv__Hp_em_) = &
             Rate_I(H_hv__Hp_em_)*nDenNuSpecies_CBI(i,j,k,iBlock,H_)
@@ -493,9 +460,9 @@ contains
           X2 = X1*X1
           X3 = X2*X1
           X4 = X2*X2
-          ImpIOn_I(Hp_) = exp(A0+A1*X1+A2*X2+A3*X3+A4*X4)&
+          ImpIOn_I(Hp_) = exp(A0 + A1*X1 + A2*X2 + A3*X3 + A4*X4) &
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
-          ImpIOn_I(Op_) = exp(B0+B1*X1+B2*X2+B3*X3+B4*X4)&
+          ImpIOn_I(Op_) = exp(B0+B1*X1+B2*X2+B3*X3+B4*X4) &
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
           ImpIon_I(Hp_) = ImpIon_I(Hp_)*nDenNuSpecies_CBI(i,j,k,iBlock,H_)
           ImpIon_I(Op_) = ImpIon_I(Op_)*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
@@ -615,7 +582,7 @@ contains
 
        MaxSLSpecies_CB(i,j,k,iBlock) = maxval(abs(SiSpecies_I(1:nSpecies) + &
             LiSpecies_I(1:nSpecies) ) / &
-            (State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) + 1e-20)) &
+            (State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock) + 1e-20)) &
             *CellVolume_GB(i,j,k,iBlock)
 
        ! Limit timestep for explicit scheme
@@ -644,89 +611,66 @@ contains
        !  Flux_VZI(Vdt_,i,j,k,1) = max (MaxSLSpecies_CB(i,j,k,iBlock),&
        !       Flux_VZI(Vdt_,i,j,k,1) )
 
-       S_IC(rho_+1:rho_+MaxSpecies,i,j,k) = S_IC(rho_+1:rho_+MaxSpecies,i,j,k)&
-            +SiSpecies_I(1:nSpecies) &
-            -LiSpecies_I(1:nSpecies)
+       Source_VC(rho_+1:rho_+nSpecies,i,j,k) = &
+            Source_VC(rho_+1:rho_+nSpecies,i,j,k) &
+            + SiSpecies_I(1:nSpecies) &
+            - LiSpecies_I(1:nSpecies)
 
-       S_IC(rho_,i,j,k) = S_IC(rho_,i,j,k) &
-            +sum(SiSpecies_I(1:MaxSpecies)) &
-            -sum(LiSpecies_I(1:MaxSpecies))
+       Source_VC(rho_,i,j,k) = Source_VC(rho_,i,j,k) &
+            + sum(SiSpecies_I(1:nSpecies)) &
+            - sum(LiSpecies_I(1:nSpecies))
 
-       S_IC(rho_+MaxSpecies+1,i,j,k) = S_IC(rho_+MaxSpecies+1,i,j,k) &
-            -State_VGB(Ux_,i,j,k,iBlock)*totalLossx &
-            -Nu_CB(i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
+            - State_VGB(Ux_,i,j,k,iBlock)*totalLossx &
+            - Nu_CB(i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)
 
-       S_IC(rho_+MaxSpecies+2,i,j,k) = S_IC(rho_+MaxSpecies+2,i,j,k) &
-            -State_VGB(Uy_,i,j,k,iBlock)*totalLossx &
-            -Nu_CB(i,j,k,iBlock)*State_VGB(Uy_,i,j,k,iBlock)
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) &
+            - State_VGB(Uy_,i,j,k,iBlock)*totalLossx &
+            - Nu_CB(i,j,k,iBlock)*State_VGB(Uy_,i,j,k,iBlock)
 
-       S_IC(rho_+MaxSpecies+3,i,j,k) = S_IC(rho_+MaxSpecies+3,i,j,k) &
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) &
             -State_VGB(Uz_,i,j,k,iBlock)*totalLossx &
             -Nu_CB(i,j,k,iBlock)*State_VGB(Uz_,i,j,k,iBlock)
 
        !----- pressure and energy source terms
        if(UseOldEnergy)then
           temp = (totalSourceNumRho*kTp0 + totalPSNumRho*T300*20.) &
-               -(totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,iBlock)
+               - (totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,iBlock)
 
-          S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) + &
-               (InvGammaMinus1*temp - 0.50*uu2*(totalLossRho) ) - &
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               + (InvGammaMinus1*temp - 0.50*uu2*(totalLossRho) ) - &
                0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_CB(i,j,k,iBlock)
-          S_IC(rho_+MaxSpecies+7,i,j,k) = S_IC(rho_+MaxSpecies+7,i,j,k) + &
-               (temp + 0.50*uu2*(totalSourceRho)*GammaMinus1) + &
-               GammaMinus1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               Nu_CB(i,j,k,iBlock)
+          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) &
+               + (temp + 0.50*uu2*(totalSourceRho)*GammaMinus1) &
+               + GammaMinus1*0.5*State_VGB(rho_,i,j,k,iBlock) &
+               *uu2*Nu_CB(i,j,k,iBlock)
 
           if(kTi > kTn)then
-             S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) &
-                  -Nu_CB(i,j,k,iBlock)*totalNumRho*InvGammaMinus1*(kTi-kTn)
-             S_IC(rho_+MaxSpecies+7,i,j,k) = S_IC(rho_+MaxSpecies+7,i,j,k) &
-                  -Nu_CB(i,j,k,iBlock)*totalNumRho*(kTi-kTn)
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  - Nu_CB(i,j,k,iBlock)*totalNumRho*InvGammaMinus1*(kTi-kTn)
+             Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) &
+                  - Nu_CB(i,j,k,iBlock)*totalNumRho*(kTi-kTn)
           end if
        else
-          temps = totalSourceNumRho*kTn            &
+          temps = totalSourceNumRho*kTn                    &
                + totalNumRho*(kTn-KTi)*Nu_CB(i,j,k,iBlock) &
-               + totalPSNumRho*kTe0                &
-               - totalLossNumRho*kTi               &
+               + totalPSNumRho*kTe0                        &
+               - totalLossNumRho*kTi                       &
                - totalRLNumRhox*totalNumRho*KTe
 
-          S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) &
-               - 0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               Nu_CB(i,j,k,iBlock)  &
-               - 0.50*uu2*(totalLossRho) &
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               - 0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_CB(i,j,k,iBlock) &
+               - 0.5*uu2*(totalLossRho) &
                + InvGammaMinus1*temps
 
-          S_IC(rho_+MaxSpecies+7,i,j,k) = S_IC(rho_+MaxSpecies+7,i,j,k) &
-               + 0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               Nu_CB(i,j,k,iBlock)  &
-               + 0.50*(GammaMinus1)*uu2*(totalSourceRho) &
+          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) &
+               + GammaMinus1 &
+               *State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_CB(i,j,k,iBlock)  &
+               + 0.5*GammaMinus1*uu2*(totalSourceRho) &
                + temps
-
        end if
 
     end do; end do; end do     ! end of the i,j,k loop
-
-    Source_VC(rho_       ,:,:,:) = Source_VC(rho_,:,:,:) + &
-         S_IC(rho_,:,:,:)
-    Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
-         Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) + &
-         S_IC(rho_+1:rho_+MaxSpecies,:,:,:)
-    Source_VC(rhoUx_     ,:,:,:) = Source_VC(rhoUx_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+1,:,:,:)
-    Source_VC(rhoUy_     ,:,:,:) = Source_VC(rhoUy_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+2,:,:,:)
-    Source_VC(rhoUz_     ,:,:,:) = Source_VC(rhoUz_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+3,:,:,:)
-    Source_VC(Bx_        ,:,:,:) = Source_VC(Bx_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+4,:,:,:)
-    Source_VC(By_        ,:,:,:) = Source_VC(By_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+5,:,:,:)
-    Source_VC(Bz_        ,:,:,:) = Source_VC(Bz_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+6,:,:,:)
-    Source_VC(P_         ,:,:,:) = Source_VC(P_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+7,:,:,:)
-    Source_VC(Energy_    ,:,:,:) = Source_VC(Energy_,:,:,:) + &
-         S_IC(rho_+MaxSpecies+8,:,:,:)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_sources
@@ -905,11 +849,11 @@ contains
           State_VGB(rhoCO2p_,i,j,k,iBlock)= &
                FaceState_VI(rhoCO2p_,body1_)*cosSZA
           State_VGB(rho_,i,j,k,iBlock)  = &
-               sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
+               sum( State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock))
           State_VGB(P_,i,j,k,iBlock) = &
                max(SolarWindP, &
-               sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
-               /MassSpecies_I(1:MaxSpecies))*kTp0 )
+               sum(State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock) &
+               /MassSpecies_I(1:nSpecies))*kTp0 )
        else
           State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MinBc_)
           State_VGB(Ux_:Bz_,i,j,k,iBlock) = 0.0
@@ -982,10 +926,10 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock))CYCLE
        State_VGB(rho_,i,j,k,iBlock)   =&
-            sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
+            sum(State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock))
        State_VGB(P_,i,j,k,iBlock)= &
-            max(SolarWindP, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock)&
-            /MassSpecies_I(1:MaxSpecies))*kTp0)
+            max(SolarWindP, sum(State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock)&
+            /MassSpecies_I(1:nSpecies))*kTp0)
     end do; end do; end do
 
     DtMax_CB(:,:,:,iBlock) = 0.0
@@ -995,12 +939,12 @@ contains
        write(*,*)'Rate_I=',Rate_I
        write(*,*)
        write(*,*)'rhoSpecies_GBI(testcell,1:nSpecies)=',&
-            State_VGB(rho_+1:rho_+MaxSpecies,iTest,jTest,kTest,iBlockTest)
+            State_VGB(rho_+1:rho_+nSpecies,iTest,jTest,kTest,iBlockTest)
        write(*,*)'p_BLK(iTest,jTest,kTest,iBlockTest)=',&
             State_VGB(P_,iTest,jTest,kTest,iBlockTest)
        write(*,*)
        write(*,*)'rhoSpecies_GBI(testcell+1,1:nSpecies)=',&
-            State_VGB(rho_+1:rho_+MaxSpecies,iTest+1,jTest,kTest,iBlockTest)
+            State_VGB(rho_+1:rho_+nSpecies,iTest+1,jTest,kTest,iBlockTest)
        write(*,*)'p_BLK(iTest+1,jTest,kTest,iBlockTest)=',&
             State_VGB(P_,iTest+1,jTest,kTest,iBlockTest)
        write(*,*)
@@ -1483,8 +1427,8 @@ contains
 
     VarsGhostFace_V(rhoHp_)  = SolarWindRho*0.3
 
-    VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
-    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&
+    VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+nSpecies))
+    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+nSpecies)&
          /MassSpecies_I)*kTp0
 
     ! Reflective in radial direction
