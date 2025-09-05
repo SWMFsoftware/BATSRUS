@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-PARAM.in.stitch: run STITCH in solar corona		StringDescription
+Param/CORONA/PARAM.in.STITCH: apply STITCH in corona		StringDescription
 
 #COMPONENT
 SC			NameComp
@@ -184,19 +184,19 @@ periodic		TypeBc6   LatMax
 
 #SAVEPLOT
 4			nPlotFile
-x=0 VAR idl_ascii		StringPlot
+x=0 VAR idl		StringPlot
 20			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dphi		NameVars
 {default}		NamePars
-y=0 VAR idl_ascii		StringPlot
+y=0 VAR idl		StringPlot
 20			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dphi		NameVars
 {default}		NamePars
-z=0 VAR idl_ascii		StringPlot
+z=0 VAR idl		StringPlot
 20			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
@@ -206,9 +206,10 @@ shl VAR idl		StringPlot
 20  			DnSavePlot
 -1.			DtSavePlot
 HGR			TypeCoordPlot
-1.001			rMin
-1.001			rMax
-0.			LonMin
+1.0			rMin
+1.1			rMax
+0.01			dR
+0.0			LonMin
 360.			LonMax
 1.			dLon    ! only read if LonMin /= LonMax
 -90.			LatMin
@@ -239,7 +240,7 @@ T			IsTimeAccurate
 
 #STITCH
 1.4E12			ZetaSI
-1.0			rStitch
+-1.05			rStitch
 0.0			tStartStitch
 5.0			tStopStitch
 

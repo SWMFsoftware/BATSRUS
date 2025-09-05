@@ -55,7 +55,7 @@ module ModUser
 
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta, rStitch = 1.0
-  logical :: UseStitchRegion = .false.
+  logical :: UseStitchRegion = .false., DoStitchOneCell = .false.
   real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
   real    :: tStartStitch = -1.0, tStopStitch = -1.0
@@ -154,6 +154,9 @@ contains
           call read_var('rStitch', rStitch)
           call read_var('tStartStitch', tStartStitch)
           call read_var('tStopStitch', tStopStitch)
+          ! For now negative rStitch means to sticth up to |rStitch|
+          DoStitchOneCell = rStitch > 0.0
+          rStitch = abs(rStitch)
 
        case("#STITCHREGION") ! input in degrees
           call read_var('UseStitchRegion', UseStitchRegion)
@@ -1972,75 +1975,76 @@ contains
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
     real :: BrJLeft, BrJRight, BrKLeft, BrKRight
     !--------------------------------------------------------------------------
-    ! STITCH
+    ! Check STITCH time
     if(tSimulation < tStartStitch .or. tSimulation > tStopStitch) RETURN
 
-    ! Only add the STITCH source term in first cell above rStitch
+    ! Add STITCH source term in/up to first cell above rStitch.
     ! Works only in spherical coordinates.
-    if(.not.(r_GB(0,1,1,iBlock)<rStitch .and. r_GB(nI,1,1,iBlock)>rStitch)) &
+    if(r_GB(0,1,1,iBlock) > rStitch &
+         .or. DoStitchOneCell .and. r_GB(nI,1,1,iBlock) < rStitch) &
          RETURN
-
-    ! Find index i for first cell above rStitch
-    ! Blocks have typically small index range in first direction, we just loop
-    do i = 1, nI
-       if (r_GB(i,1,1,iBlock) > rStitch) EXIT
-    end do
 
     ZetaJLeft = Zeta
     ZetaJRight = Zeta
     ZetaKLeft = Zeta
     ZetaKRight = Zeta
 
-    do k = 1, nK; do j = 1, nJ
+    do i = 1, nI
+       ! Check if we are above stitch radius
+       if(r_GB(i-1,1,1,iBlock) > rStitch) EXIT
+       ! Check if we are below stitch radius
+       if(DoStitchOneCell .and. r_GB(i,1,1,iBlock) < rStitch) CYCLE
+       do k = 1, nK; do j = 1, nJ
 
-       XyzSph_DD = rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock))
+          XyzSph_DD = rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock))
 
-       BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
-       if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
+          BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
+          if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
 
-       BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
-       if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
+          BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
+          if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
 
-       BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
-       if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
+          BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
+          if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
 
-       BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
-       if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
+          BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
+          if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
-       BrJLeft  = sum(BXyzJLeft_D*Xyz_DGB(:,i,j-1,k,iBlock)) &
-            /r_GB(i,j-1,k,iBlock)
-       BrJRight = sum(BXyzJRight_D*Xyz_DGB(:,i,j+1,k,iBlock)) &
-            /r_GB(i,j+1,k,iBlock)
-       BrKLeft  = sum(BXyzKLeft_D*Xyz_DGB(:,i,j,k-1,iBlock)) &
-            /r_GB(i,j,k-1,iBlock)
-       BrKRight = sum(BXyzKRight_D*Xyz_DGB(:,i,j,k+1,iBlock)) &
-            /r_GB(i,j,k+1,iBlock)
+          BrJLeft  = sum(BXyzJLeft_D*Xyz_DGB(:,i,j-1,k,iBlock)) &
+               /r_GB(i,j-1,k,iBlock)
+          BrJRight = sum(BXyzJRight_D*Xyz_DGB(:,i,j+1,k,iBlock)) &
+               /r_GB(i,j+1,k,iBlock)
+          BrKLeft  = sum(BXyzKLeft_D*Xyz_DGB(:,i,j,k-1,iBlock)) &
+               /r_GB(i,j,k-1,iBlock)
+          BrKRight = sum(BXyzKRight_D*Xyz_DGB(:,i,j,k+1,iBlock)) &
+               /r_GB(i,j,k+1,iBlock)
 
-       if(UseStitchRegion)then
-          call xyz_to_lonlat(Xyz_DGB(:,i,j-1,k,iBlock), Lon, Lat)
-          ZetaJLeft = zeta_region(lon, lat)
+          if(UseStitchRegion)then
+             call xyz_to_lonlat(Xyz_DGB(:,i,j-1,k,iBlock), Lon, Lat)
+             ZetaJLeft = zeta_region(lon, lat)
 
-          call xyz_to_lonlat(Xyz_DGB(:,i,j+1,k,iBlock), Lon, Lat)
-          ZetaJRight = zeta_region(lon, lat)
+             call xyz_to_lonlat(Xyz_DGB(:,i,j+1,k,iBlock), Lon, Lat)
+             ZetaJRight = zeta_region(lon, lat)
 
-          call xyz_to_lonlat(Xyz_DGB(:,i,j,k-1,iBlock), Lon, Lat)
-          ZetaKLeft = zeta_region(lon, lat)
+             call xyz_to_lonlat(Xyz_DGB(:,i,j,k-1,iBlock), Lon, Lat)
+             ZetaKLeft = zeta_region(lon, lat)
 
-          call xyz_to_lonlat(Xyz_DGB(:,i,j,k+1,iBlock), Lon, Lat)
-          ZetaKRight = zeta_region(lon, lat)
-       end if
+             call xyz_to_lonlat(Xyz_DGB(:,i,j,k+1,iBlock), Lon, Lat)
+             ZetaKRight = zeta_region(lon, lat)
+          end if
 
-       dBSph_D(1) = 0
-       dBSph_D(2) = -(ZetaKRight*BrKRight - ZetaKLeft*BrKLeft)/ &
-            (CellFace_DFB(2,i,j,k,iBlock) + CellFace_DFB(2,i,j+1,k,iBlock))
-       dBSph_D(3) =  (ZetaJRight*BrJRight - ZetaJLeft*BrJLeft)/ &
-            (CellFace_DFB(3,i,j,k,iBlock) + CellFace_DFB(3,i,j,k+1,iBlock))
-       dBXyz_D = matmul(XyzSph_DD, dBSph_D)
+          dBSph_D(1) = 0
+          dBSph_D(2) = -(ZetaKRight*BrKRight - ZetaKLeft*BrKLeft)/ &
+               (CellFace_DFB(2,i,j,k,iBlock) + CellFace_DFB(2,i,j+1,k,iBlock))
+          dBSph_D(3) =  (ZetaJRight*BrJRight - ZetaJLeft*BrJLeft)/ &
+               (CellFace_DFB(3,i,j,k,iBlock) + CellFace_DFB(3,i,j,k+1,iBlock))
+          dBXyz_D = matmul(XyzSph_DD, dBSph_D)
 
-       Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-            + sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*dBXyz_D)
-    end do; end do
+          Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               + sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*dBXyz_D)
+       end do; end do
+    end do
 
   contains
     !==========================================================================
