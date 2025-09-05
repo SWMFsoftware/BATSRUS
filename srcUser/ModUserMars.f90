@@ -138,7 +138,7 @@ module ModUser
   ! HNuSpecies_dim_I(O_)=18.4e3    ! m
 
   real, dimension(MaxNuSpecies):: BodynDenNuSpecies_I,&
-       BodynDenNuSpDim_I=[1.1593e12, 3.2278e9, 1.1307e7, 1.951e4, &
+       BodynDenNuSpDim_I = [1.1593e12, 3.2278e9, 1.1307e7, 1.951e4, &
        1.5248e3, 9.4936e5, 5.2695e8, 2.2258e11]
 
   integer, parameter :: & ! other numbers
@@ -2094,8 +2094,10 @@ contains
                Ionizationrate_CBI(i+1,j,k,iBlock,O_)
        elseif(r_GB(i,j,k,iBlock) <= 3*rBody)then
           tempNuSpecies_CBI(i,j,k,iBlock)       = UaState_VCB(1,i,j,k,iBlock)
-          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)  = UaState_VCB(2,i,j,k,iBlock)
-          nDenNuSpecies_CBI(i,j,k,iBlock,O_)    = UaState_VCB(3,i,j,k,iBlock)
+          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &
+               = 1e-6*UaState_VCB(2,i,j,k,iBlock) ! convert from m^-3 to cm^-3
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_) &
+               = 1e-6*UaState_VCB(3,i,j,k,iBlock) ! convert from m^-3 to cm^-3
           Ionizationrate_CBI(i,j,k,iBlock,CO2_) = UaState_VCB(4,i,j,k,iBlock)
           Ionizationrate_CBI(i,j,k,iBlock,O_)   = UaState_VCB(5,i,j,k,iBlock)
        end if
@@ -2326,7 +2328,8 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_
-    use ModPhysics, ONLY: No2Io_V, UnitN_, UnitT_, NameTecUnit_V, NameIdlUnit_V
+    use ModPhysics, ONLY: No2Io_V, UnitN_, UnitT_, UnitTemperature_, &
+         NameTecUnit_V, NameIdlUnit_V
     use ModAdvance, ONLY: State_VGB, Rho_
 
     integer,          intent(in) :: iBlock
@@ -2349,7 +2352,16 @@ contains
 
     IsFound = .true.
     PlotVarBody = 0.0
+    NameTecUnit = NameTecUnit_V(UnitN_)
+    NameIdlUnit = NameIdlUnit_V(UnitN_)
+
     select case(NameVar)
+    case('tneu')
+       PlotVar_G(1:nI,1:nJ,1:nK) = TempNuSpecies_CBI(:,:,:,iBlock)
+       PlotVarBody = TNu_body_dim
+       NameTecVar = 'Tneu'
+       NameTecUnit = NameTecUnit_V(UnitTemperature_)
+       NameIdlUnit = NameIdlUnit_V(UnitTemperature_)
     case('nco2')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
@@ -2375,21 +2387,24 @@ contains
             Ionizationrate_CBI(:,:,:,iBlock,O_)/No2Io_V(UnitT_) &
             *nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
        NameTecVar = 'IOp'
+       NameTecUnit = trim(NameTecUnit)//'/s'
+       NameIdlUnit = trim(NameIdlUnit)//'/s'
     case('ico2p')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             Ionizationrate_CBI(:,:,:,iBlock,CO2_)/No2Io_V(UnitT_) &
             *nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
        NameTecVar = 'ICO2p'
+       NameTecUnit = trim(NameTecUnit)//'/s'
+       NameIdlUnit = trim(NameIdlUnit)//'/s'
     case('prod')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             Productrate_CB(:,:,:,iBlock)/No2Io_V(UnitT_)*No2Io_V(UnitN_)
        NameTecVar = 'prod'
+       NameTecUnit = trim(NameTecUnit)//'/s'
+       NameIdlUnit = trim(NameIdlUnit)//'/s'
     case default
        IsFound = .false.
     end select
-
-    NameTecUnit = NameTecUnit_V(UnitN_)
-    NameIdlUnit = NameIdlUnit_V(UnitN_)
 
     UsePlotVarBody = .true.
 
