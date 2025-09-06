@@ -356,6 +356,8 @@ module ModMain
   character(len=len(NameVar_V)) :: NameVarLower_V(nVar+nFluid)
   character(len=len(NameVar_V)) :: NamePrimitive_V(nVar)
 
+  ! Neutral state variables received from Upper Atmosphere model
+  logical:: IsNewUaState = .false.
   real, allocatable :: UaState_VCB(:,:,:,:,:)
 
   ! Logical is true if compiled with OpenACC
