@@ -941,7 +941,7 @@ contains
       ResCooling_I = 0.0;
       do iPoint = 1, nLast
          if(TeSi_I(iPoint)>1.0e8)then
-            write(*,*)'Failure in heat condusction setting'
+            write(*,*)'Failure in heat conduction setting'
             write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
             write(*,*)'TeSiIn, PeSiIn = ', TeSiIn, PeSiIn
             write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
