@@ -701,9 +701,9 @@ contains
        end do
        VarValue = TeFraction*minval_grid(Tmp1_GB, iLoc_I=iLoc_I)*No2Io_V(&
             UnitTemperature_)
-       if(index(StringTest,'show_temin')>0.and.iLoc_I(5)==iProc)&
-            write(*,*)'TeMin, x, y, z=', VarValue, &
-            Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
+       ! if(index(StringTest,'show_temin')>0.and.iLoc_I(5)==iProc)&
+       !     write(*,*)'TeMin, x, y, z=', VarValue, &
+       !     Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
        VarValue = VarValue/nProc
     case('temax')
        do iBlock = 1, nBlock
@@ -720,9 +720,9 @@ contains
        end do
        VarValue = TeFraction*maxval_grid(Tmp1_GB, iLoc_I=iLoc_I)*No2Io_V(&
             UnitTemperature_)
-       if(index(StringTest,'show_temax')>0.and.iLoc_I(5)==iProc)&
-            write(*,*)'TeMax, x, y, z=', VarValue, &
-            Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
+       ! if(index(StringTest,'show_temax')>0.and.iLoc_I(5)==iProc)&
+          !  write(*,*)'TeMax, x, y, z=', VarValue, &
+          !  Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
        VarValue = VarValue/nProc
     case default
        VarValue = -7777.
