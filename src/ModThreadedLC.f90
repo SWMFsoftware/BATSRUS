@@ -1157,11 +1157,7 @@ contains
     use ModWaves,        ONLY: WaveFirst_, WaveLast_, UseAwRepresentative
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-    use ModTransitionRegion, ONLY: RhoTr_=>Rho_, Utr_=>U_, RhoUtr_=>RhoU_, &
-         Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
-         PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WminorTr_=>Wminor_, &
-         WmajorTr_=>Wmajor_, advance_thread_semi_impl
-    use ModConst, ONLY: cMu
+
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -1174,7 +1170,6 @@ contains
     integer:: iAction
 
     integer :: i, j, k, iMajor, iMinor, j1, k1
-    real :: Weight_I(3), State_V(nVarState), StateTr_V(WminorTr_), SignBr
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: TiSiIn, PiSiOut
