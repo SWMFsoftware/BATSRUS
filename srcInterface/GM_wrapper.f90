@@ -290,7 +290,7 @@ contains
 
     if(DoTestMe)write(*,*) NameSub,': nDimOut, iGridOut, iDecompOut=', &
          nDimOut, iGridOut, iDecompOut
-    
+
   end subroutine GM_get_grid_info
   !============================================================================
   subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
