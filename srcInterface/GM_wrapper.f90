@@ -123,16 +123,14 @@ contains
     logical :: DoTest,DoTestMe
     character(len=*), parameter:: NameSub = 'GM_set_param'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' called with TypeAction,iProc=',&
-         TypeAction,iProc
+    if(DoTest)write(*,*)NameSub,' called with TypeAction,iProc=', &
+         TypeAction, iProc
 
     select case(TypeAction)
     case('VERSION')
-       call put(CompInfo,                              &
-            Use        =.true.,                        &
-            NameVersion='BATSRUS (Univ. of Michigan)')
+       call put(CompInfo, Use=.true., NameVersion='BATSRUS')
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc, &
             nThread=nThread, Name=NameThisComp)
@@ -221,7 +219,7 @@ contains
        call MH_update_local_decomposition(MH_Domain)
        MH_Domain%IsLocal=.true.
     end if
-    call CON_set_do_test('test_grids',DoTest,DoTestMe)
+    call CON_set_do_test('test_grids', DoTest, DoTestMe)
 
     if(is_proc0(GM_))call MH_get_root_decomposition(GM_)
 
@@ -280,13 +278,19 @@ contains
 
     ! Return basic grid information useful for model coupling.
     ! The decomposition index increases with load balance and AMR.
+
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_get_grid_info'
     !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     nDimOut    = nDim
     iGridOut   = iNewGrid
     iDecompOut = iNewDecomposition
 
+    if(DoTestMe)write(*,*) NameSub,': nDimOut, iGridOut, iDecompOut=', &
+         nDimOut, iGridOut, iDecompOut
+    
   end subroutine GM_get_grid_info
   !============================================================================
   subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
@@ -330,7 +334,7 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_init_session'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     UseIm = Couple_CC(IM_,GM_) % DoThis .or. Couple_CC(PS_,GM_) % DoThis
     UsePw = Couple_CC(PW_,GM_) % DoThis
@@ -411,7 +415,7 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_run'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe)write(*,*)NameSub,' called with tSim, tSimLimit=',&
          TimeSimulation, TimeSimulationLimit
