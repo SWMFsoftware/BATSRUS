@@ -7,8 +7,8 @@ module ModUser
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc
 
-  use ModSize,     ONLY: nI,nJ,nK
-  use ModPhysics,  ONLY: ElectronCharge
+  use ModSize, ONLY: nI,nJ,nK
+  use ModPhysics, ONLY: ElectronCharge
 
   use ModUserEmpty, &
        IMPLEMENTED1 => user_calc_sources, &

@@ -550,7 +550,7 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModPhysics,  ONLY: rBody
+    use ModPhysics, ONLY: rBody
     use ModCoordTransform, ONLY: rot_xyz_sph
 
     integer, intent(in) :: iBlock
@@ -957,7 +957,7 @@ contains
     !==========================================================================
     subroutine calc_source_cell
 
-      use ModPhysics,   ONLY: GammaMinus1_I
+      use ModPhysics, ONLY: GammaMinus1_I
 
       ! Calculate source terms for one cell. The pressures source is
       ! S(p) = (gamma-1)[S(e) - u.S(rhou) + 0.5 u**2 S(rho)]
@@ -1236,13 +1236,13 @@ contains
   subroutine user_update_states_sph(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,     ONLY: StateOld_VGB, State_VGB, &
+    use ModAdvance, ONLY: StateOld_VGB, State_VGB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, DtMax_CB
-    use ModMain,        ONLY: Cfl, nStage, iStage
-    use ModEnergy,      ONLY: energy_to_pressure, pressure_to_energy
-    use BATL_lib,       ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, &
+    use ModMain, ONLY: Cfl, nStage, iStage
+    use ModEnergy, ONLY: energy_to_pressure, pressure_to_energy
+    use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, &
          IsLogRadius
-    use ModMultiFluid,  ONLY: DoConserveNeutrals
+    use ModMultiFluid, ONLY: DoConserveNeutrals
 
     integer,intent(in):: iBlock
     integer:: i, j, k, iVar, iVarFlux, iFluid
@@ -1380,13 +1380,13 @@ contains
   subroutine user_update_states_cyl(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,     ONLY: StateOld_VGB, State_VGB, &
+    use ModAdvance, ONLY: StateOld_VGB, State_VGB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, DtMax_CB
-    use ModMain,        ONLY: Cfl, nStage, iStage
-    use ModEnergy,      ONLY: energy_to_pressure, pressure_to_energy
-    use BATL_lib,       ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, &
+    use ModMain, ONLY: Cfl, nStage, iStage
+    use ModEnergy, ONLY: energy_to_pressure, pressure_to_energy
+    use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, &
          IsLogRadius
-    use ModMultiFluid,  ONLY: DoConserveNeutrals
+    use ModMultiFluid, ONLY: DoConserveNeutrals
 
     integer,intent(in):: iBlock
     integer:: i, j, k, iVar, iVarFlux, iFluid

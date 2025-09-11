@@ -27,8 +27,8 @@ module ModUser
        test_start, test_stop, &
        iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest, iProc
   use ModSize
-  use ModNumConst,  ONLY: cPi, cTiny
-  use ModAdvance,   ONLY: Pe_, UseElectronPressure
+  use ModNumConst, ONLY: cPi, cTiny
+  use ModAdvance, ONLY: Pe_, UseElectronPressure
   use ModMultiFluid
 
   include 'user_module.h' ! list of public methods
@@ -795,11 +795,11 @@ contains
   subroutine user_set_face_boundary(FBC)
 
     use ModMain, ONLY: nStep, tSimulation, FaceBCType
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Bx_, Bz_
-    use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Bx_, Bz_
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB
     use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V, UnitN_, &
          UnitTemperature_
-    use ModSolarwind,    ONLY: get_solar_wind_point
+    use ModSolarwind, ONLY: get_solar_wind_point
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
 
@@ -1351,11 +1351,11 @@ contains
     ! calculate all collision rates for electrons (fen, fei)
     ! (used for sources & resistivity)
 
-    use ModMain,       ONLY: nStep
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: No2SI_V, UnitN_
+    use ModMain, ONLY: nStep
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
-    use ModGeometry,   ONLY: Xyz_DGB
+    use ModGeometry, ONLY: Xyz_DGB
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Te
@@ -2999,8 +2999,8 @@ contains
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: LowDensityRatio, &
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: LowDensityRatio, &
          Si2No_V, No2Si_V, UnitN_, UnitTemperature_, UnitX_, UnitU_
     use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: Used_GB, Xyz_DGB
@@ -3124,8 +3124,8 @@ contains
   !============================================================================
   subroutine derive_cell_diffusivity( &
        iBlock, i, j, k, TeSI, nIon_I, nElec, EtaSi)
-    use ModResistivity,  ONLY: Eta0SI
-    use ModConst,        ONLY: cElectronMass, cElectronCharge, cMu
+    use ModResistivity, ONLY: Eta0SI
+    use ModConst, ONLY: cElectronMass, cElectronCharge, cMu
 
     integer, intent(in)  :: iBlock, i, j, k
     real,    intent(in)  :: TeSI
@@ -3214,12 +3214,12 @@ contains
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
 
-    use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, &
          UnitN_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
-    use ModAdvance,     ONLY: State_VGB
-    use ModVarIndexes,  ONLY: Pe_, P_
-    use ModConst,       ONLY: cBoltzmann
-    use ModMultiFluid,  ONLY: MassIon_I
+    use ModAdvance, ONLY: State_VGB
+    use ModVarIndexes, ONLY: Pe_, P_
+    use ModConst, ONLY: cBoltzmann
+    use ModMultiFluid, ONLY: MassIon_I
 
     integer, intent(in) :: iBlock
     real, intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -3279,12 +3279,12 @@ contains
        OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, EntropyOut)
 
-    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, &
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, &
          ElectronPressureRatio, InvGammaElectronMinus1
-    use ModVarIndexes,   ONLY: nVar, p_
-    use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
-    use ModAdvance,      ONLY: State_VGB
-    use ModGeometry,     ONLY: Xyz_DGB
+    use ModVarIndexes, ONLY: nVar, p_
+    use ModConst, ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: Xyz_DGB
 
     ! The State_V vector is in normalized units
     real, intent(in) :: State_V(nVar)
@@ -3422,14 +3422,14 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitN_, UnitU_, UnitT_,&
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: No2Si_V, UnitP_, UnitN_, UnitU_, UnitT_,&
          ElectronPressureRatio, &
          UnitTemperature_, UnitEnergyDens_, UnitX_
     use ModVarIndexes, ONLY: P_, Pe_
-    use ModConst,      ONLY: cBoltzmann
+    use ModConst, ONLY: cBoltzmann
     use ModMultiFluid, ONLY: MassIon_I
-    use ModMain,       ONLY: nStep
+    use ModMain, ONLY: nStep
     use ModCellGradient, ONLY: calc_gradient
 
     integer,          intent(in)   :: iBlock
@@ -3700,8 +3700,8 @@ contains
   subroutine user_preset_conditions(i,j,k,iBlock)
     ! This is applied as initial conditions and in the upstream boundary
     ! for the semi-implicit heat conduction
-    use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: &
+    use ModAdvance, ONLY: P_, Pe_, State_VGB
+    use ModPhysics, ONLY: &
          SolarWindRho, SolarWindUx, SolarWindUy, SolarWindUz, SolarWindP, &
          LowDensityRatio, ElectronPressureRatio, Io2No_V, UnitTemperature_, &
          SolarWindBx, SolarWindBy, SolarWindBz, UnitX_, UnitU_, UnitN_, &
@@ -3828,13 +3828,13 @@ contains
   !============================================================================
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModImplicit, ONLY: StateSemi_VGB, iTeImpl
-    use ModSize,     ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use BATL_lib,    ONLY: nG
-    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
+    use ModSize, ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY: nG
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_
     use ModCellBoundary, ONLY: set_cell_boundary
-    use ModVarIndexes,   ONLY: NameVar_V
+    use ModVarIndexes, ONLY: NameVar_V
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -3932,9 +3932,9 @@ contains
 
     ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.
 
-    use BATL_lib,    ONLY: iNode_B, iTree_IA, Level_
-    use ModAdvance,  ONLY: State_VGB, H2OpRho_
-    use ModPhysics,  ONLY: No2SI_V, UnitN_
+    use BATL_lib, ONLY: iNode_B, iTree_IA, Level_
+    use ModAdvance, ONLY: State_VGB, H2OpRho_
+    use ModPhysics, ONLY: No2SI_V, UnitN_
     use ModGeometry, ONLY: Xyz_DGB
 
     ! Variables required by this user subroutine

@@ -262,7 +262,7 @@ contains
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
 
-    use ModAdvance,  ONLY: Source_VC
+    use ModAdvance, ONLY: Source_VC
     use ModMain, ONLY: iNewDecomposition
 
     integer, intent(in) :: iBlock
@@ -281,11 +281,11 @@ contains
   subroutine user_sources(iBlock, Source_VC)
 
     use ModMain, ONLY: iNewGrid, iNewDecomposition, Unused_B, nBlock
-    use ModAdvance,  ONLY: State_VGB,Flux_VXI,Flux_VYI,Flux_VZI, Vdt_
+    use ModAdvance, ONLY: State_VGB,Flux_VXI,Flux_VYI,Flux_VZI, Vdt_
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModGeometry, ONLY: Xyz_DGB, r_GB
-    use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1
+    use ModPhysics, ONLY: Rbody, InvGammaMinus1, GammaMinus1
     use ModPointImplicit, ONLY: UsePointImplicit
     use BATL_lib, ONLY: CellVolume_GB
 
@@ -975,7 +975,7 @@ contains
 
     use ModMain, ONLY: FaceBCType
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
-    use ModPhysics,    ONLY: SolarWindRho
+    use ModPhysics, ONLY: SolarWindRho
 
     type(FaceBCType), intent(inout):: FBC
 
@@ -1042,8 +1042,8 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModPhysics,    ONLY: No2Io_V, UnitN_, NameTecUnit_V, NameIdlUnit_V
-    use ModAdvance,    ONLY: State_VGB, Rho_
+    use ModPhysics, ONLY: No2Io_V, UnitN_, NameTecUnit_V, NameIdlUnit_V
+    use ModAdvance, ONLY: State_VGB, Rho_
 
     ! Returns dimensional number density (/cc)
 
@@ -1096,7 +1096,7 @@ contains
 
   real function neutral_density(R0,iNu)
     !  use ModUser, ONLY : BodynDenNuSpecies_I, HNuSpecies_I
-    use ModPhysics, ONLY : Rbody
+    use ModPhysics, ONLY: Rbody
 
     real, intent(in) :: R0
     integer, intent(in) :: iNu
@@ -1111,12 +1111,12 @@ contains
 
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
-    use ModGeometry,   ONLY: Xyz_DGB, r_GB
-    use ModMain,       ONLY: Unused_B
+    use ModGeometry, ONLY: Xyz_DGB, r_GB
+    use ModMain, ONLY: Unused_B
     use ModVarIndexes, ONLY: &
          Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUz_
-    use ModAdvance,    ONLY: State_VGB,Tmp1_GB
-    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModAdvance, ONLY: State_VGB,Tmp1_GB
+    use ModPhysics, ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
     use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out)            :: VarValue
@@ -1163,9 +1163,9 @@ contains
 
   subroutine user_set_resistivity(iBlock, Eta_G)
 
-    use ModPhysics,  ONLY: No2Si_V, Si2No_V, &
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, &
          UnitTemperature_, UnitX_,UnitT_, Rbody
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: rMin_B
     use ModResistivity, ONLY: Eta0Si
 

@@ -162,7 +162,7 @@ contains
 
     use ModPhysics, ONLY: No2Si_V, UnitB_
     use ModIoUnit, ONLY: UnitTmp_
-    use ModMain,   ONLY: tSimulation
+    use ModMain, ONLY: tSimulation
 
     character(len=100) :: NameFile
 
@@ -242,8 +242,8 @@ contains
     use ModConst, ONLY: cProtonMass
 
     use CON_line_extract, ONLY: line_get, line_clean
-    use CON_axes,         ONLY: transform_matrix
-    use CON_planet,       ONLY: RadiusPlanet
+    use CON_axes, ONLY: transform_matrix
+    use CON_planet, ONLY: RadiusPlanet
 
     integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
@@ -362,7 +362,7 @@ contains
     ! SWMF GM and RB coupling.
 
     ! Module variables to use:
-    use ModMain,   ONLY: DoRbSatTrace
+    use ModMain, ONLY: DoRbSatTrace
     use ModSatelliteFile, ONLY: nSatellite
 
     ! Subroutine Arguments:
@@ -385,11 +385,11 @@ contains
 
     use ModSatelliteFile, ONLY: NameFileSat_I, XyzSat_DI, gm_trace_sat
     use ModWriteLogSatFile, ONLY: collect_satellite_data
-    use ModMain,          ONLY: UseB0, nBlock
-    use ModPhysics,       ONLY: No2Si_V, UnitB_
-    use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_
-    use ModB0,            ONLY: get_b0
-    use ModCurrent,       ONLY: get_point_data
+    use ModMain, ONLY: UseB0, nBlock
+    use ModPhysics, ONLY: No2Si_V, UnitB_
+    use ModVarIndexes, ONLY: nVar, Bx_, By_, Bz_
+    use ModB0, ONLY: get_b0
+    use ModCurrent, ONLY: get_point_data
     use ModMPI
 
     ! Arguments

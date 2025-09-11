@@ -27,9 +27,9 @@ contains
   !============================================================================
   subroutine GM_get_info_for_ie(nVarIeGm, nVarGmIe, NameVar_I)
 
-    use ModMain,             ONLY: TypeFaceBc_I, body1_
+    use ModMain, ONLY: TypeFaceBc_I, body1_
     use ModGroundMagPerturb, ONLY: nMagTotal
-    use ModAdvance,          ONLY: UseElectronPressure, UseAnisoPressure, &
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, &
                                    UseAnisoPe
 
     ! Pass number and names of variables requested from IE

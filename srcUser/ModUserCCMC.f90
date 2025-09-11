@@ -45,7 +45,7 @@ contains
   !============================================================================
   subroutine user_read_inputs
 
-    use ModReadParam,   ONLY: read_line, read_command, read_var
+    use ModReadParam, ONLY: read_line, read_command, read_var
     character (len=100) :: NameCommand
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
@@ -71,11 +71,11 @@ contains
   subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
        DoRefine, IsInside_I, Value_I)
 
-    use ModMain,     ONLY: UseBody, UseRotatingBc, nRefineLevel
-    use ModPhysics,  ONLY: rBody, rCurrents
+    use ModMain, ONLY: UseBody, UseRotatingBc, nRefineLevel
+    use ModPhysics, ONLY: rBody, rCurrents
     use ModNumConst, ONLY: cPi
     use ModGeometry, ONLY: TypeGeometry
-    use BATL_lib,    ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, &
+    use BATL_lib, ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, &
          CellSize_DB, CoordMin_DB, CoordMin_D, CoordMax_D
 
     integer,   intent(in):: iArea        ! area index in BATL_region

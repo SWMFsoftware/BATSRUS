@@ -129,10 +129,10 @@ contains
     use ModSolarwind, ONLY: get_solar_wind_point
     use ModNumConst, ONLY: cRadToDeg
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I
-    use CON_planet_field,  ONLY: map_planet_field
+    use CON_planet_field, ONLY: map_planet_field
 
     use CON_line_extract, ONLY: line_get, line_clean
-    use CON_axes,         ONLY: transform_matrix
+    use CON_axes, ONLY: transform_matrix
 
     integer, intent(in) :: iSizeIn, jSizeIn, nDensityIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut, AeOut
@@ -305,11 +305,11 @@ contains
     ! Modules
     use ModSatelliteFile, ONLY: NameFileSat_I, XyzSat_DI, gm_trace_sat
     use ModWriteLogSatFile, ONLY: collect_satellite_data
-    use ModMain,          ONLY: UseB0, nBlock
-    use ModPhysics,       ONLY: No2Si_V, UnitB_
-    use ModVarIndexes,    ONLY: Bx_, Bz_
-    use ModB0,            ONLY: get_b0
-    use ModCurrent,       ONLY: get_point_data
+    use ModMain, ONLY: UseB0, nBlock
+    use ModPhysics, ONLY: No2Si_V, UnitB_
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModB0, ONLY: get_b0
+    use ModCurrent, ONLY: get_point_data
     use ModMPI
 
     ! Arguments
@@ -359,16 +359,16 @@ contains
     ! Provide total number of points along rays
     ! and the number of variables to pass to IM
 
-    use ModMain,       ONLY: tSimulation, TypeCoordSystem
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
     use ModVarIndexes, ONLY: Bx_, Bz_, nVar
-    use ModIO,         ONLY: NamePrimitiveVarOrig
-    use CON_comp_param,   ONLY: lNameVersion
-    use CON_world,        ONLY: get_comp_info
+    use ModIO, ONLY: NamePrimitiveVarOrig
+    use CON_comp_param, ONLY: lNameVersion
+    use CON_world, ONLY: get_comp_info
     use CON_line_extract, ONLY: line_get, line_clean
-    use CON_coupler,      ONLY: Grid_C, IM_
-    use CON_axes,         ONLY: transform_matrix
-    use ModMultiFluid,    ONLY: nFluid, iUx_I, iUz_I
-    use ModFieldTrace,    ONLY: DoExtractBGradB1, DoExtractEfield, &
+    use CON_coupler, ONLY: Grid_C, IM_
+    use CON_axes, ONLY: transform_matrix
+    use ModMultiFluid, ONLY: nFluid, iUx_I, iUz_I
+    use ModFieldTrace, ONLY: DoExtractBGradB1, DoExtractEfield, &
          trace_field_equator
     use ModImCoupling, ONLY: IsImHeidi
 
@@ -649,7 +649,7 @@ contains
     ! SWMF GM and IM coupling.
 
     ! Module variables to use:
-    use ModMain,   ONLY: DoImSatTrace
+    use ModMain, ONLY: DoImSatTrace
     use ModSatelliteFile, ONLY: nSatellite
 
     ! Subroutine Arguments:
@@ -855,17 +855,17 @@ contains
   subroutine GM_put_from_im_cimi(Buffer_IIV,iSizeIn,jSizeIn,nVarIm,NameVarIm)
 
     use CON_coupler
-    use CON_world,      ONLY: get_comp_info
+    use CON_world, ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
     use ModImCoupling                              ! Storage for IM pressure
-    use ModMain, ONLY : nStep,tSimulation
+    use ModMain, ONLY: nStep,tSimulation
     use ModIoUnit, ONLY: UnitTmp_
     use BATL_lib, ONLY: iProc
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
     use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I, Pe_, &
          SpeciesFirst_, NameVar_V
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies, UseElectronPressure
-    use ModUtilities,       ONLY: split_string
+    use ModAdvance, ONLY: UseMultiSpecies, nSpecies, UseElectronPressure
+    use ModUtilities, ONLY: split_string
     character(len=80):: NameFile
 
     integer, intent(in):: iSizeIn,jSizeIn,nVarIm
@@ -1330,7 +1330,7 @@ contains
     ! write values to plot file
 
     use ModIoUnit, ONLY: UnitTmp_
-    use ModMain,   ONLY: tSimulation
+    use ModMain, ONLY: tSimulation
     character(len=100):: NameFile
     integer:: nCall = 0
     !--------------------------------------------------------------------------

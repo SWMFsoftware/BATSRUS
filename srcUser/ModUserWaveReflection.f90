@@ -91,11 +91,11 @@ contains
 
   subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: nI, nJ, nK, nBlock
+    use ModMain, ONLY: nI, nJ, nK, nBlock
     use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
-    use ModAdvance,  ONLY: State_VGB, &
+    use ModAdvance, ONLY: State_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, P_, Bx_, By_, Bz_
-    use ModPhysics,  ONLY: ShockSlope, ShockLeft_V, ShockRight_V, Gamma
+    use ModPhysics, ONLY: ShockSlope, ShockLeft_V, ShockRight_V, Gamma
     use ModNumConst, ONLY: cPi
 
     integer, intent(in) :: iBlock
@@ -202,10 +202,10 @@ contains
 
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
-    use ModSize,     ONLY : nI, nJ, nK
-    use ModGeometry, ONLY : Xyz_DGB, CellSize_DB
-    use ModPhysics,  ONLY : ShockSlope
-    use ModMain,     ONLY : tSimulation
+    use ModSize, ONLY: nI, nJ, nK
+    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
+    use ModPhysics, ONLY: ShockSlope
+    use ModMain, ONLY: tSimulation
 
     ! Variables required by this user subroutine
     character (len=*),intent(in) :: TypeCriteria

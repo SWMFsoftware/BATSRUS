@@ -21,12 +21,12 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: Xyz_DGB
+    use ModMain, ONLY: nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: Xyz_DGB
     use ModVarIndexes, ONLY: Bx_,By_,Bz_
-    use ModPhysics,    ONLY: Bdp
-    use ModB0,         ONLY: B0_DGB
+    use ModPhysics, ONLY: Bdp
+    use ModB0, ONLY: B0_DGB
 
     integer, intent(in) :: iBlock
 

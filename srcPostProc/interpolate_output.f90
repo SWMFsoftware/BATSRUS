@@ -7,13 +7,13 @@ program interpolate_output
   ! Read a *.outs IDL file of type ascii/real4/real8 and a satellite file,
   ! then interpolate the *.outs to the trajectory from the satellite file.
 
-  use ModPlotFile,       ONLY: read_plot_file
-  use ModTimeConvert,    ONLY: time_int_to_real, time_real_to_int
-  use ModNumConst,       ONLY: cRadToDeg, cDegToRad
-  use ModInterpolate,    ONLY: interpolate_vector, bilinear
+  use ModPlotFile, ONLY: read_plot_file
+  use ModTimeConvert, ONLY: time_int_to_real, time_real_to_int
+  use ModNumConst, ONLY: cRadToDeg, cDegToRad
+  use ModInterpolate, ONLY: interpolate_vector, bilinear
   use ModCoordTransform, ONLY: atan2_check
-  use ModUtilities,      ONLY: open_file, close_file
-  use ModIoUnit,         ONLY: UnitTmp_
+  use ModUtilities, ONLY: open_file, close_file
+  use ModIoUnit, ONLY: UnitTmp_
 
   implicit none
 

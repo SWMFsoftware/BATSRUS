@@ -6,8 +6,8 @@
 module ModUser
 
   use ModMultiFluid
-  use ModSize,       ONLY: nI, nJ, nK, MaxBlock
-  use ModAdvance,    ONLY: Pe_, UseElectronPressure
+  use ModSize, ONLY: nI, nJ, nK, MaxBlock
+  use ModAdvance, ONLY: Pe_, UseElectronPressure
   use BATL_lib, ONLY: lVerbose, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iProc
   use omp_lib
@@ -97,7 +97,7 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam, ONLY: read_var, read_line, read_command
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
 
@@ -145,11 +145,11 @@ contains
   !============================================================================
 
   subroutine user_neutral_atmosphere(iBlock)
-    use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
+    use ModBlockData, ONLY: get_block_data, set_block_data, put_block_data, &
          use_block_data, MaxBlockData
-    use ModPhysics,    ONLY: rPlanetSi, cProtonMass, No2SI_V, UnitX_
-    use ModNumConst,   ONLY: cPi, cRadToDeg
-    use ModGeometry,   ONLY: r_GB, Xyz_DGB,xMinBox,yMinBox,yMaxBox,zMinBox,zMaxBox
+    use ModPhysics, ONLY: rPlanetSi, cProtonMass, No2SI_V, UnitX_
+    use ModNumConst, ONLY: cPi, cRadToDeg
+    use ModGeometry, ONLY: r_GB, Xyz_DGB,xMinBox,yMinBox,yMaxBox,zMinBox,zMaxBox
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
 
     integer,intent(in) :: iBlock
@@ -364,8 +364,8 @@ contains
     ! calculate all collision rates for electrons (fen, fei)
     ! (used for sources & resistivity)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: No2SI_V, UnitN_
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
 
     integer,intent(in) :: i,j,k,iBlock
@@ -420,9 +420,9 @@ contains
 
     ! calculate all rates not involving electron collisions
 
-    use ModPhysics,  ONLY: rPlanetSI, rBody
-    use ModConst,    ONLY: cElectronMass, cProtonMass
-    use ModMain,     ONLY: UseBody
+    use ModPhysics, ONLY: rPlanetSI, rBody
+    use ModConst, ONLY: cElectronMass, cProtonMass
+    use ModMain, ONLY: UseBody
     use ModNumConst, ONLY: cPi
     use ModGeometry, ONLY: Xyz_DGB
 
@@ -722,13 +722,13 @@ contains
 
   subroutine user_calc_sources_impl(iBlock)
 
-    use ModMain,     ONLY: nI, nJ, nK, DtMax_B
-    use ModAdvance,  ONLY: State_VGB, Source_VC, Rho_, &
+    use ModMain, ONLY: nI, nJ, nK, DtMax_B
+    use ModAdvance, ONLY: State_VGB, Source_VC, Rho_, &
          RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
-    use ModConst,    ONLY: cBoltzmann, cElectronMass, cProtonMass
+    use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass
     use ModGeometry, ONLY: r_GB, Xyz_DGB
-    use ModCurrent,  ONLY: get_current
-    use ModPhysics,  ONLY: SolarWindUx, SolarWindUy, SolarWindUz, UnitN_, UnitRho_, &
+    use ModCurrent, ONLY: get_current
+    use ModPhysics, ONLY: SolarWindUx, SolarWindUy, SolarWindUz, UnitN_, UnitRho_, &
          UnitU_, UnitP_, UnitT_, UnitB_, &
          ElectronPressureRatio, ElectronCharge, Si2No_V, No2Si_V, &
          UnitEnergyDens_, UnitJ_, UnitRhoU_
@@ -1633,8 +1633,8 @@ contains
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: SolarWindN, LowDensityRatio, cBoltzmann, &
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: SolarWindN, LowDensityRatio, cBoltzmann, &
          ElectronPressureRatio, Si2No_V, No2Si_V, UnitN_, UnitP_!, UnitB_
 
     integer,intent(in) :: iBlock
@@ -1715,8 +1715,8 @@ contains
   subroutine derive_cell_diffusivity(iBlock, i, j, k, &
        TeSI, nIon_I, nElec, EtaSi)
 
-    use ModResistivity,  ONLY: Eta0SI
-    use ModConst,        ONLY: cElectronMass, cElectronCharge, cMu
+    use ModResistivity, ONLY: Eta0SI
+    use ModConst, ONLY: cElectronMass, cElectronCharge, cMu
 
     integer, intent(in)  :: iBlock, i, j, k
     real,    intent(in)  :: TeSI
@@ -1788,12 +1788,12 @@ contains
 
   subroutine user_set_resistivity(iBlock, Eta_G)
 
-    use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, &
          UnitN_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
-    use ModAdvance,     ONLY: State_VGB
-    use ModVarIndexes,  ONLY: Pe_, P_
-    use ModConst,       ONLY: cBoltzmann
-    use ModMultiFluid,  ONLY: MassIon_I
+    use ModAdvance, ONLY: State_VGB
+    use ModVarIndexes, ONLY: Pe_, P_
+    use ModConst, ONLY: cBoltzmann
+    use ModMultiFluid, ONLY: MassIon_I
 
     integer, intent(in) :: iBlock
     real, intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1853,12 +1853,12 @@ contains
        OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, EntropyOut)
 
-    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, &
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, &
          ElectronPressureRatio, InvGammaElectronMinus1
-    use ModVarIndexes,   ONLY: nVar, p_
-    use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
-    use ModAdvance,      ONLY: State_VGB
-    use ModGeometry,     ONLY: Xyz_DGB
+    use ModVarIndexes, ONLY: nVar, p_
+    use ModConst, ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: Xyz_DGB
 
     ! The State_V vector is in normalized units
     real, intent(in) :: State_V(nVar)
@@ -2014,14 +2014,14 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, &
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, &
          UnitT_, ElectronCharge, ElectronPressureRatio
     use ModVarIndexes, ONLY: P_, Pe_
-    use ModConst,      ONLY: cBoltzmann
-    use ModCurrent,    ONLY: get_current
+    use ModConst, ONLY: cBoltzmann
+    use ModCurrent, ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
-    use ModMain,       ONLY: DtMax_B
+    use ModMain, ONLY: DtMax_B
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -2240,8 +2240,8 @@ contains
   subroutine user_preset_conditions(i,j,k,iBlock)
     ! Initial conditions and upstream boundary for semi-implicit
     ! heat conduction
-    use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: SolarWindN, SolarWindUx, SolarWindUy, SolarWindUz, &
+    use ModAdvance, ONLY: P_, Pe_, State_VGB
+    use ModPhysics, ONLY: SolarWindN, SolarWindUx, SolarWindUy, SolarWindUz, &
          SolarWindTempDim, LowDensityRatio, ElectronPressureRatio, Io2No_V, &
          UnitTemperature_
 
@@ -2303,9 +2303,9 @@ contains
   !============================================================================
   subroutine user_set_ICs(iBlock)
 
-    use ModMain,     ONLY: UseBody
-    use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: ElectronPressureRatio, No2Si_V, &
+    use ModMain, ONLY: UseBody
+    use ModAdvance, ONLY: P_, Pe_, State_VGB
+    use ModPhysics, ONLY: ElectronPressureRatio, No2Si_V, &
          UnitRho_, UnitRhoU_, UnitP_, rBody
     use ModGeometry, ONLY: r_GB
 
@@ -2397,10 +2397,10 @@ contains
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModImplicit, ONLY: StateSemi_VGB, iTeImpl
-    use ModSize,     ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
+    use ModSize, ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -2436,8 +2436,8 @@ contains
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModMain,       ONLY: DtMax_B
-    use ModPhysics,    ONLY: No2SI_V, UnitT_
+    use ModMain, ONLY: DtMax_B
+    use ModPhysics, ONLY: No2SI_V, UnitT_
 
     real, intent(out)             :: VarValue
     character (len=*), intent(in) :: TypeVar
@@ -2462,12 +2462,12 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(FBC)
 
-    use ModSize,         ONLY: x_
-    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_
-    use ModSolarwind,    ONLY: get_solar_wind_point
+    use ModSize, ONLY: x_
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_
+    use ModSolarwind, ONLY: get_solar_wind_point
     ! use ModB0,           ONLY: B0_DX
-    use ModMain,         ONLY: body1_, FaceBCType
-    use ModPhysics,      ONLY: LowDensityRatio, SolarWindUx, SolarWindUy, &
+    use ModMain, ONLY: body1_, FaceBCType
+    use ModPhysics, ONLY: LowDensityRatio, SolarWindUx, SolarWindUy, &
          SolarWindUz, SolarWindN, SolarWindTempDim, &
          ElectronPressureRatio, UnitTemperature_, Io2No_V, &
          NO2SI_V, UnitP_, UnitRho_, UnitU_, UnitB_, UnitN_, &
@@ -2663,8 +2663,8 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModMain,             ONLY: xMaxBc_
-    use ModGeometry,         ONLY: Xyz_DGB, xMaxBox
+    use ModMain, ONLY: xMaxBc_
+    use ModGeometry, ONLY: Xyz_DGB, xMaxBox
     use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock

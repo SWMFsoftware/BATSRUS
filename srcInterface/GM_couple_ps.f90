@@ -26,10 +26,10 @@ contains
   subroutine GM_put_from_ps(Buffer_IIV, iSizeIn, jSizeIn, nVarPsGm, NameVarIn)
 
     use CON_coupler
-    use ModConst,           ONLY: cProtonMass
-    use CON_world,          ONLY: get_comp_info
-    use ModProcessVarName,  ONLY: process_var_name
-    use ModFieldTrace,      ONLY: UseAccurateTrace, DoMapEquatorRay
+    use ModConst, ONLY: cProtonMass
+    use CON_world, ONLY: get_comp_info
+    use ModProcessVarName, ONLY: process_var_name
+    use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
     use ModImCoupling       ! Storage for IM (and PS) pressure/density
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVarPsGm

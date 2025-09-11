@@ -110,7 +110,7 @@ contains
     use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use ModSetParameters, ONLY: set_parameters
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
-    use ModMain, ONLY : NameThisComp, &
+    use ModMain, ONLY: NameThisComp, &
          IsTimeAccurate, tSimulation, StartTime, iStartTime_I, UseRotatingBc
     use ModB0, ONLY: DtUpdateB0, DoUpdateB0
     use CON_physics, ONLY: get_time, get_planet
@@ -174,13 +174,13 @@ contains
   subroutine GM_set_grid
     use MH_domain_decomposition
     use CON_coupler
-    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple
-    use ModPhysics,      ONLY: No2Si_V, UnitX_
-    use ModVarIndexes,   ONLY: nVar
-    use ModAdvance,      ONLY: State_VGB
-    use CON_comp_param,  ONLY: GM_
-    use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
-    use BATL_lib,        ONLY: CoordMin_D, CoordMax_D, Particle_I
+    use ModMain, ONLY: TypeCoordSystem, NameVarCouple
+    use ModPhysics, ONLY: No2Si_V, UnitX_
+    use ModVarIndexes, ONLY: nVar
+    use ModAdvance, ONLY: State_VGB
+    use CON_comp_param, ONLY: GM_
+    use ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
+    use BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
     use ModParticleFieldLine, ONLY: iKindReg, UseParticles
 
     logical:: UseParticleLine = .false.
@@ -270,7 +270,7 @@ contains
   subroutine GM_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     use BATL_lib, ONLY: nDim
-    use ModMain,  ONLY: iNewGrid, iNewDecomposition
+    use ModMain, ONLY: iNewGrid, iNewDecomposition
 
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
@@ -295,7 +295,7 @@ contains
   !============================================================================
   subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
-    use BATL_lib,   ONLY: MaxDim, find_grid_block
+    use BATL_lib, ONLY: MaxDim, find_grid_block
     use ModPhysics, ONLY: Si2No_V, UnitX_
 
     integer, intent(in) :: nDimIn ! dimension of position vectors
@@ -321,11 +321,11 @@ contains
 
   subroutine GM_init_session(iSession, TimeSimulation)
 
-    use ModMain,     ONLY: UseIe, UsePw, TypeCellBc_I, TypeFaceBc_I, body1_
-    use ModMain,     ONLY: UseIM
-    use ModPIC,      ONLY: NameVersionPic
+    use ModMain, ONLY: UseIe, UsePw, TypeCellBc_I, TypeFaceBc_I, body1_
+    use ModMain, ONLY: UseIM
+    use ModPIC, ONLY: NameVersionPic
     use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_, PC_, SC_
-    use CON_world,   ONLY: get_comp_info
+    use CON_world, ONLY: get_comp_info
 
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -406,7 +406,7 @@ contains
 
   subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
-    use ModMain,   ONLY: tSimulation
+    use ModMain, ONLY: tSimulation
 
     real, intent(inout) :: TimeSimulation   ! current time of component
 

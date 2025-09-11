@@ -334,7 +334,7 @@ contains
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
 
-    use ModAdvance,  ONLY: Source_VC
+    use ModAdvance, ONLY: Source_VC
     use ModMain, ONLY: iNewDecomposition
 
     integer, intent(in) :: iBlock
@@ -366,11 +366,11 @@ contains
 
     ! Set Source_VC source terms for block iBlock
 
-    use ModAdvance,  ONLY: State_VGB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
+    use ModAdvance, ONLY: State_VGB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModGeometry, ONLY: r_GB
-    use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
+    use ModPhysics, ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
          No2Io_V, No2Si_V, UnitT_, UnitN_, UnitTemperature_
     use BATL_lib, ONLY: CellVolume_GB
     use ModPointImplicit, ONLY: UsePointImplicit
@@ -1375,9 +1375,9 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(FBC)
 
-    use ModMain,       ONLY: UseRotatingBc, ExtraBc_,Body1_,xMinBc_, FaceBCType
+    use ModMain, ONLY: UseRotatingBc, ExtraBc_,Body1_,xMinBc_, FaceBCType
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
-    use ModPhysics,    ONLY: SolarWindRho, FaceState_VI, OmegaBody_D
+    use ModPhysics, ONLY: SolarWindRho, FaceState_VI, OmegaBody_D
     use ModCoordTransform, ONLY: cross_product
 
     type(FaceBCType), intent(inout):: FBC
@@ -1441,7 +1441,7 @@ contains
   !============================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, xMaxBox
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, xMaxBox
     use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock
@@ -1785,12 +1785,12 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
-    use ModGeometry,   ONLY: Xyz_DGB,r_GB
-    use ModMain,       ONLY: Unused_B
+    use ModGeometry, ONLY: Xyz_DGB,r_GB
+    use ModMain, ONLY: Unused_B
     use ModVarIndexes, ONLY: &
          Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUz_
-    use ModAdvance,    ONLY: State_VGB,Tmp1_GB
-    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModAdvance, ONLY: State_VGB,Tmp1_GB
+    use ModPhysics, ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
     use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out)           :: VarValue
@@ -2063,7 +2063,7 @@ contains
   subroutine ua_input(iBlock)
 
     use ModGeometry, ONLY: TypeGeometry, r_GB
-    use ModPhysics,  ONLY: rBody
+    use ModPhysics, ONLY: rBody
 
     integer, intent(in) :: iBlock
 

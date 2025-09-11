@@ -70,7 +70,7 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: nI, nJ, nK
+    use ModMain, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
     use ModGeometry, ONLY: r_GB, rMin_B
@@ -114,7 +114,7 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: nI, nJ, nK
+    use ModMain, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
     use ModGeometry, ONLY: r_GB, rMin_B
