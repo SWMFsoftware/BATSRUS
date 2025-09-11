@@ -11,7 +11,7 @@ module ModUser
        SpeciesFirst_, SpeciesLast_, MassSpecies_V
   use ModAdvance, ONLY: nSpecies
   use ModPhysics, ONLY: BodyRhoSpecies_I
-  use ModMain, ONLY: UaState_VCB
+  use ModMain, ONLY: IsNewUaState, UaState_VCB, rMaxUa
   use BATL_lib, ONLY: nI, nJ, nK, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
   use ModUtilities, ONLY: open_file, close_file, upper_case
@@ -72,7 +72,7 @@ module ModUser
 
   real :: totalNumRho, totalLossRho, totalSourceRho, totalLossNumRho, &
        totalSourceNumRho, totalLossx, totalLossNumx
-  real:: rInNeu=1.0294464, rOutNeu = 4.0
+  real:: rInNeu=1.0294464
 
   !$omp threadprivate( totalNumRho, totalLossRho, totalSourceRho )
   !$omp threadprivate( totalLossNumRho )
@@ -278,7 +278,7 @@ contains
 
        case("#NEUTRALRADIUS")
           call read_var('rInNeu', rInNeu)
-          call read_var('rOutNeu', rOutNeu)
+          call read_var('rOutNeu', rMaxUa)
 
        case('#REACTIONS')
           call read_var('UseImpactIon', UseImpactIon)
@@ -335,7 +335,7 @@ contains
   subroutine user_calc_sources_impl(iBlock)
 
     use ModAdvance,  ONLY: Source_VC
-    use ModMain, ONLY: iNewDecomposition, IsNewUaState
+    use ModMain, ONLY: iNewDecomposition
 
     integer, intent(in) :: iBlock
 
@@ -398,7 +398,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(r_GB(1,1,1,iBlock) > rOutNeu) RETURN
+    if(r_GB(1,1,1,iBlock) > rMaxUa) RETURN
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -753,7 +753,7 @@ contains
        FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10*SolarWindRho
     end do
     call set_multiSp_ICs
-    !    Rbody = 1.0 + 140.0e3/Mars
+    !    Rbody = 1.0 + 140.0e3/rMars
     BodyRho_I(1) = sum(BodyRhoSpecies_I)
     BodyP_I(1)   = sum(BodyRhoSpecies_I/MassSpecies_I)*kTp0
 
@@ -823,7 +823,7 @@ contains
     end if
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if (r_GB(i,j,k,iBlock)< Rbody) then
+       if (r_GB(i,j,k,iBlock) < Rbody) then
           cosSZA = (0.5 + sign(0.5, Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(r_GB(i,j,k,iBlock), 1e-3) &
                + 1e-3
@@ -1862,8 +1862,8 @@ contains
     ! the whole block is inside the body
     if (r_GB(nI,1,1,iBlock) < Rbody) RETURN
 
-    ! the top of the block is outside rOutNeu (this looks wrong)
-    if (r_GB(MaxI,1,1,iBlock) >= rOutNeu) RETURN
+    ! the bottom of the block is outside rMaxUa
+    if (r_GB(1,1,1,iBlock) >= rMaxUa) RETURN
 
     dR     = CellSize_DB(x_,iBlock)
     dPhi   = CellSize_DB(y_,iBlock)
@@ -1895,6 +1895,8 @@ contains
           jLong = max(jLong, 1)
 
           do i = nI, 1, -1
+             if (r_GB(i,j,k,iBlock) >= rMaxUa) CYCLE
+
              hh = (r_GB(i,j,k,iBlock) - 1)*3396.00
              !                 write(*,*)'hh=', hh, i,j,k,iBlock
              xLong = (Phi-Long_I(jLong))/Dlong
@@ -1914,8 +1916,8 @@ contains
                 Ionizationrate_CBI(i,j,k,iBlock,O_) = &
                      Ionizationrate_CBI(i+1,j,k,iBlock,O_)
              elseif(hh <= Alt_I(NAlt))then
-                iAlt=int((hh - (Alt_I(1)+Dalt/2))/Dalt+1.0)
-                ip1=min(iAlt+1,NAlt)
+                iAlt = int((hh - (Alt_I(1)+Dalt/2))/Dalt+1.0)
+                ip1 = min(iAlt+1,NAlt)
                 if(iAlt < 1)then
                    write(*,*)'wrong ialt',iAlt
                 end if
@@ -2003,13 +2005,14 @@ contains
                      +xLong*IOp(jp1, kp1, NAlt))*xLat
 
                 ! grav=3.72/r_GB(i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-                grav=3.72/(1.0+300.0/3396.0)/(1.0+300.0/3396.0)
+                grav = 3.72/(1.0+300.0/3396.0)/(1.0+300.0/3396.0)
 
-                Hscale=cBoltzmann*&
-                     tempNuSpecies_CBI(i,j,k,iBlock)/grav/cProtonMass! in m unit
+                ! in m unit
+                Hscale = cBoltzmann* &
+                     tempNuSpecies_CBI(i,j,k,iBlock)/grav/cProtonMass
 
-                HCO2= Hscale/NuMassSpecies_I(CO2_)/1.0e3
-                HO= Hscale/NuMassSpecies_I(O_)/1.0e3
+                HCO2 = Hscale/NuMassSpecies_I(CO2_)/1.0e3
+                HO   = Hscale/NuMassSpecies_I(O_)/1.0e3
 
                 nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
                      ((Den_CO2(jLong,kLat,NAlt)*(1-xLong) &
@@ -2024,14 +2027,14 @@ contains
                      +xLong*Den_O(jp1,kp1,Nalt))*xLat)&
                      *exp(-dH/HO)
 
-                tempICO2p=max(tempICO2p,TINY)
-                tempIOP=max(tempIOp,TINY)
+                tempICO2p = max(tempICO2p, TINY)
+                tempIOP   = max(tempIOp, TINY)
                 ! Ionizationrate_CBI(i,j,k,iBlock,CO2_)
                 !   =tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
                 ! Ionizationrate_CBI(i,j,k,iBlock,O_)
                 !   =tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-                Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
-                Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
+                Ionizationrate_CBI(i,j,k,iBlock,CO2_) = tempICO2p
+                Ionizationrate_CBI(i,j,k,iBlock,O_)   = tempIOP
 
              end if ! hh < or > 300km
           end do
@@ -2092,14 +2095,17 @@ contains
                Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
           Ionizationrate_CBI(i,j,k,iBlock,O_)=&
                Ionizationrate_CBI(i+1,j,k,iBlock,O_)
-       elseif(r_GB(i,j,k,iBlock) <= 3*rBody)then
-          tempNuSpecies_CBI(i,j,k,iBlock)       = UaState_VCB(1,i,j,k,iBlock)
+       elseif(r_GB(i,j,k,iBlock) <= rMaxUa)then
+          tempNuSpecies_CBI(i,j,k,iBlock) &
+               = UaState_VCB(1,i,j,k,iBlock)
           nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &
                = 1e-6*UaState_VCB(2,i,j,k,iBlock) ! convert from m^-3 to cm^-3
           nDenNuSpecies_CBI(i,j,k,iBlock,O_) &
                = 1e-6*UaState_VCB(3,i,j,k,iBlock) ! convert from m^-3 to cm^-3
-          Ionizationrate_CBI(i,j,k,iBlock,CO2_) = UaState_VCB(4,i,j,k,iBlock)
-          Ionizationrate_CBI(i,j,k,iBlock,O_)   = UaState_VCB(5,i,j,k,iBlock)
+          Ionizationrate_CBI(i,j,k,iBlock,CO2_) &
+               = UaState_VCB(4,i,j,k,iBlock)
+          Ionizationrate_CBI(i,j,k,iBlock,O_) &
+               = UaState_VCB(5,i,j,k,iBlock)
        end if
     end do; end do; end do
 
@@ -2109,7 +2115,6 @@ contains
 
     ! Set neutral density and some related variables
 
-    use ModMain, ONLY: IsNewUaState
     use ModGeometry, ONLY: Xyz_DGB, r_GB
     use ModPhysics, ONLY: rBody
 
@@ -2131,7 +2136,7 @@ contains
 
        if(r_GB(i,j,k,iBlock)<= Rbody)then
           nDenNuSpecies_CBI(i,j,k,iBlock,:) = BodynDenNuSpecies_I
-       else if(r_GB(i,j,k,iBlock) < rOutNeu) then
+       else if(r_GB(i,j,k,iBlock) < rMaxUa) then
           nDenNuSpecies_CBI(i,j,k,iBlock,:) = BodynDenNuSpecies_I &
                *exp(-(r_GB(i,j,k,iBlock) - rInNeu)/HNuSpecies_I)
        else
@@ -2212,71 +2217,50 @@ contains
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &
+            nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+            nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
+
+       nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) = &
+            nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
+            nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
+
        if(UseHotO) then
-          Nu_CB(i,j,k,iBlock) = nu0*sum(nDenNuSpecies_CBI(i,j,k,iBlock,:))
-
-          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-               nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
-               nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
-
-          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
-               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
-               nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
-
-          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &
                nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
                nDenNuSpecies_CBI(i,j,k,iBlock,Oh_) + &
                nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
 
-          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= &
-               nDenNuSpecies_CBI(i,j,k,iBlock,H_) + &
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_) = &
+               nDenNuSpecies_CBI(i,j,k,iBlock,H_)+ &
                nDenNuSpecies_CBI(i,j,k,iBlock,Hx_)
+
        else
-          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
-               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
-               nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
-
-          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-               nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
-               nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
-
-          Nu_CB(i,j,k,iBlock) = nu0* &
-               (nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
-               nDenNuSpecies_CBI(i,j,k,iBlock,O_))
-
-          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1e-5
-
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_) = 1e-5
        end if
 
+       Nu_CB(i,j,k,iBlock) = (nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
+            nDenNuSpecies_CBI(i,j,k,iBlock,O_) +  &
+            nDenNuSpecies_CBI(i,j,k,iBlock,H_))*nu0
     end do; end do; end do
 
-    if(IsNewUaState .or. UseFileAtm)then
-       if(IsNewUaState)then
-          call ua_input(iBlock)
-       else
-          call mars_input(iBlock)
-       end if
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseHotO) then
-             nDenNuSpecies_CBI(i,j,k,iBlock,Oh_) = &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_) + &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
+    if(IsNewUaState) call ua_input(iBlock)
+    if(UseFileAtm) call mars_input(iBlock)
 
-             nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if( (IsNewUaState .or. UseFileAtm) &
+            .and. r_GB(i,j,k,iBlock) <= rMaxUa)then
+          ! Inside neutral model
+          if(UseHotO) nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Oh_) + &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
 
-             Nu_CB(i,j,k,iBlock) = nu0*( &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,H_) )
-          else
-             Nu_CB(i,j,k,iBlock) = nu0*( &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_) )
-
-             nDenNuSpecies_CBI(i,j,k,iBlock,H_) = 1e-5
-          end if
+          Nu_CB(i,j,k,iBlock) = nu0*( &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_))
+          ! Sometime H_ is added, sometimes not !!!
+          ! + nDenNuSpecies_CBI(i,j,k,iBlock,H_) )
 
           Ionizationrate_CBI(i,j,k,iBlock,CO2_) = &
                Ionizationrate_CBI(i,j,k,iBlock,CO2_)* &
@@ -2284,10 +2268,8 @@ contains
           Ionizationrate_CBI(i,j,k,iBlock,O_) = &
                Ionizationrate_CBI(i,j,k,iBlock,O_)* &
                nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-
-       end do; end do; end do
-    else
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       else
+          ! Outside neutral model (if any)
           Ionizationrate_CBI(i,j,k,iBlock,O_) = Rate_I(O_hv__Op_em_) &
                *nDenNuSpecies_CBI(i,j,k,iBlock,O_) &
                *Productrate_CB(i,j,k,iBlock)
@@ -2295,18 +2277,18 @@ contains
           Ionizationrate_CBI(i,j,k,iBlock,CO2_) = Rate_I(CO2_hv__CO2p_em_) &
                *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &
                *Productrate_CB(i,j,k,iBlock)
+       end if
+       if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+          write(*,*)'Rate_I(CO2_hv__CO2p_em_)=',Rate_I(CO2_hv__CO2p_em_)
+          write(*,*)'nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=', &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+          write(*,*)'Productrate_CB(i,j,k,iBlock)=', &
+               Productrate_CB(i,j,k,iBlock)
+          write(*,*)'Ionizationrate_CBI(i,j,k,iBlock,CO2_)=', &
+               Ionizationrate_CBI(i,j,k,iBlock,CO2_)
+       end if
 
-          if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
-             write(*,*)'Rate_I(CO2_hv__CO2p_em_)=',Rate_I(CO2_hv__CO2p_em_)
-             write(*,*)'nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=', &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-             write(*,*)'Productrate_CB(i,j,k,iBlock)=', &
-                  Productrate_CB(i,j,k,iBlock)
-             write(*,*)'Ionizationrate_CBI(i,j,k,iBlock,CO2_)=', &
-                  Ionizationrate_CBI(i,j,k,iBlock,CO2_)
-          end if
-       end do;end do; end do
-    end if
+    end do; end do; end do
 
     if(DoTest)then
        write(*,*)'usehoto=', UseHotO
