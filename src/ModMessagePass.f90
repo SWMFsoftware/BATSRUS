@@ -28,16 +28,16 @@ contains
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
-    use ModMain, ONLY : &
+    use ModMain, ONLY: &
          IsTimeLoop, UseConstrainB, iNewDecomposition, &
          nOrder, nOrderProlong, TypeMessagePass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
+    use ModAdvance, ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
     use ModGeometry, ONLY: IsBoundary_B
-    use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
+    use ModPhysics, ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
-    use ModEnergy,   ONLY: limit_pressure
+    use ModEnergy, ONLY: limit_pressure
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
     use ModBuffer, ONLY: fill_in_from_buffer, set_buffer_transform

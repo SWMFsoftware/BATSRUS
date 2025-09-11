@@ -224,8 +224,8 @@ contains
   !============================================================================
   subroutine show_progress
 
-    use ModIo,      ONLY: DnProgressShort, DnProgressLong
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, nStep, Dt
+    use ModIo, ONLY: DnProgressShort, DnProgressLong
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, nStep, Dt
     use ModPhysics, ONLY: Si2No_V, UnitT_
 
     ! Show timing results if required

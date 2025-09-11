@@ -37,7 +37,7 @@ contains
     use ModVarIndexes, ONLY: Rho_
     use BATL_lib, ONLY:  nI, nJ, nK, MaxDim
     use ModUtilities, ONLY: join_string
-    use ModWaves,     ONLY: WaveFirst_, WaveLast_, FrequencySi_W
+    use ModWaves, ONLY: WaveFirst_, WaveLast_, FrequencySi_W
     !
     ! Arguments
     !

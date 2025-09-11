@@ -83,12 +83,12 @@ contains
   !============================================================================
   subroutine write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
 
-    use BATL_lib,  ONLY: MaxDim, nDim, nJ, nK, nIjk_D, &
+    use BATL_lib, ONLY: MaxDim, nDim, nJ, nK, nIjk_D, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
          r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
-    use ModIO,     ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
+    use ModIO, ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
     use ModKind, ONLY: Real4_
 
@@ -231,16 +231,16 @@ contains
   !============================================================================
   subroutine write_tecplot_connect(iFile, NameFile)
 
-    use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
-    use ModIO,        ONLY: DoSaveOneTecFile, DoSaveTecBinary, &
+    use ModAdvance, ONLY: iTypeAdvance_BP, SkippedBlock_
+    use ModIO, ONLY: DoSaveOneTecFile, DoSaveTecBinary, &
          TypePlot, PlotRange_EI
-    use ModIoUnit,    ONLY: UnitTmp_
+    use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
-    use ModMain,      ONLY: nBlockMax
-    use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
+    use ModMain, ONLY: nBlockMax
+    use ModMpi, ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
          MPI_allgather, MPI_INTEGER
-    use ModNumConst,  ONLY: cHalfPi, cPi
-    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, k0_, nKp1_, &
+    use ModNumConst, ONLY: cHalfPi, cPi
+    use BATL_lib, ONLY: nI, nJ, nK, nIJK, k0_, nKp1_, &
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
          CoordMin_DB, CoordMax_DB, Xyz_DGB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis, &
@@ -625,9 +625,9 @@ contains
   !============================================================================
   subroutine write_tecplot_head(NameFile, StringUnit)
 
-    use ModIoUnit,    ONLY: UnitTmp_
+    use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
-    use ModIO,        ONLY: DoSaveTecBinary
+    use ModIO, ONLY: DoSaveTecBinary
 
     ! Write out tecplot header file
 
@@ -705,17 +705,17 @@ contains
   !============================================================================
   subroutine write_tecplot_auxdata(iUnitIn)
 
-    use ModMain, ONLY : IsTimeAccurate, nStep, nOrder, UseRotatingBc, &
+    use ModMain, ONLY: IsTimeAccurate, nStep, nOrder, UseRotatingBc, &
          TypeCoordSystem
     use ModGeometry, ONLY: nUsedCell
     use ModFaceValue, ONLY: TypeLimiter, LimiterBeta
-    use ModPhysics, ONLY : &
+    use ModPhysics, ONLY: &
          ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModAdvance, ONLY : TypeFlux
+    use ModAdvance, ONLY: TypeFlux
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO, ONLY: StringDateOrTime, DoSaveTecBinary
-    use ModNumConst, ONLY : cRadToDeg
+    use ModNumConst, ONLY: cRadToDeg
     use BATL_lib, ONLY: nProc, nI, nJ, nK, nIJK, nNodeUsed
 
     integer, intent(in), optional:: iUnitIn
@@ -1071,10 +1071,9 @@ contains
     ! block number, ie blocks 1 to n on PE 0, blocks n+1 to n+m on PE 1,
     ! etc.
 
-    use ModMain, ONLY :
-    use ModPhysics, ONLY : No2Io_V, UnitX_, &
+    use ModPhysics, ONLY: No2Io_V, UnitX_, &
          ThetaTilt
-    use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
+    use ModAdvance, ONLY: iTypeAdvance_B, SkippedBlock_
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
     use ModNodes, ONLY: nNodeAll, iNodeGlobal_NB, IsNodeUnique_NB
@@ -1928,10 +1927,10 @@ contains
   subroutine assign_node_numbers
 
     use ModIO, ONLY: write_prefix, iUnitOut
-    use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
+    use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
     use ModNodes
     use ModMpi
-    use ModMain,  ONLY: nBlockMax
+    use ModMain, ONLY: nBlockMax
     use BATL_lib, ONLY: nBlock, nNodeUsed, message_pass_node
 
     integer, parameter:: nNodeBlock=(nI+1)*(nJ+1)*(nK+1)
@@ -2095,12 +2094,12 @@ contains
     ! based on NamePlotVar_V array
 
     use ModPhysics
-    use ModUtilities,  ONLY: lower_case
-    use ModIO,         ONLY: IsDimensionalPlot_I, TypePlot
+    use ModUtilities, ONLY: lower_case
+    use ModIO, ONLY: IsDimensionalPlot_I, TypePlot
     use ModVarIndexes, ONLY: IsMhd
-    use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
+    use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I
     use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
-    use BATL_lib,      ONLY: nDim
+    use BATL_lib, ONLY: nDim
 
     ! Arguments
 

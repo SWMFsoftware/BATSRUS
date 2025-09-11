@@ -59,10 +59,10 @@ contains
 
   subroutine read_boundary_geometry_param(NameCommand)
 
-    use ModMain,      ONLY: UseSolidState, TypeCellBc_I, TypeFaceBc_I
-    use ModMain,      ONLY: Coord1MinBc_, xMinBc_, solidBc_
+    use ModMain, ONLY: UseSolidState, TypeCellBc_I, TypeFaceBc_I
+    use ModMain, ONLY: Coord1MinBc_, xMinBc_, solidBc_
     use ModReadParam, ONLY: read_var
-    use BATL_size,    ONLY: nDim
+    use BATL_size, ONLY: nDim
 
     integer :: i
 
@@ -120,7 +120,7 @@ contains
          r_GB, rBody2_GB, rMinBody2_B, IsBody_B, &
          IsBoundary_B, IsNoBody_B, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-    use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
+    use ModPhysics, ONLY: xBody2,yBody2,zBody2, rbody, rBody2
     use BATL_lib, ONLY: &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
          nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, Used_GB,&
@@ -272,7 +272,7 @@ contains
 
     ! Recalculate Used_GB information in ghost cells if grid changed.
 
-    use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
+    use ModMain, ONLY: nBlock, Unused_B, iNewGrid, iNewDecomposition, &
              nIteration, nOrderProlong, UseOpenACC
     use ModGeometry, ONLY: IsBody_B
     use BATL_lib, ONLY: message_pass_cell, Used_GB

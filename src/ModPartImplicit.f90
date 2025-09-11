@@ -114,11 +114,11 @@ contains
   !============================================================================
   subroutine read_part_impl_param(NameCommand)
 
-    use ModReadParam,     ONLY: read_var
+    use ModReadParam, ONLY: read_var
     use ModPointImplicit, ONLY: UsePointImplicit
-    use ModLinearSolver,  ONLY: &
+    use ModLinearSolver, ONLY: &
          BlockJacobi_, GaussSeidel_, Bilu_
-    use ModAdvance,       ONLY: UseEfield
+    use ModAdvance, ONLY: UseEfield
 
     character(len=*), intent(in) :: NameCommand
 
@@ -394,12 +394,12 @@ contains
          nStep, tSimulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
-    use ModAdvance, ONLY : State_VGB, StateOld_VGB, &
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, &
          DtMax_CB, Tmp1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModCoarseAxis, ONLY:UseCoarseAxis, coarsen_axis_cells
-    use ModPhysics, ONLY : No2Si_V, UnitT_
+    use ModPhysics, ONLY: No2Si_V, UnitT_
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModEnergy, ONLY: pressure_to_energy_block, energy_to_pressure_cell
@@ -816,9 +816,9 @@ contains
 
     ! Initialization for NR
 
-    use ModMain, ONLY : nStep,dt,nOrder, &
+    use ModMain, ONLY: nStep,dt,nOrder, &
          UseRadDiffusion
-    use ModAdvance, ONLY : TypeFlux
+    use ModAdvance, ONLY: TypeFlux
     use ModMpi
     use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
 
@@ -1865,7 +1865,7 @@ contains
     use ModMain
     use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
     use ModGeometry, ONLY: r_GB
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer :: iBlock, iBlockImpl
     integer :: i, j, k
@@ -1940,7 +1940,7 @@ contains
     ! Convert data structure Var_VGB of the implicit code to the explicit code
 
     use ModMain
-    use ModEnergy,  ONLY: pressure_to_energy_block
+    use ModEnergy, ONLY: pressure_to_energy_block
     use ModAdvance, ONLY: State_VGB
     use ModSize, ONLY: nG, nI, nJ, nK
 
@@ -1997,11 +1997,11 @@ contains
 
     ! Convert the implicit block Var_VC to block iBlock of the explicit code
 
-    use ModSize,       ONLY: nI, nJ, nK
-    use ModEnergy,     ONLY: energy_to_pressure_cell
-    use ModAdvance,    ONLY: nVar, State_VGB
+    use ModSize, ONLY: nI, nJ, nK
+    use ModEnergy, ONLY: energy_to_pressure_cell
+    use ModAdvance, ONLY: nVar, State_VGB
     use ModMultiFluid, ONLY: nFluid, iRho, iRho_I
-    use ModPhysics,    ONLY: RhoMin_I
+    use ModPhysics, ONLY: RhoMin_I
 
     real,    intent(in) :: Var_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
     integer, intent(in) :: iBlock
@@ -2072,7 +2072,7 @@ contains
     ! otherwise return              Res_VCB = Var_VCB(t+DtExpl)
 
     use ModMain
-    use ModAdvance, ONLY : TypeFlux, DtMax_CB
+    use ModAdvance, ONLY: TypeFlux, DtMax_CB
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
@@ -2166,7 +2166,7 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
+    use ModAdvance, ONLY: Source_VC  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
 
     integer, intent(in) :: iBlock
@@ -2209,8 +2209,8 @@ contains
     ! subroutine get_physical_flux from ModFaceFlux.
 
     use ModVarIndexes, ONLY: nVar, Energy_
-    use ModMain,     ONLY: x_, y_, z_
-    use ModAdvance,  ONLY: nFlux
+    use ModMain, ONLY: x_, y_, z_
+    use ModAdvance, ONLY: nFlux
 #ifndef _OPENACC
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_physical_flux, &
@@ -2281,14 +2281,14 @@ contains
   subroutine get_cmax_face(Var_VF, B0_DF, nFaceI, nFaceJ, nFaceK, &
        iDim, iBlock,Cmax_F)
 
-    use ModMain,     ONLY: x_, y_, z_
+    use ModMain, ONLY: x_, y_, z_
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_speed_max
 #ifndef _OPENACC
     use ModFaceFlux, ONLY: B0x, B0y, B0z, CmaxDt, Area, DoTestCell,&
          iFace, jFace, kFace, UnLeft_I, UnRight_I
 #endif
-    use ModAdvance,  ONLY: eFluid_
+    use ModAdvance, ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid
 
     integer, intent(in) :: nFaceI,nFaceJ,nFaceK,iDim,iBlock
@@ -2380,7 +2380,7 @@ contains
   subroutine get_dt_courant(DtOut)
 
     use ModMain
-    use ModB0,  ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: IsNoBody_B
     use ModMpi
     use ModHallResist, ONLY: UseHallResist, set_hall_factor_face

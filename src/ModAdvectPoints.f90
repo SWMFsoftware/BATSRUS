@@ -4,7 +4,7 @@
 
 module ModAdvectPoints
 
-  use BATL_lib,     ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -84,7 +84,7 @@ contains
     use ModAdvance, ONLY: Rho_, RhoUz_, Ux_, Uz_, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, nFluid
     use ModCurrent, ONLY: get_point_data
-    use BATL_lib,   ONLY: nBlock, nProc, iComm
+    use BATL_lib, ONLY: nBlock, nProc, iComm
     use ModMpi
 
     real,    intent(in)    :: WeightOldState      ! Weight of old state
@@ -168,13 +168,13 @@ contains
 
     ! Create a non-trivial flow field and advect a number of points
 
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
-    use ModAdvance,  ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_,RhoUy_,RhoUz_
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Dt
+    use ModAdvance, ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_,RhoUy_,RhoUz_
     use ModGeometry, ONLY: xMaxBox
-    use BATL_lib,    ONLY: Xyz_DGB, x_, z_, iProc, &
+    use BATL_lib, ONLY: Xyz_DGB, x_, z_, iProc, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModNumConst, ONLY: cTwoPi
-    use ModIoUnit,   ONLY: UnitTmp_
+    use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
 
     integer, parameter :: nStep=100, nPoint = 1000

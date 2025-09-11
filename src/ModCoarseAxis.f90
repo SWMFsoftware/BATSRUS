@@ -62,7 +62,7 @@ contains
     !$acc routine vector
 
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, DtMax_CB
+    use ModAdvance, ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, DtMax_CB
     use BATL_lib, ONLY: CellVolume_GB,Used_GB
     use ModUtilities, ONLY: i_gang
 

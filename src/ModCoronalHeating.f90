@@ -10,7 +10,7 @@ module ModCoronalHeating
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModMain,       ONLY: nI, nJ, nK
+  use ModMain, ONLY: nI, nJ, nK
   use ModTurbulence
   use omp_lib
 
@@ -74,7 +74,7 @@ contains
   !============================================================================
   subroutine read_coronal_heating_param(NameCommand)
     ! Read heating parameters, call read_turbulence_param if needed
-    use ModReadParam,  ONLY: read_var, lStringLine
+    use ModReadParam, ONLY: read_var, lStringLine
 
     character(len=*), intent(in):: NameCommand
     character(len=lStringLine) :: TypeCoronalHeating
@@ -137,7 +137,7 @@ contains
   !============================================================================
   subroutine init_coronal_heating
     ! Convert dimensional heating parameters
-    use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_
+    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_coronal_heating'
@@ -166,15 +166,15 @@ contains
     ! function equals the prescribed (for example, stemming from
     ! the unsigned flux) total heating
 
-    use ModAdvance,     ONLY: State_VGB, Bz_
-    use ModGeometry,    ONLY: IsNoBody_B, TypeGeometry
+    use ModAdvance, ONLY: State_VGB, Bz_
+    use ModGeometry, ONLY: IsNoBody_B, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, tSimulation,z_
-    use ModMpi,         ONLY: MPI_REAL, MPI_SUM
-    use ModNumConst,    ONLY: cHalfPi, cTwoPi
-    use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, tSimulation,z_
+    use ModMpi, ONLY: MPI_REAL, MPI_SUM
+    use ModNumConst, ONLY: cHalfPi, cTwoPi
+    use ModPhysics, ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
          UnitEnergyDens_, rBody
-    use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB, nProc, iComm, Used_GB
+    use BATL_lib, ONLY: CellFace_DB, CellVolume_GB, nProc, iComm, Used_GB
 
     integer :: i, j, k, iBlock
     integer :: iTheta, iPhi, iError
@@ -368,10 +368,10 @@ contains
   !============================================================================
   subroutine get_photosphere_field(iBlock, Bz_C, BzCgs_II)
     ! Internal program used in calculating heat factor
-    use ModMain,      ONLY: nI, nJ, nK, z_
+    use ModMain, ONLY: nI, nJ, nK, z_
     use ModInterpolate, ONLY: find_cell
-    use ModPhysics,   ONLY: No2Si_V, UnitB_
-    use BATL_lib,     ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB
+    use ModPhysics, ONLY: No2Si_V, UnitB_
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB
 
     integer, intent(in) :: iBlock
     real, intent(in)    :: Bz_C(1:nI, 1:nJ, 0:nK+1) ! temporary array created
@@ -402,13 +402,13 @@ contains
   !============================================================================
   subroutine get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
     ! Internal program used in calculating the heat factor
-    use ModAdvance,     ONLY: State_VGB
-    use ModGeometry,    ONLY: r_GB
-    use ModMain,        ONLY: nJ, nK, r_
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: r_GB
+    use ModMain, ONLY: nJ, nK, r_
     use ModInterpolate, ONLY: find_cell
-    use ModPhysics,     ONLY: No2Si_V, UnitB_, UnitX_
-    use ModVarIndexes,  ONLY: Bx_, Bz_
-    use BATL_lib,       ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB, &
+    use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB, &
          CellFace_DFB, Xyz_DGB
 
     integer, intent(in) :: iBlock

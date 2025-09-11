@@ -7,9 +7,9 @@ module ModImplHypre
        test_start, test_stop, StringTest
   use ModBatsrusUtility, ONLY: stop_mpi
 
-  use ModKind,   ONLY: Int8_
+  use ModKind, ONLY: Int8_
   use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D, iRatio, jRatio, kRatio
-  use BATL_lib,  ONLY: iProc, iNode_B, &
+  use BATL_lib, ONLY: iProc, iNode_B, &
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iComm, &
        nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, &
        Proc_, Coord0_, Coord1_, Coord2_, Coord3_, Level_

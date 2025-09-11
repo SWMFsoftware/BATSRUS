@@ -10,11 +10,11 @@ module ModIonElectron
   use ModMain, ONLY:  UseUserSourceImpl
   use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
-  use ModB0,       ONLY: UseB0, B0_DGB
+  use ModB0, ONLY: UseB0, B0_DGB
   use ModMultiFluid, ONLY: nIonFluid, nTrueIon, ElectronFirst_, &
        iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,   &
        iPIon_I, ChargePerMass_I, MassIon_I, ChargeIon_I
-  use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
+  use BATL_lib, ONLY: nI, nJ, nK, x_, y_, z_
 
   implicit none
 
@@ -282,12 +282,12 @@ contains
     ! The subroutine will correct the electron fluid and electric field
     ! based on the Hall MHD case.
 
-    use ModSize,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
     use ModMultiFluid, ONLY: iPIon_I
-    use ModB0,         ONLY: UseB0, B0_DGB
-    use ModCellGradient,   ONLY: calc_gradient
-    use ModCurrent,        ONLY: get_current
-    use BATL_lib,          ONLY: Used_GB
+    use ModB0, ONLY: UseB0, B0_DGB
+    use ModCellGradient, ONLY: calc_gradient
+    use ModCurrent, ONLY: get_current
+    use BATL_lib, ONLY: Used_GB
 
     real,    intent(inout) :: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in)    :: iMin, iMax, jMin, jMax, kMin, kMax
@@ -358,7 +358,7 @@ contains
   subroutine correct_electronfluid_efield_cell(State_V, B0_D, Current_D,  &
        GradPe_D, DoCorrectPe, DoCorrectEfield, DoTest)
 
-    use ModPhysics,        ONLY: ElectronCharge
+    use ModPhysics, ONLY: ElectronCharge
     use ModCoordTransform, ONLY: cross_product
 
     real,    intent(inout) :: State_V(nVar)

@@ -22,9 +22,9 @@ module ModSaMhd
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, BperU_, Rho_, &
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
-  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, UseSaMhd
+  use ModAdvance, ONLY: State_VGB, nI, nJ, nK, UseSaMhd
   use ModGeometry, ONLY: r_GB
-  use ModB0,       ONLY: UseB0, B0_DGB
+  use ModB0, ONLY: UseB0, B0_DGB
 
   implicit none
   PRIVATE ! Except
@@ -84,7 +84,7 @@ contains
   !============================================================================
   subroutine update_samhd(iBlock, iStage)
     use BATL_lib, ONLY: Used_GB
-    use ModMain,     ONLY: nStage
+    use ModMain, ONLY: nStage
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim), Rho, B2
@@ -191,7 +191,7 @@ contains
   subroutine correct_samhd_face_value(iBlock, DoResChangeOnly)
 
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModMain,     ONLY: nIFace, nJFace, nKFace, &
+    use ModMain, ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModParallel, ONLY: DiLevel_EB
 
@@ -227,8 +227,8 @@ contains
   contains
     !==========================================================================
     subroutine correct_facex(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModB0,       ONLY: B0_DX
-      use ModAdvance,  ONLY: LeftState_VX, RightState_VX
+      use ModB0, ONLY: B0_DX
+      use ModAdvance, ONLY: LeftState_VX, RightState_VX
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       ! Loop variables
       integer :: i, j, k
@@ -265,8 +265,8 @@ contains
     !==========================================================================
     subroutine correct_facey(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModB0,       ONLY: B0_DY
-      use ModAdvance,  ONLY: LeftState_VY, RightState_VY
+      use ModB0, ONLY: B0_DY
+      use ModAdvance, ONLY: LeftState_VY, RightState_VY
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       ! Loop variables
       integer :: i, j, k
@@ -307,8 +307,8 @@ contains
     !==========================================================================
     subroutine correct_facez(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModB0,       ONLY: B0_DZ
-      use ModAdvance,  ONLY: LeftState_VZ, RightState_VZ
+      use ModB0, ONLY: B0_DZ
+      use ModAdvance, ONLY: LeftState_VZ, RightState_VZ
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       ! Loop variables
       integer :: i, j, k

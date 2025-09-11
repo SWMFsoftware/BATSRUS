@@ -11,14 +11,14 @@ module ModTurbulence
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModMain,       ONLY: nI, nJ, nK
-  use ModReadParam,  ONLY: lStringLine
+  use ModMain, ONLY: nI, nJ, nK
+  use ModReadParam, ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: nIonFluid
   use ModTransitionRegion, ONLY: PoyntingFluxPerBSi, LperpTimesSqrtBSi
-  use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
+  use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure, &
        UseAwRepresentative
-  use ModUtilities,  ONLY: i_gang
+  use ModUtilities, ONLY: i_gang
   use omp_lib
 
   implicit none
@@ -101,8 +101,8 @@ contains
   !============================================================================
   subroutine read_turbulence_param(NameCommand)
 
-    use ModAdvance,    ONLY: UseAnisoPressure
-    use ModReadParam,  ONLY: read_var
+    use ModAdvance, ONLY: UseAnisoPressure
+    use ModReadParam, ONLY: read_var
 
     integer :: iFluid
 
@@ -219,10 +219,10 @@ contains
   !============================================================================
   subroutine init_turbulence
 
-    use ModPhysics,     ONLY: Si2No_V, UnitB_, UnitX_, UnitU_, UnitEnergyDens_
-    use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
+    use ModPhysics, ONLY: Si2No_V, UnitB_, UnitX_, UnitU_, UnitEnergyDens_
+    use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
     use ModLookupTable, ONLY: i_lookup_table
-    use ModVarIndexes,  ONLY: nChargeStateAll
+    use ModVarIndexes, ONLY: nChargeStateAll
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_turbulence'
@@ -264,7 +264,7 @@ contains
   !============================================================================
   subroutine set_alfven_wave_vel_vect(iBlock)
     use ModAdvance, ONLY: State_VGB
-    use ModB0,      ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
     integer, intent(in) :: iBlock
@@ -288,7 +288,7 @@ contains
     !$acc routine seq
 
     use ModAdvance, ONLY: State_VGB
-    use ModB0,      ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
@@ -693,7 +693,7 @@ contains
     use ModPhysics, ONLY: pMin_I, TMin_I
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
-    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor
+    use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
     use ModMultiFluid, ONLY: &
          ChargePerMass_I, ElectronPerMass_I, InvMassIon_I, UseMultiIon, &
          nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
@@ -990,9 +990,9 @@ contains
     ! Convert Alfven wave turbulence energy densities to
     ! dimensionless representative functions. Switch the logical
     ! UseAwRepresentativeHere on.
-    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, &
+    use BATL_lib, ONLY: Unused_B, Used_GB, nBlock, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
 
     integer :: iBlock, i, j, k
@@ -1017,9 +1017,9 @@ contains
   subroutine representative_to_wave_energy
     ! Convert dimensionless representative functions to Alfven wave turbulence
     ! energy densities. Switch of the logical IsOnAwRepresentative
-    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock
+    use BATL_lib, ONLY: Unused_B, Used_GB, nBlock
     use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
-    use ModAdvance,    ONLY: State_VGB, StateOld_VGB
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB
 
     integer :: iBlock, i, j, k
     real    :: SqrtRho

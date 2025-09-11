@@ -8,7 +8,7 @@ module ModPlotShell
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
-  use ModNumConst,        ONLY: cRadtoDeg, cDegToRad
+  use ModNumConst, ONLY: cRadtoDeg, cDegToRad
   implicit none
 
   SAVE
@@ -52,10 +52,10 @@ contains
 
     ! set up the shell grid for this plot file
 
-    use ModMain,           ONLY: tSimulation, TypeCoordSystem
-    use CON_axes,          ONLY: transform_matrix
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: show_rot_matrix
-    use ModUtilities,      ONLY: split_string
+    use ModUtilities, ONLY: split_string
 
     integer, intent(in):: iFile
 
@@ -148,12 +148,12 @@ contains
     use ModFieldLineThread, ONLY: DoPlotThreads, rChromo, &
          interpolate_thread_state, set_thread_plotvar
 #endif
-    use ModGeometry,    ONLY: rMin_B
+    use ModGeometry, ONLY: rMin_B
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
+    use BATL_lib, ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
          xyz_to_coord, r_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModParallel,       ONLY: DiLevel_EB, Unset_
+    use ModParallel, ONLY: DiLevel_EB, Unset_
 
     ! Arguments
     integer, intent(in):: iBlock
@@ -269,7 +269,7 @@ contains
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
-    use ModMain,     ONLY: tSimulation, nStep
+    use ModMain, ONLY: tSimulation, nStep
     use ModPlotFile, ONLY: save_plot_file
 
     integer,          intent(in) :: iFile, nPlotvar

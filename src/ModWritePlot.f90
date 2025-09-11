@@ -39,7 +39,7 @@ contains
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, &
          close_file, i_gang
-    use ModAdvance, ONLY : State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, &
          write_plot_shell, PlotVar_VIII
@@ -882,7 +882,7 @@ contains
   contains
     !==========================================================================
     subroutine plotvar_to_plotvarnodes
-      use BATL_lib,  ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
 
       integer:: i2,j2,k2
       integer:: nCell_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
@@ -948,7 +948,7 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : DtMax_CB, State_VGB, DivB1_GB, &
+    use ModAdvance, ONLY: DtMax_CB, State_VGB, DivB1_GB, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
          UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
          StateOld_VGB
@@ -2053,7 +2053,7 @@ contains
          UnitElectric_, UnitJ_, UnitPoynting_, UnitEnergyDens_, &
          No2Io_V, No2Si_V, UnitUser_V, NameVarLower_V
     use ModVarIndexes, ONLY: DefaultState_V
-    use ModUtilities,  ONLY: lower_case
+    use ModUtilities, ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
@@ -2199,10 +2199,10 @@ contains
          UnitP_, UnitU_, UnitB_, UnitT_, UnitDivB_, UnitRhoU_, &
          UnitElectric_, UnitJ_, UnitPoynting_, UnitEnergyDens_, &
          NameIdlUnit_V, NameUnitUserIdl_V, UnitAngle_, NameVarLower_V
-    use ModUtilities,  ONLY: lower_case
-    use ModIO,         ONLY: TypePlot, IsDimensionalPlot_I, NameUnitUserIdl_I
+    use ModUtilities, ONLY: lower_case
+    use ModIO, ONLY: TypePlot, IsDimensionalPlot_I, NameUnitUserIdl_I
     use ModMultiFluid, ONLY: extract_fluid_name
-    use BATL_lib,      ONLY: IsRLonLat, IsCylindrical
+    use BATL_lib, ONLY: IsRLonLat, IsCylindrical
 
     ! Arguments
 
@@ -2340,7 +2340,7 @@ contains
     ! Adjust plot range so it coincides with the cell boundaries
     ! of the cells of size PlotRes1 in the first dimension
 
-    use ModKind,  ONLY: nByteReal
+    use ModKind, ONLY: nByteReal
     use BATL_lib, ONLY: nDim, DomainSize_D, CoordMin_D, nIJK_D, nRoot_D
 
     real, intent(in)   :: PlotRes1       ! smallest cell size in coord1 to plot

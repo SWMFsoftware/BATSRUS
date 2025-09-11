@@ -31,7 +31,7 @@ contains
          Residual_GB=>Tmp1_GB,Dir_GB=>Tmp2_GB
     use ModAdvance, ONLY:tmp3_blk=>divB1_GB
     use ModGeometry, ONLY: IsNoBody_B, IsBody_B
-    use ModParallel, ONLY : Unset_, DiLevel_EB
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModMpi
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nBlock, MaxBlock, x_, y_, z_, k0_, j0_, nJp1_, nKp1_, &

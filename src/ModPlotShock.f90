@@ -8,7 +8,7 @@ module ModPlotShock
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
-  use ModNumConst,  ONLY: cRadtoDeg, cDegToRad
+  use ModNumConst, ONLY: cRadtoDeg, cDegToRad
 
   implicit none
 
@@ -113,9 +113,9 @@ contains
     ! onto the shock surface of the plot area.
     ! The shock surface is where DivUDx has minimum along the radial direction
 
-    use ModGeometry,    ONLY: rMin_B, rMax_B
+    use ModGeometry, ONLY: rMin_B, rMax_B
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: Unused_B, CoordMin_DB, nIjk_D, CellSize_DB, &
+    use BATL_lib, ONLY: Unused_B, CoordMin_DB, nIjk_D, CellSize_DB, &
          xyz_to_coord
     use ModCoordTransform, ONLY: rlonlat_to_xyz
 

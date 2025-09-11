@@ -3,10 +3,10 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPUI
 
-  use BATL_lib,          ONLY: test_start, test_stop
-  use ModVarIndexes,     ONLY: nPui, PuiFirst_, PuiLast_, nIonFluid
+  use BATL_lib, ONLY: test_start, test_stop
+  use ModVarIndexes, ONLY: nPui, PuiFirst_, PuiLast_, nIonFluid
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModSize,           ONLY: nI, nJ, nK
+  use ModSize, ONLY: nI, nJ, nK
 
   implicit none
   save
@@ -58,7 +58,7 @@ contains
   !============================================================================
   subroutine init_mod_pui
 
-    use ModWaves,   ONLY: WaveFirst_
+    use ModWaves, ONLY: WaveFirst_
     use ModPhysics, ONLY: Si2No_V, UnitU_
 
     integer ::  iPui
@@ -92,7 +92,7 @@ contains
   !============================================================================
   subroutine set_pui_state(State_V, StateRead_V, iVarMatch_V)
 
-    use ModNumConst,   ONLY: cPi
+    use ModNumConst, ONLY: cPi
     use ModMultiFluid, ONLY: iRho_I, iP_I
     use ModVarIndexes, ONLY: nVar
 
@@ -127,11 +127,11 @@ contains
 
     ! advection+diffusion in PUI velocity space
 
-    use ModAdvance,         ONLY: State_VGB, DtMax_CB
-    use BATL_lib,        ONLY: Used_GB
+    use ModAdvance, ONLY: State_VGB, DtMax_CB
+    use BATL_lib, ONLY: Used_GB
     use ModLinearAdvection, ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
-    use ModMain,            ONLY: Cfl
+    use ModMain, ONLY: Cfl
 
     integer, intent(in) :: iBlock
 

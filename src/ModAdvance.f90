@@ -9,11 +9,11 @@ module ModAdvance
   use ModSize
   use ModVarIndexes
   use ModMultiFluid, ONLY: UseMultiIon
-  use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity, &
+  use ModMain, ONLY: UseB, UseRotatingFrame, UseGravity, &
        iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
        iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
        nIFace, nJFace, nKFace
-  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModIO, ONLY: iUnitOut, write_prefix
   use omp_lib
 
   implicit none

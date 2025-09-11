@@ -14,13 +14,13 @@ module ModLaserHeating
   ! the plasa following the rules of geometrical optics. The laser energy is
   ! deposited near the critical density.
 
-  use ModAdvance,  ONLY: State_VGB
+  use ModAdvance, ONLY: State_VGB
   use ModVarIndexes
   use ModConst
   use ModMpi
   use ModCoordTransform
-  use ModPhysics,  ONLY: No2Si_V, UnitRho_, UnitX_
-  use ModMain,     ONLY: TypeCellBc_I, UseLaserHeating
+  use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitX_
+  use ModMain, ONLY: TypeCellBc_I, UseLaserHeating
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 
   implicit none
@@ -901,7 +901,7 @@ contains
   !============================================================================
   subroutine get_rays
 
-    use BATL_lib,    ONLY: IsRzGeometry
+    use BATL_lib, ONLY: IsRzGeometry
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_rays'
@@ -942,8 +942,8 @@ contains
   !============================================================================
   subroutine init_beam3d
 
-    use BATL_lib,    ONLY: IsRzGeometry
-    use ModConst,    ONLY: cDegToRad
+    use BATL_lib, ONLY: IsRzGeometry
+    use ModConst, ONLY: cDegToRad
     use ModGeometry, ONLY: yMinBox, yMaxBox, zMinBox, zMaxBox
 
     real:: CosTheta, SinTheta, CosPhi, SinPhi
@@ -1090,7 +1090,7 @@ contains
   subroutine init_beam_rz
 
     use ModGeometry, ONLY: TypeGeometry, yMaxBox
-    use ModConst,    ONLY: cDegToRad
+    use ModConst, ONLY: cDegToRad
 
     real:: CosTheta, SinTheta
     real:: rCr, yCrStart, yStart
@@ -1172,7 +1172,7 @@ contains
   subroutine init_beam_rz2
 
     use ModGeometry, ONLY: TypeGeometry, yMaxBox, CellSize1Min
-    use ModConst,    ONLY: cDegToRad
+    use ModConst, ONLY: cDegToRad
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlane, xPlane
     real:: rDistance, BeamAmplitude
@@ -1536,10 +1536,10 @@ contains
     use ModSize, ONLY: nI, nJ, nK
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
     use ModMain, ONLY: tSimulation, dt, nBlock, Unused_B
-    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
+    use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
          UseElectronPressure, UseIdealEos
     use ModConservative, ONLY: UseNonConservative
-    use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
+    use ModPhysics, ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
          No2Si_V, UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_
     use ModGeometry, ONLY: xMinBox

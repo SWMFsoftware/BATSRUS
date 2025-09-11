@@ -10,10 +10,10 @@ module ModFaceBoundary
   use ModUtilities, ONLY: norm2
 #endif
   use ModMultiFluid
-  use ModAdvance,    ONLY: nSpecies, nIonDensity
-  use ModNumConst,   ONLY: cDegToRad
+  use ModAdvance, ONLY: nSpecies, nIonDensity
+  use ModNumConst, ONLY: cDegToRad
   use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I
-  use ModBuffer,     ONLY: get_from_spher_buffer_grid
+  use ModBuffer, ONLY: get_from_spher_buffer_grid
   use ModPhysics, ONLY: set_radial_state
   use ModMain
 
@@ -54,10 +54,10 @@ contains
   !============================================================================
   subroutine read_face_boundary_param(NameCommand)
 
-    use ModReadParam,  ONLY: read_var
-    use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
+    use ModReadParam, ONLY: read_var
+    use ModMain, ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
     use ModMultiFluid, ONLY: nIonFluid, nFluid
-    use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
+    use ModPhysics, ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
 
     character(len=*), intent(in):: NameCommand
 
@@ -192,20 +192,20 @@ contains
   !============================================================================
   subroutine set_face_bc(FBC, IsBodyCell_G, IsTrueCell_G)
 
-    use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
-    use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
+    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure, &
          LeftState_VX, LeftState_VY, LeftState_VZ,    &
          RightState_VX, RightState_VY, RightState_VZ, &
          UseAnisoPe, UseMultiSpecies
-    use ModParallel,   ONLY: DiLevel_EB
+    use ModParallel, ONLY: DiLevel_EB
     use ModNumConst
-    use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, BodyNDim_I, &
+    use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, BodyNDim_I, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_, BodyNSpeciesDim_I
-    use ModSolarwind,  ONLY: get_solar_wind_point
+    use ModSolarwind, ONLY: get_solar_wind_point
     use ModIeCoupling, ONLY: logvar_ionosphere, calc_inner_bc_velocity
 
-    use CON_axes,      ONLY: transform_matrix
-    use BATL_lib,      ONLY: Xyz_DGB
+    use CON_axes, ONLY: transform_matrix
+    use BATL_lib, ONLY: Xyz_DGB
 
     type(FaceBCType), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
@@ -454,7 +454,7 @@ contains
       use ModMain
       use ModMultiFluid
       use CON_planet_field, ONLY: get_planet_field, map_planet_field
-      use ModConst,   ONLY: cElectronCharge, cBoltzmann,cProtonMass
+      use ModConst, ONLY: cElectronCharge, cBoltzmann,cProtonMass
       use ModPlanetConst, ONLY: Earth_, rPlanet_I
       use ModUtilities
       use ModBoundaryGeometry, ONLY: iBoundary_GB

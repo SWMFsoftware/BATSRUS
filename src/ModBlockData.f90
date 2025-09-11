@@ -8,7 +8,7 @@ module ModBlockData
        test_start, test_stop, iBlockTest, iProcTest, iProc
   use ModBatsrusUtility, ONLY: stop_mpi
 
-  use ModSize,  ONLY: MaxBlock
+  use ModSize, ONLY: MaxBlock
 
   implicit none
 
@@ -822,7 +822,7 @@ contains
   subroutine read_block_restart_files(NameRestartInDir, UseRestartInSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
-    use ModIO,   ONLY: UnitTmp_
+    use ModIO, ONLY: UnitTmp_
 
     character(len=*), intent(in) :: NameRestartInDir
     logical,          intent(in) :: UseRestartInSeries
@@ -894,7 +894,7 @@ contains
        NameRestartDir, UseRestartSeries, NameBlockFile)
 
     use BATL_lib, ONLY: iMortonNode_A, iNode_B
-    use ModMain,  ONLY: nIteration
+    use ModMain, ONLY: nIteration
 
     integer, intent(in) :: iBlock
     logical, intent(in) :: UseRestartSeries

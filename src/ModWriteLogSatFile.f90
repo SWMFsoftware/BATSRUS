@@ -51,7 +51,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Tmp1_GB
     use ModPhysics, ONLY: Si2Io_V, Si2No_V, UnitT_
     use ModIO
-    use ModIoUnit, ONLY   : io_unit_new
+    use ModIoUnit, ONLY: io_unit_new
     use ModUtilities, ONLY: flush_unit, split_string, open_file
     use ModSatelliteFile, ONLY: NameFileSat_I, IsFirstWriteSat_I, iUnitSat_I, &
          TypeTimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
@@ -410,9 +410,9 @@ contains
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes
-    use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, StateOld_VGB, DivB1_GB
-    use ModCurrent,  ONLY: get_point_data
-    use ModB0,       ONLY: B0_DGB, get_b0
+    use ModAdvance, ONLY: Tmp1_GB, Tmp2_GB, State_VGB, StateOld_VGB, DivB1_GB
+    use ModCurrent, ONLY: get_point_data
+    use ModB0, ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, &
          zMinBox, zMaxBox, DomainVolume
     use ModFieldTrace, ONLY: Trace_DSNB
@@ -424,9 +424,9 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, &
          integrate_grid, maxval_grid, minval_grid, MinIJK_D, &
          MaxIJK_D, nDim, xyz_to_coord, CellVolume_GB
-    use BATL_tree,       ONLY: find_tree_cell, iTree_IA, Block_, Proc_
-    use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
-    use ModInterpolate,  ONLY: interpolate_vector
+    use BATL_tree, ONLY: find_tree_cell, iTree_IA, Block_, Proc_
+    use BATL_geometry, ONLY: CoordMin_D, DomainSize_D
+    use ModInterpolate, ONLY: interpolate_vector
     use ModMPI
 
     integer, intent(in)                    :: nLogVar, nLogR, nLogTot, iSat
@@ -574,20 +574,20 @@ contains
     !==========================================================================
     subroutine set_log_var
 
-      use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, tSimulation
+      use ModMain, ONLY: x_, y_, z_, TypeCoordSystem, tSimulation
       use ModUtilities, ONLY: lower_case
-      use ModCurrent,   ONLY: get_current
-      use ModEnergy,    ONLY: get_fluid_energy_block, energy_i
-      use ModWaves,     ONLY: UseWavePressure
-      use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
-      use ModGeometry,  ONLY: r_GB
-      use ModIO,        ONLY: lNameLogVar
+      use ModCurrent, ONLY: get_current
+      use ModEnergy, ONLY: get_fluid_energy_block, energy_i
+      use ModWaves, ONLY: UseWavePressure
+      use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
+      use ModGeometry, ONLY: r_GB
+      use ModIO, ONLY: lNameLogVar
       use ModIeCoupling, ONLY: logvar_ionosphere
       use ModCoordTransform, ONLY: cross_product
-      use CON_axes,     ONLY: transform_matrix
+      use CON_axes, ONLY: transform_matrix
       use ModUserInterface ! user_get_log_var
       use ModFaceBoundary, ONLY: ratioOH
-      use ModPhysics,     ONLY: Gbody
+      use ModPhysics, ONLY: Gbody
       use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
       use ModChromosphere, ONLY: get_tesi_c, TeSi_C
 
@@ -1252,9 +1252,9 @@ contains
     !==========================================================================
     subroutine set_sat_var
 
-      use ModAdvance,   ONLY: UseMultiSpecies
+      use ModAdvance, ONLY: UseMultiSpecies
       use ModUtilities, ONLY: lower_case
-      use ModIO,        ONLY : lNameLogVar
+      use ModIO, ONLY: lNameLogVar
 
       integer:: jVar
       character(len=lNameLogVar):: NameLogVarLower
@@ -1485,9 +1485,9 @@ contains
     ! over the surface of a sphere centered at the origin radius Radius.
     ! The resolution in the colatitude is determined by the nTheta parameter.
 
-    use ModMain,           ONLY: TypeMessagePass
-    use ModGeometry,       ONLY: r_GB, Coord111_DB, TypeGeometry
-    use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
+    use ModMain, ONLY: TypeMessagePass
+    use ModGeometry, ONLY: r_GB, Coord111_DB, TypeGeometry
+    use BATL_lib, ONLY: nI, nJ, nK, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
          IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
          CellSize_DB, Theta_, Phi_, j0_, k0_, nJp1_, nKp1_
@@ -1733,7 +1733,7 @@ contains
     ! for the z axis is defined by the radius Radius and the z position is
     ! is given by z.
 
-    use ModMain,  ONLY: TypeMessagePass
+    use ModMain, ONLY: TypeMessagePass
     use ModGeometry, ONLY: Coord111_DB
     use ModNumConst, ONLY: cTwoPi
     use ModInterpolate, ONLY: trilinear
@@ -1877,9 +1877,9 @@ contains
   subroutine satellite_test
 
     use ModVarIndexes
-    use ModAdvance,      ONLY: State_VGB
-    use ModCurrent,      ONLY: get_point_data
-    use BATL_lib,        ONLY: Xyz_DGB, x_, y_, z_, nBlock, iProc
+    use ModAdvance, ONLY: State_VGB
+    use ModCurrent, ONLY: get_point_data
+    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, nBlock, iProc
     real:: State_V(0:nVar+3)
 
     logical:: DoTest
@@ -1958,8 +1958,8 @@ contains
     ! This subroutine integrates all the state variables at the same time
     ! for the processor only.
 
-    use ModAdvance,   ONLY: nVar, State_VGB, P_
-    use ModGeometry,  ONLY: IsNoBody_B
+    use ModAdvance, ONLY: nVar, State_VGB, P_
+    use ModGeometry, ONLY: IsNoBody_B
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
          nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
          IsCartesian, CellVolume_B, CellVolume_GB, Used_GB

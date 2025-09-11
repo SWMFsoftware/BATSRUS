@@ -4,7 +4,7 @@
 
 module ModWriteProgress
 
-  use BATL_lib,     ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -67,18 +67,18 @@ contains
     use ModMain
     use ModPhysics
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModIO,        ONLY: iUnitOut, write_prefix
+    use ModIO, ONLY: iUnitOut, write_prefix
     use ModFaceValue, ONLY: TypeLimiter, LimiterBeta
-    use ModAdvance,   ONLY: TypeFlux, UseEfield, iTypeUpdate
-    use ModGeometry,  ONLY: &
+    use ModAdvance, ONLY: TypeFlux, UseEfield, iTypeUpdate
+    use ModGeometry, ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          CellSizeMin, CellSizeMax, nUsedCell, count_true_cells
-    use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
+    use ModImplicit, ONLY: UseImplicit, UseSemiImplicit, &
          UseSplitSemiImplicit, TypeSemiImplicit
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiFluid, ONLY: UseNeutralFluid
-    use ModFaceFlux,   ONLY: TypeFluxNeutral
-    use CON_planet,    ONLY: NamePlanet, IsPlanetModified, &
+    use ModFaceFlux, ONLY: TypeFluxNeutral
+    use CON_planet, ONLY: NamePlanet, IsPlanetModified, &
          Planet_, NewPlanet_, &
          RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
          IonosphereHeight
@@ -368,7 +368,7 @@ contains
   !============================================================================
   subroutine write_timeaccurate
 
-    use ModMain, ONLY : tSimulation
+    use ModMain, ONLY: tSimulation
     !--------------------------------------------------------------------------
     write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
          '   Simulated Time T = ',tSimulation, &

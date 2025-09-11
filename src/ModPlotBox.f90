@@ -13,8 +13,8 @@ module ModPlotBox
   use ModIO, ONLY: PlotDx_DI, PlotRange_EI, PlotNormal_DI, TypeCoordPlot_I, &
        TypePlotFormat_I, TypeFile_I, ObsPos_DI, IsObsBox_I, &
        MaxPlotvar, StringPlotVar, DimFactor_V, StringPlotVar_I
-  use ModNumConst,        ONLY: cDegToRad, cTwoPi
-  use ModCoordTransform,  ONLY: xyz_to_lonlat
+  use ModNumConst, ONLY: cDegToRad, cTwoPi
+  use ModCoordTransform, ONLY: xyz_to_lonlat
 
   implicit none
   SAVE
@@ -53,11 +53,11 @@ contains
 
     ! Set up the box grid for this plot file
 
-    use ModMain,           ONLY: tSimulation, TypeCoordSystem
-    use CON_axes,          ONLY: transform_matrix
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: show_rot_matrix, cross_product, &
          rot_matrix_x, rot_matrix_y, rot_matrix_z
-    use ModUtilities,      ONLY: split_string
+    use ModUtilities, ONLY: split_string
 
     integer, intent(in):: iFile
 
@@ -165,16 +165,16 @@ contains
     ! onto the spherical shell of the plot area.
 
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
+    use BATL_lib, ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, r_
-    use ModPhysics,     ONLY: rBody
-    use ModMain,        ONLY: UseBody
+    use ModPhysics, ONLY: rBody
+    use ModMain, ONLY: UseBody
     use ModFieldLineThread, ONLY: interpolate_thread_state, &
          set_thread_plotvar, DoPlotThreads, rChromo
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
     use ModVarIndexes, ONLY: nVar
-    use ModParallel,   ONLY: DiLevel_EB, Unset_
-    use ModGeometry,   ONLY: RadiusMin, rMin_B
+    use ModParallel, ONLY: DiLevel_EB, Unset_
+    use ModGeometry, ONLY: RadiusMin, rMin_B
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -281,7 +281,7 @@ contains
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
-    use ModMain,     ONLY: tSimulation, nStep
+    use ModMain, ONLY: tSimulation, nStep
     use ModPlotFile, ONLY: save_plot_file
 
     integer,          intent(in) :: iFile, nPlotvar

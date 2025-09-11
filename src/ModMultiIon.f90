@@ -103,10 +103,10 @@ contains
 
     ! Identify regions where only one ion fluid is present.
 
-    use ModSize,     ONLY: nI, nJ, nK, x_, y_
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
-    use ModPhysics,  ONLY: Gamma
-    use BATL_lib,    ONLY: Xyz_DGB, Used_GB
+    use ModSize, ONLY: nI, nJ, nK, x_, y_
+    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, p_
+    use ModPhysics, ONLY: Gamma
+    use BATL_lib, ONLY: Xyz_DGB, Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -154,12 +154,12 @@ contains
     !    where s is the index of the ion fluid, and E is the electric
     !    field in the comoving frame.
 
-    use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
+    use ModMain, ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, Efield_DGB, UseTotalIonEnergy
-    use ModB0,      ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2
-    use BATL_lib,   ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -268,19 +268,19 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
-    use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
+    use ModMain, ONLY: nI, nJ, nK, UseB0, UseFlic
     use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModB0,      ONLY: B0_DGB
-    use BATL_lib,   ONLY: Xyz_DGB
+    use ModB0, ONLY: B0_DGB
+    use BATL_lib, ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
          InvClight2, Si2No_V, No2Si_V, Io2No_V, &
          UnitTemperature_, UnitT_, UnitU_
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
 
-    use ModMain,    ONLY: x_, y_, z_
+    use ModMain, ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
-    use ModNumConst,       ONLY: iLeviCivita_III
-    use ModSize,           ONLY: MaxDim
+    use ModNumConst, ONLY: iLeviCivita_III
+    use ModSize, ONLY: MaxDim
     use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock

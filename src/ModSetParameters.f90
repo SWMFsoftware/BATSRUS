@@ -52,31 +52,31 @@ contains
          UseSimpleProlongation, BetaProlong, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, &
          IsRoundCube, iProc, nProc, iComm, init_mpi
-    use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits, &
+    use ModAMR, ONLY: init_mod_amr, read_amr_param, fix_amr_limits, &
          AdaptGrid
-    use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param, &
+    use ModFieldTrace, ONLY: init_mod_field_trace, read_field_trace_param, &
          DoMapEquatorRay
     use ModIO
-    use CON_planet,       ONLY: read_planet_var, check_planet_var
-    use CON_star,         ONLY: read_star_var
+    use CON_planet, ONLY: read_planet_var, check_planet_var
+    use CON_star, ONLY: read_star_var
     use ModPlanetConst
-    use CON_axes,         ONLY: init_axes, get_axes, &
+    use CON_axes, ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
-    use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
+    use ModUtilities, ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
          split_string, join_string, open_file, lower_case, &
          DoWriteCallSequence, StringTestSwmf => StringTest
-    use CON_planet,       ONLY: get_planet
-    use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
+    use CON_planet, ONLY: get_planet
+    use ModTimeConvert, ONLY: time_int_to_real, time_real_to_int
     use ModReadParam
-    use ModMessagePass,   ONLY: DoOneCoarserLayer
-    use ModFaceValue,     ONLY: &
+    use ModMessagePass, ONLY: DoOneCoarserLayer
+    use ModFaceValue, ONLY: &
          UseTvdResChange, UseAccurateResChange, nGUsed, &
          DoLimitMomentum, LimiterBeta, TypeLimiter, read_face_value_param, &
          TypeLimiter5, UseCweno, &
          iVarSmooth_V, iVarSmoothIndex_I, &
          StringLowOrderRegion, iRegionLowOrder_I
     use ModElectricField, ONLY: UseJCrossBForce
-    use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
+    use ModPartSteady, ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
          RelativeEps_V, AbsoluteEps_V
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells, &
          read_boundary_geometry_param
@@ -87,7 +87,7 @@ contains
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
          nVarRestartMapping, NameVarRestartFrom_V, NameVarRestartTo_V, &
          TypeRestartOutFile
-    use ModHallResist,    ONLY: &
+    use ModHallResist, ONLY: &
          UseHallResist, read_hall_param
     use ModParticleFieldLine, ONLY: read_particle_line_param
     use ModParticleMover, ONLY: read_charged_particle_param=>read_param, &
@@ -95,7 +95,7 @@ contains
          UseChargedParticles=>UseParticles, UseHybrid
     use ModHeatConduction, ONLY: read_heatconduction_param
     use ModHeatFluxCollisionless, ONLY: read_heatflux_param
-    use ModRadDiffusion,   ONLY: read_rad_diffusion_param
+    use ModRadDiffusion, ONLY: read_rad_diffusion_param
     use ModResistivity, ONLY: UseResistivity, &
          read_resistivity_param, init_mod_resistivity
     use ModMultiFluid, ONLY: ChargeIon_I, nIonFluid, &
@@ -114,12 +114,12 @@ contains
     use ModCalcSource, ONLY: read_source_param
     use ModFaceFlux, ONLY: read_face_flux_param, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
-    use ModLookupTable,     ONLY: read_lookup_table_param, get_lookup_table, &
+    use ModLookupTable, ONLY: read_lookup_table_param, get_lookup_table, &
          i_lookup_table, copy_lookup_table_to_gpu
-    use ModIeCoupling,      ONLY: read_ie_velocity_param
+    use ModIeCoupling, ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
-    use ModLaserHeating,    ONLY: read_laser_heating_param
-    use ModLocalTimeStep,   ONLY: read_localstep_param
+    use ModLaserHeating, ONLY: read_laser_heating_param
+    use ModLocalTimeStep, ONLY: read_localstep_param
     use ModIoUnit, ONLY: io_unit_new
     use ModNumConst, ONLY: cDegToRad, cTiny, cHalfPi
     use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
@@ -135,12 +135,12 @@ contains
     ! BEGIN CORONA SPECIFIC
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: read_magnetogram_param
-    use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
+    use ModCoronalHeating, ONLY: read_coronal_heating_param, &
          init_coronal_heating, UseCoronalHeating
     use ModTurbulence, ONLY: read_turbulence_param
-    use ModTurbulence,    ONLY: UseAlfvenWaveDissipation
+    use ModTurbulence, ONLY: UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_thread_param
-    use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
+    use ModThreadedLC, ONLY: init_threaded_lc, read_threaded_bc_param
     use ModRadiativeCooling, ONLY: UseRadCooling,&
          read_cooling_param, check_cooling_param
     use ModChromosphere, ONLY: read_chromosphere_param, init_chromosphere
@@ -2891,7 +2891,7 @@ contains
 
       use ModMultiFluid, ONLY: extract_fluid_name, select_fluid, &
            iRho, iRhoUx, iRhouy, iRhoUz, iP, iEnergy
-      use ModUtilities,  ONLY: join_string
+      use ModUtilities, ONLY: join_string
 
       integer :: iWave, iPui, iMaterial, iFluid, lConservative, lPrimitive
       character(len=3)  :: NameWave, NamePui
@@ -4157,9 +4157,9 @@ contains
     !==========================================================================
     subroutine correct_plot_range
 
-      use BATL_lib,     ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
+      use BATL_lib, ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
            CoordMin_D, CoordMax_D, nIJK_D
-      use ModKind,      ONLY: nByteReal
+      use ModKind, ONLY: nByteReal
       use ModWritePlot, ONLY: adjust_plot_range
       use ModIO
 

@@ -27,9 +27,9 @@ module ModRadDiffusion
   ! 2. In the split semi-implicit scheme all variables
   !    use the point-implicit energy exchange!
 
-  use ModImplicit,    ONLY: UseAccurateRadiation
-  use ModVarIndexes,  ONLY: p_, nWave
-  use BATL_size,      ONLY: nDim, MaxDim
+  use ModImplicit, ONLY: UseAccurateRadiation
+  use ModVarIndexes, ONLY: p_, nWave
+  use BATL_size, ONLY: nDim, MaxDim
 
   implicit none
   save
@@ -115,7 +115,7 @@ contains
   !============================================================================
   subroutine read_rad_diffusion_param(NameCommand)
 
-    use ModMain,      ONLY: UseRadDiffusion
+    use ModMain, ONLY: UseRadDiffusion
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -161,17 +161,17 @@ contains
   !============================================================================
   subroutine init_rad_diffusion
 
-    use ModAdvance,     ONLY: nWave, UseElectronPressure
-    use ModMain,        ONLY: UseRadDiffusion
-    use ModSize,        ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+    use ModAdvance, ONLY: nWave, UseElectronPressure
+    use ModMain, ONLY: UseRadDiffusion
+    use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxBlock
-    use ModImplicit,    ONLY: UseFullImplicit, &
+    use ModImplicit, ONLY: UseFullImplicit, &
          UseSemiImplicit, TypeSemiImplicit, &
          nVarSemi, iEradImpl, iTeImpl, iErImplFirst, iErImplLast
-    use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, &
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_, &
          cRadiationNo
-    use ModVarIndexes,  ONLY: nWave, WaveFirst_
-    use ModWaves,       ONLY: UseWavePressure, GammaWave
+    use ModVarIndexes, ONLY: nWave, WaveFirst_
+    use ModWaves, ONLY: UseWavePressure, GammaWave
 
     real :: TradMin
 
@@ -295,9 +295,9 @@ contains
        StateLeft_V, StateRight_V, Normal_D, &
        RadDiffCoef, EradFlux, IsNewBlockRadDiffusion)
 
-    use ModAdvance,      ONLY: State_VGB, Erad_
+    use ModAdvance, ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModVarIndexes,   ONLY: nVar
+    use ModVarIndexes, ONLY: nVar
 
     integer, intent(in):: iDir, i, j, k, iBlock
     real, intent(inout):: StateLeft_V(nVar)
@@ -340,8 +340,8 @@ contains
     !==========================================================================
     subroutine get_diffusion_coef(State_V, DiffCoef)
 
-      use ModAdvance,     ONLY: nWave
-      use ModPhysics,     ONLY: Si2No_V, UnitX_, Clight
+      use ModAdvance, ONLY: nWave
+      use ModPhysics, ONLY: Si2No_V, UnitX_, Clight
       use ModUserInterface ! user_material_properties
 
       real, intent(in) :: State_V(nVar)
@@ -375,11 +375,11 @@ contains
   !============================================================================
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nWave
-    use ModConst,      ONLY: cLightSpeed
-    use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
-    use ModMain,       ONLY: nI, nJ, nK
-    use BATL_lib,      ONLY: Used_GB
+    use ModAdvance, ONLY: State_VGB, Source_VC, Erad_, nWave
+    use ModConst, ONLY: cLightSpeed
+    use ModPhysics, ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
+    use ModMain, ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: Used_GB
     use ModVarIndexes, ONLY: Energy_
     use ModUserInterface ! user_material_properties
 
@@ -435,18 +435,18 @@ contains
   subroutine get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
        DeltaSemiAll_VCB)
 
-    use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
+    use BATL_lib, ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
-    use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,  ONLY: State_VGB, UseElectronPressure, &
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure, &
          nWave, WaveFirst_, WaveLast_
-    use ModConst,    ONLY: cBoltzmann
+    use ModConst, ONLY: cBoltzmann
     use ModImplicit, ONLY: &
          nVarSemiAll, nBlockSemi, iBlockFromSemi_B, TypeSemiImplicit, &
          SemiImplCoeff, iTeImpl, iErImplFirst, iErImplLast
-    use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
+    use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, Dt
     use ModNumConst, ONLY: i_DD
-    use ModPhysics,  ONLY: InvGammaMinus1, Clight, cRadiationNo, UnitN_, &
+    use ModPhysics, ONLY: InvGammaMinus1, Clight, cRadiationNo, UnitN_, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
     use ModGeometry, ONLY: TypeGeometry
@@ -841,8 +841,8 @@ contains
     !==========================================================================
     subroutine get_diffusion_coef
 
-      use ModAdvance,      ONLY: nWave
-      use ModConst,        ONLY: cElectronMass
+      use ModAdvance, ONLY: nWave
+      use ModConst, ONLY: cElectronMass
       use ModFaceGradient, ONLY: set_block_field3
 
       real :: OpacityRosseland_W(nWave), DiffRad_W(nWave)
@@ -933,10 +933,10 @@ contains
   !============================================================================
   subroutine set_rad_outflow_bc(iSide, iBlock, iBlockSemi, State_VG, IsLinear)
 
-    use BATL_lib,       ONLY: CellSize_DB
-    use ModImplicit,    ONLY: nVarSemi
-    use ModPhysics,     ONLY: Clight
-    use ModSize,        ONLY: x_, y_, z_, &
+    use BATL_lib, ONLY: CellSize_DB
+    use ModImplicit, ONLY: nVarSemi
+    use ModPhysics, ONLY: Clight
+    use ModSize, ONLY: x_, y_, z_, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          j0_, nJp1_, k0_, nKp1_
 
@@ -1019,17 +1019,17 @@ contains
   !============================================================================
   subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use BATL_lib,        ONLY: store_face_flux, IsCartesian, CellFace_DB, &
+    use BATL_lib, ONLY: store_face_flux, IsCartesian, CellFace_DB, &
          CellFace_DFB, CellSize_DB, CellVolume_GB
-    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: set_block_field3
-    use ModImplicit,     ONLY: nVarSemi, &
+    use ModImplicit, ONLY: nVarSemi, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
-    use ModMain,         ONLY: nI, nJ, nK
-    use ModParallel,     ONLY: DiLevel_EB, Unset_
-    use ModNumConst,     ONLY: i_DD
-    use BATL_lib,        ONLY: Used_GB
+    use ModMain, ONLY: nI, nJ, nK
+    use ModParallel, ONLY: DiLevel_EB, Unset_
+    use ModNumConst, ONLY: i_DD
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1420,14 +1420,14 @@ contains
   !============================================================================
   subroutine add_jacobian_rad_diff(iBlock, nVarImpl, Jacobian_VVCI)
 
-    use BATL_lib,    ONLY: IsCartesian, DiLevelNei_IIIB, Unset_, CellSize_DB, &
+    use BATL_lib, ONLY: IsCartesian, DiLevelNei_IIIB, Unset_, CellSize_DB, &
          CellFace_DB, CellFace_DFB, CellVolume_B, CellVolume_GB
     use ModImplicit, ONLY: UseFullImplicit, nStencil, Stencil1_, Stencil2_, &
          Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap,&
          UseSemiImplicit
-    use ModMain,     ONLY: nI, nJ, nK, TypeCellBc_I
+    use ModMain, ONLY: nI, nJ, nK, TypeCellBc_I
     use ModNumConst, ONLY: i_DD
-    use ModPhysics,  ONLY: InvClight
+    use ModPhysics, ONLY: InvClight
     use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
@@ -1677,14 +1677,14 @@ contains
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
     ! of the extremely advanced PGF90 12.9 compiler
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
-    use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iErImplFirst, SemiImplCoeff
-    use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
-    use ModPhysics,    ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
+    use ModImplicit, ONLY: nVarSemiAll, iTeImpl, iErImplFirst, SemiImplCoeff
+    use ModMain, ONLY: nI, nJ, nK, Dt, UseRadDiffusion
+    use ModPhysics, ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
          No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, InvGammaElectronMinus1
-    use BATL_lib,      ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModUserInterface ! user_material_properties
 
     integer, intent(in):: iBlock, iBlockSemi

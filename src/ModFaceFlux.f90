@@ -481,9 +481,9 @@ contains
   !============================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
-    use ModAdvance,  ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
+    use ModAdvance, ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModParallel, ONLY: DiLevel_EB
-    use ModMain,     ONLY: nIFace, nJFace, nKFace, &
+    use ModMain, ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
     use ModMultiFluid, ONLY: UseMultiIon
@@ -565,7 +565,7 @@ contains
     subroutine get_flux_x(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IX
-      use BATL_lib,   ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       integer:: iFlux
@@ -671,7 +671,7 @@ contains
     subroutine get_flux_y(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IY
-      use BATL_lib,   ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iFlux
       integer, parameter:: iGang = 1
@@ -774,7 +774,7 @@ contains
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IZ
-      use BATL_lib,   ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iFlux
       integer, parameter:: iGang = 1
@@ -883,7 +883,7 @@ contains
       use ModAdvance, ONLY: State_VGB
       use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUz, iP
       use ModEnergy, ONLY: energy_i
-      use BATL_lib,  ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
       real, intent(inout):: Flux_V(nFlux)
 
       real :: Coef
@@ -1160,14 +1160,14 @@ contains
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
-    use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
+    use ModPhysics, ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultiFluid, ONLY: UseMultiIon, NeutralFirst_, ChargeIon_I, &
          iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid, &
          nIonFluid
     use ModUserInterface ! user_material_properties
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
-    use ModSaMhd,         ONLY: aligning_bc
+    use ModSaMhd, ONLY: aligning_bc
     use ModTurbulence, ONLY: UseTurbulentCascade
 
     real, intent(out):: Flux_V(nFaceValue)
@@ -2211,8 +2211,8 @@ contains
       ! The Godunov flux works for hydro fluid (no magnetic field)
       ! Called for each fluid separately. Uses iFluid, iRho, ...
 
-      use ModAdvance,  ONLY: UseElectronPressure
-      use ModExactRS,  ONLY: wR, wL, RhoL, RhoR, pL, pR, UnL, UnR, &
+      use ModAdvance, ONLY: UseElectronPressure
+      use ModExactRS, ONLY: wR, wL, RhoL, RhoR, pL, pR, UnL, UnR, &
            UnStar, pStar, exact_rs_set_gamma, exact_rs_sample, exact_rs_pu_star
       use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
       use ModTurbulence, ONLY: PoyntingFluxPerB
@@ -2609,7 +2609,7 @@ contains
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
          iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
          ElectronFirst_, nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
-    use ModMain,    ONLY: Climit
+    use ModMain, ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
 
@@ -2945,9 +2945,9 @@ contains
     !==========================================================================
     subroutine get_mhd_speed
 
-      use ModPhysics,  ONLY: ElectronPressureRatio
+      use ModPhysics, ONLY: ElectronPressureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
+      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, BperU_, &
            UseMagFriction, MagFrictionCoefOrig, MagFrictionCoef
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
@@ -3467,8 +3467,8 @@ contains
     ! Make Unormal 6th order accuracte
 
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModAdvance,    ONLY: State_VGB
-    use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
+    use ModAdvance, ONLY: State_VGB
+    use BATL_lib, ONLY: correct_face_value, CellCoef_DDGB, &
          Xi_, Eta_, Zeta_, nDim
 
     real, intent(inout):: Unormal_I(nFluid+1)

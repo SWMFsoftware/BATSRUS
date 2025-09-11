@@ -9,16 +9,16 @@ module ModParticleMover
        nI, nJ, nK, Unused_B, CoordMin_DB, CellSize_DB, &
        coord_to_xyz, CellVolume_GB, jDim_, kDim_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModMain,         ONLY: NameThisComp, UseB0
-  use ModB0,           ONLY: get_b0, B0_DGB
-  use ModAdvance,      ONLY: Efield_DGB, State_VGB, &
+  use ModMain, ONLY: NameThisComp, UseB0
+  use ModB0, ONLY: get_b0, B0_DGB
+  use ModAdvance, ONLY: Efield_DGB, State_VGB, &
        UseAnisoPressure
-  use ModVarIndexes,   ONLY: Bx_, Bz_
-  use ModMultiFluid,   ONLY: iPParIon_I, &
+  use ModVarIndexes, ONLY: Bx_, Bz_
+  use ModMultiFluid, ONLY: iPParIon_I, &
           iRhoIon_I, iPIon_I, iRhoUxIon_I, iRhoUzIon_I
-  use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
+  use ModParticles, ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
-  use BATL_particles,  ONLY: Particle_I, &
+  use BATL_particles, ONLY: Particle_I, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
   use ModNumConst
@@ -146,7 +146,7 @@ contains
     ! 4.0                    Mass_I
     ! 2.0                    Charge_I
 
-    use ModMultiFluid,   ONLY: nTrueIon
+    use ModMultiFluid, ONLY: nTrueIon
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -253,7 +253,7 @@ contains
   !============================================================================
   subroutine normalize_param
 
-    use ModPhysics,    ONLY: ElectronCharge
+    use ModPhysics, ONLY: ElectronCharge
     use ModMultiFluid, ONLY: ChargePerMass_I
     !--------------------------------------------------------------------------
     if(.not.DoNormalize)RETURN
@@ -543,7 +543,7 @@ contains
   end subroutine check_done
   !============================================================================
   subroutine get_state_from_vdf_block(iBlock)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -611,7 +611,7 @@ contains
   end subroutine get_state_from_vdf
   !============================================================================
   subroutine get_vdf_from_state(iBlock, DoOnScratch)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     ! If the distribution function is initialized for the
@@ -673,7 +673,7 @@ contains
        MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,DoOnScratch, DoSkip_G)
 
     use ModRandomNumber, ONLY: random_real
-    use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
+    use BATL_lib, ONLY: iNode_B, IsCartesianGrid
 
     integer, intent(in) :: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock
 

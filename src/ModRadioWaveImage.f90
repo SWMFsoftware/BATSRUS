@@ -164,8 +164,8 @@ contains
   subroutine ray_path(iParticle, IsEndOfSegment)
 
     use ModVarIndexes, ONLY: nVar, Rho_
-    use ModPhysics,    ONLY: No2Si_V, UnitN_
-    use ModIO,         ONLY: UseNoRefraction
+    use ModPhysics, ONLY: No2Si_V, UnitN_
+    use ModIO, ONLY: UseNoRefraction
 
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
@@ -386,7 +386,7 @@ contains
 
       use ModUserInterface ! user_material_properties
       use ModCoordTransform, ONLY: cross_product
-      use ModWaves,      ONLY: nWave, WaveLast_, FrequencySi_W
+      use ModWaves, ONLY: nWave, WaveLast_, FrequencySi_W
 
       ! Omega = \nabla n/n\times d\vec{x}/ds
       ! Analogous to the magnetic field times q/m in the

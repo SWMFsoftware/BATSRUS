@@ -527,7 +527,7 @@ contains
     use ModMain
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use ModGeometry, ONLY: r_GB
-    use BATL_lib,    ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Indices corresponding to the starting point and directon of traces
     integer :: i, j, k, iBlock, iRay
@@ -2387,12 +2387,12 @@ contains
     use ModMain, ONLY: NamePrimitive_V
     use ModIo, ONLY: &
          StringDateOrTime, NamePlotDir, PlotRange_EI, TypePlot_I, TypeFile_I
-    use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
-    use ModIoUnit,         ONLY: UnitTmp_
-    use CON_line_extract,  ONLY: line_get, line_clean
-    use CON_axes,          ONLY: transform_matrix
-    use ModInterpolate,    ONLY: fit_parabola
-    use ModUtilities,      ONLY: open_file, close_file
+    use ModAdvance, ONLY: nVar, Ux_, Uz_, Bx_, Bz_
+    use ModIoUnit, ONLY: UnitTmp_
+    use CON_line_extract, ONLY: line_get, line_clean
+    use CON_axes, ONLY: transform_matrix
+    use ModInterpolate, ONLY: fit_parabola
+    use ModUtilities, ONLY: open_file, close_file
 
     integer, intent(in):: iFile
 
@@ -2688,11 +2688,11 @@ contains
        DoMessagePass)
 
     use CON_ray_trace, ONLY: ray_init
-    use CON_axes,      ONLY: transform_matrix
-    use ModAdvance,    ONLY: nVar, State_VGB, Bx_, Bz_
-    use ModGeometry,       ONLY: CellSize_DB
-    use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use ModElectricField,  ONLY: calc_inductive_e
+    use CON_axes, ONLY: transform_matrix
+    use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_
+    use ModGeometry, ONLY: CellSize_DB
+    use CON_line_extract, ONLY: line_init, line_collect, line_clean
+    use ModElectricField, ONLY: calc_inductive_e
 
     integer, intent(in):: nRadius, nLon
     real,    intent(in):: Radius_I(nRadius), Longitude_I(nLon)
@@ -2914,7 +2914,7 @@ contains
     ! The results are stored by CON_line_extract.
 
     use CON_ray_trace, ONLY: ray_init
-    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
+    use ModAdvance, ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
     use ModGeometry, ONLY: CellSize_DB, x_, y_, z_
 
     integer, intent(in) :: nLine
@@ -3257,7 +3257,7 @@ contains
   !============================================================================
   subroutine xyz_to_ijk(XyzIn_D, IndOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
 
-    use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, &
+    use BATL_lib, ONLY: Phi_, Theta_, x_, y_, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsPeriodicCoord_D, &
          CoordMin_D, CoordMax_D, xyz_to_coord
 
@@ -3317,15 +3317,15 @@ contains
   !============================================================================
   subroutine write_plot_lcb(iFile)
 
-    use CON_line_extract,  ONLY: line_get, line_clean
-    use CON_planet_field,  ONLY: map_planet_field
-    use CON_axes,          ONLY: transform_matrix
-    use ModIoUnit,         ONLY: UnitTmp_
-    use ModUtilities,      ONLY: open_file, close_file
-    use ModAdvance,        ONLY: nVar
-    use ModPhysics,        ONLY: &
+    use CON_line_extract, ONLY: line_get, line_clean
+    use CON_planet_field, ONLY: map_planet_field
+    use CON_axes, ONLY: transform_matrix
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
+    use ModAdvance, ONLY: nVar
+    use ModPhysics, ONLY: &
          Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_
-    use ModIO,             ONLY: &
+    use ModIO, ONLY: &
          StringDateOrTime, NamePlotDir, PlotRange_EI, TypePlot_I, IsPlotNameN
 
     integer, intent(in) :: iFile
@@ -3590,14 +3590,14 @@ contains
   !============================================================================
   subroutine write_plot_ieb(iFile)
 
-    use CON_line_extract,  ONLY: line_get, line_clean
-    use CON_planet_field,  ONLY: map_planet_field
-    use CON_axes,          ONLY: transform_matrix
-    use ModIoUnit,         ONLY: UnitTmp_
-    use ModUtilities,      ONLY: open_file, close_file
-    use ModAdvance,        ONLY: nVar
-    use ModPhysics,        ONLY: Si2No_V, UnitX_
-    use ModIO,             ONLY: StringDateOrTime, NamePlotDir
+    use CON_line_extract, ONLY: line_get, line_clean
+    use CON_planet_field, ONLY: map_planet_field
+    use CON_axes, ONLY: transform_matrix
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
+    use ModAdvance, ONLY: nVar
+    use ModPhysics, ONLY: Si2No_V, UnitX_
+    use ModIO, ONLY: StringDateOrTime, NamePlotDir
 
     integer, intent(in) :: iFile
 

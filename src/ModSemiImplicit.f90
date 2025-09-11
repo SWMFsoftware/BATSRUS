@@ -53,8 +53,8 @@ contains
   !============================================================================
   subroutine read_semi_impl_param(NameCommand)
 
-    use ModReadParam,     ONLY: read_var
-    use ModLinearSolver,  ONLY: &
+    use ModReadParam, ONLY: read_var
+    use ModLinearSolver, ONLY: &
          Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_, Bilu1_
 
     character(len=*), intent(in) :: NameCommand
@@ -122,7 +122,7 @@ contains
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModVarIndexes, ONLY: nWave
     use ModResistivity, ONLY: BxImpl_, UseResistivity
-    use ModHallResist,  ONLY: UseHallResist
+    use ModHallResist, ONLY: UseHallResist
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_semi_impl'
@@ -269,11 +269,11 @@ contains
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
-    use ModRadDiffusion,   ONLY: &
+    use ModRadDiffusion, ONLY: &
          get_impl_rad_diff_state, set_rad_diff_range, update_impl_rad_diff
     use ModHeatConduction, ONLY: &
          get_impl_heat_cond_state, update_impl_heat_cond
-    use ModResistivity,    ONLY: &
+    use ModResistivity, ONLY: &
          get_impl_resistivity_state, update_impl_resistivity
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
@@ -1077,11 +1077,11 @@ contains
   subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
     !$acc routine vector
 
-    use BATL_lib,          ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: nI, nJ, nK
     use ModHeatConduction, ONLY: add_jacobian_heat_cond
 #ifndef _OPENACC
-    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
-    use ModResistivity,    ONLY: add_jacobian_resistivity, &
+    use ModRadDiffusion, ONLY: add_jacobian_rad_diff
+    use ModResistivity, ONLY: add_jacobian_resistivity, &
          add_jacobian_hall_resist
 #endif
 
@@ -1122,7 +1122,7 @@ contains
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: DtMax_CB
-    use ModMain,    ONLY: Dt, IsTimeAccurate, Cfl, UseDtLimit
+    use ModMain, ONLY: Dt, IsTimeAccurate, Cfl, UseDtLimit
     use ModImplicit, ONLY: UseNoOverlap
     use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
     use BATL_lib, ONLY: nI, nJ, nK, Used_GB, CellVolume_GB

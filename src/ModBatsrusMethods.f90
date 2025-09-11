@@ -29,11 +29,11 @@ contains
     use ModMain
     use ModConstrainDivB, ONLY: DoInitConstrainB
     use ModIO
-    use ModAMR,      ONLY: nRefineLevelIC
-    use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
+    use ModAMR, ONLY: nRefineLevelIC
+    use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
     use ModParallel, ONLY: init_mod_parallel
     use ModWriteProgress, ONLY: write_progress, write_runtime_values
-    use BATL_lib,    ONLY: find_test_cell, iProc, iComm
+    use BATL_lib, ONLY: find_test_cell, iProc, iComm
 
     ! Local variables
 
@@ -79,17 +79,17 @@ contains
       use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
            set_amr_geometry, nBlock, Unused_B, init_amr_criteria, &
            nInitialAmrLevel
-      use BATL_region, only: Area_I, nArea
+      use BATL_region, ONLY: Area_I, nArea
       use ModBatlInterface, ONLY: set_batsrus_grid
       ! Dummy variables, to avoid array size issues with State_VGB in
       ! set_amr_criteria
-      use ModAdvance, ONLY : nVar, State_VGB
+      use ModAdvance, ONLY: nVar, State_VGB
       use ModLoadBalance, ONLY: load_balance
       use ModAMR, ONLY: DoSetAmrLimits, set_amr_limits
       use CON_axes, ONLY: transform_matrix, dLongitudeHgr, dLongitudeHgi
       use ModNumConst, ONLY: cTwoPi
       use ModCoordTransform, ONLY: xyz_to_lonlat, rot_matrix_y, rot_matrix_z
-      use ModSatelliteFile,      ONLY: xyz_sat
+      use ModSatelliteFile, ONLY: xyz_sat
       ! local variables
 
       character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -226,18 +226,18 @@ contains
 
       use ModSetInitialCondition, ONLY: set_initial_condition, &
            add_rotational_velocity
-      use ModIO,                  ONLY: IsRestart, DoRestartBface
-      use ModRestartFile,         ONLY: read_restart_files
-      use ModMessagePass,         ONLY: exchange_messages
-      use ModMain,                ONLY: UseB0, iSignRotationIC
-      use ModAdvance,             ONLY: State_VGB
-      use ModBuffer,              ONLY: DoRestartBuffer
-      use ModB0,                  ONLY: set_b0_reschange, B0_DGB
-      use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
-      use ModAMR,                 ONLY: prepare_amr, do_amr, &
+      use ModIO, ONLY: IsRestart, DoRestartBface
+      use ModRestartFile, ONLY: read_restart_files
+      use ModMessagePass, ONLY: exchange_messages
+      use ModMain, ONLY: UseB0, iSignRotationIC
+      use ModAdvance, ONLY: State_VGB
+      use ModBuffer, ONLY: DoRestartBuffer
+      use ModB0, ONLY: set_b0_reschange, B0_DGB
+      use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
+      use ModAMR, ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
-      use ModLoadBalance,         ONLY: load_balance
-      use ModParticleMover,       ONLY: UseHybrid, get_vdf_from_state, &
+      use ModLoadBalance, ONLY: load_balance
+      use ModParticleMover, ONLY: UseHybrid, get_vdf_from_state, &
            get_state_from_vdf, trace_particles
 
       use ModUserInterface ! user_initial_perturbation, user_action
@@ -406,7 +406,7 @@ contains
     use ModPIC, ONLY: UsePic, pic_init_region
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell, iProc
     use ModTimeStepControl, ONLY: TimeSimulationOldCheck
-    use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use EEE_ModCommonVariables, ONLY: UseCme
 
     logical:: DoTest
@@ -500,7 +500,7 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix, DoSavePlotsAmr, UseParcel, &
          Parcel_DI, nParcel
     use ModAMR, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
-    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
+    use ModPhysics, ONLY: No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
     use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
@@ -514,7 +514,7 @@ contains
          set_global_timestep, DoCheckTimeStep, DnCheckTimeStep, TimeStepMin, &
          TimeSimulationOldCheck
     use ModParticleFieldLine, ONLY: UseParticles, advect_particle_line
-    use ModLaserHeating,    ONLY: add_laser_heating
+    use ModLaserHeating, ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
     use ModMessagePass, ONLY: exchange_messages
     use ModB0, ONLY: DoUpdateB0, DtUpdateB0
@@ -533,14 +533,14 @@ contains
     use ModWriteProgress, ONLY: write_timeaccurate
     use ModUpdateState, ONLY: update_b0, update_te0, fix_anisotropy
     use ModProjectDivB, ONLY: project_divb
-    use ModCleanDivB,   ONLY: clean_divb
+    use ModCleanDivB, ONLY: clean_divb
     use ModFreq, ONLY: is_time_to
     use ModPIC, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
-    use BATL_region, only: Area_I, nArea
+    use BATL_region, ONLY: Area_I, nArea
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: xyz_to_lonlat, rot_matrix_y, rot_matrix_z
-    use ModSatelliteFile,      ONLY: xyz_sat
+    use ModSatelliteFile, ONLY: xyz_sat
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
@@ -795,7 +795,7 @@ contains
     use ModConstrainDivB, ONLY: DoInitConstrainB, bcenter_to_bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
-    use ModAdvance, ONLY : Bx_, Bz_, State_VGB, Tmp1_GB
+    use ModAdvance, ONLY: Bx_, Bz_, State_VGB, Tmp1_GB
     use ModIO, ONLY: write_prefix, iUnitOut
     use BATL_lib, ONLY: iProc, Xyz_DGB, x_,y_,z_, nBlock, message_pass_cell, &
          maxval_grid
@@ -871,7 +871,7 @@ contains
 
     use ModMain
     use ModIO
-    use ModUtilities, ONLY : upper_case
+    use ModUtilities, ONLY: upper_case
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: iProc
     ! use ModFieldLineThread, ONLY: UseFieldLineThreads
@@ -1368,24 +1368,24 @@ contains
   subroutine BATS_finalize
 
     ! Alphabetical order
-    use BATL_lib,           ONLY: clean_batl
-    use ModAdvance,         ONLY: clean_mod_advance
-    use ModBlockData,       ONLY: clean_mod_block_data
+    use BATL_lib, ONLY: clean_batl
+    use ModAdvance, ONLY: clean_mod_advance
+    use ModBlockData, ONLY: clean_mod_block_data
     use ModBorisCorrection, ONLY: clean_mod_boris_correction
-    use ModConstrainDivB,   ONLY: clean_mod_ct
-    use ModFaceValue,       ONLY: clean_mod_face_value
-    use ModFieldTrace,      ONLY: clean_mod_field_trace
-    use ModGeometry,        ONLY: clean_mod_geometry
-    use ModIeCoupling,      ONLY: clean_mod_ie_coupling
-    use ModMain,            ONLY: clean_mod_main
-    use ModNodes,           ONLY: clean_mod_nodes
-    use ModParallel,        ONLY: clean_mod_parallel
-    use ModPartImplicit,    ONLY: clean_mod_part_impl
-    use ModPointImplicit,   ONLY: clean_mod_point_impl
-    use ModReverseField,    ONLY: clean_mod_reverse_field
-    use ModSemiImplicit,    ONLY: clean_mod_semi_impl
-    use ModUserInterface,   ONLY: user_action
-    use ModBatsrusUtility,  ONLY: error_report
+    use ModConstrainDivB, ONLY: clean_mod_ct
+    use ModFaceValue, ONLY: clean_mod_face_value
+    use ModFieldTrace, ONLY: clean_mod_field_trace
+    use ModGeometry, ONLY: clean_mod_geometry
+    use ModIeCoupling, ONLY: clean_mod_ie_coupling
+    use ModMain, ONLY: clean_mod_main
+    use ModNodes, ONLY: clean_mod_nodes
+    use ModParallel, ONLY: clean_mod_parallel
+    use ModPartImplicit, ONLY: clean_mod_part_impl
+    use ModPointImplicit, ONLY: clean_mod_point_impl
+    use ModReverseField, ONLY: clean_mod_reverse_field
+    use ModSemiImplicit, ONLY: clean_mod_semi_impl
+    use ModUserInterface, ONLY: user_action
+    use ModBatsrusUtility, ONLY: error_report
 
     integer:: iError
     logical:: DoTest

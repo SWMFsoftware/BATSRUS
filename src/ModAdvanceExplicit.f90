@@ -38,7 +38,7 @@ contains
          save_cons_flux, apply_cons_flux
     use ModCoronalHeating, ONLY: get_coronal_heat_factor,&
          UseUnsignedFluxModel
-    use ModWaves,  ONLY: UseAwRepresentative
+    use ModWaves, ONLY: UseAwRepresentative
     use ModTurbulence, ONLY:           &
          wave_energy_to_representative, representative_to_wave_energy
     use ModMessagePass, ONLY: exchange_messages
@@ -358,16 +358,16 @@ contains
   end subroutine advance_explicit
   !============================================================================
   subroutine update_secondbody
-    use ModMain,     ONLY:  nBlock, Unused_B, body2_, iNewGrid
-    use ModPhysics,  ONLY: rBody2, xBody2, yBody2, zBody2, &
+    use ModMain, ONLY:  nBlock, Unused_B, body2_, iNewGrid
+    use ModPhysics, ONLY: rBody2, xBody2, yBody2, zBody2, &
          set_second_body_coord
-    use ModMessagePass,      ONLY: exchange_messages
+    use ModMessagePass, ONLY: exchange_messages
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
          fix_boundary_ghost_cells
-    use ModGeometry,   ONLY: Xyz_DGB, rBody2_GB, rMinBody2_B, &
+    use ModGeometry, ONLY: Xyz_DGB, rBody2_GB, rMinBody2_B, &
          IsNoBody_B
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
-    use ModAdvance,    ONLY: State_VGB, nVar
+    use ModAdvance, ONLY: State_VGB, nVar
     use BATL_lib, ONLY: nI, nJ, nK, Used_GB
 
     integer :: i,j,k

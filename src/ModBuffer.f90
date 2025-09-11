@@ -67,7 +67,7 @@ contains
   subroutine init_buffer_grid
 
     use ModVarIndexes, ONLY: nVar
-    use ModMain,       ONLY: rLowerModel
+    use ModMain, ONLY: rLowerModel
 
     integer:: nCell_D(3)
     !--------------------------------------------------------------------------
@@ -97,9 +97,9 @@ contains
     ! to radians
 
     use ModReadParam, ONLY: read_var
-    use ModNumConst,  ONLY: cDegToRad
+    use ModNumConst, ONLY: cDegToRad
 
-    use ModMain,      ONLY: NameThisComp
+    use ModMain, ONLY: NameThisComp
     character(LEN=*), intent(in) :: NameCommand
     character(len=*), parameter:: NameSub = 'read_buffer_grid_param'
     !--------------------------------------------------------------------------
@@ -429,9 +429,9 @@ contains
   !============================================================================
   subroutine save_buffer_restart
 
-    use ModMain,       ONLY: NameThisComp
-    use ModIoUnit,     ONLY: UnitTmp_
-    use ModUtilities,  ONLY: open_file, close_file
+    use ModMain, ONLY: NameThisComp
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
     character(len=*), parameter:: NameSub = 'save_buffer_restart'
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartOUT/buffer.dat', &
@@ -470,9 +470,9 @@ contains
   !============================================================================
   subroutine read_buffer_restart
 
-    use ModMain,       ONLY: NameThisComp
-    use ModIoUnit,     ONLY: UnitTmp_
-    use ModUtilities,  ONLY: open_file, close_file
+    use ModMain, ONLY: NameThisComp
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
     character(len=*), parameter:: NameSub = 'read_buffer_restart'
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartIN/buffer.dat', &
@@ -501,7 +501,7 @@ contains
     !$acc routine vector
 
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
-    use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc, &
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc, &
          test_start, test_stop
     integer, intent(in)::iBlock
 
@@ -541,7 +541,7 @@ contains
     ! Do not update solution in the domain covered by the buffer grid
 
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
-    use BATL_lib,   ONLY: nI, nJ, nK, &
+    use BATL_lib, ONLY: nI, nJ, nK, &
          test_start, test_stop
     integer, intent(in):: iBlock
 
@@ -564,8 +564,8 @@ contains
     ! Fix initial conditions. Works differently for IH and OH.
 
     use ModGeometry, ONLY:r_GB
-    use BATL_lib,  ONLY: Xyz_DGB
-    use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B, UseOuterHelio
+    use BATL_lib, ONLY: Xyz_DGB
+    use ModMain, ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B, UseOuterHelio
     use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
 
     integer  :: iBlock

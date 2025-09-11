@@ -257,7 +257,7 @@ contains
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
          UseLowOrderRegion, IsLowOrderOnly_B
-    use ModGeometry,   ONLY: IsNoBody_B, IsBoundary_B
+    use ModGeometry, ONLY: IsNoBody_B, IsBoundary_B
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModPartSteady, ONLY: UsePartSteady
     use ModParallel
@@ -628,15 +628,15 @@ contains
     ! based on the stepping selection criteria.
 
     use ModMain
-    use ModFaceFlux, ONLY : calc_face_flux
-    use ModFaceValue, ONLY : calc_face_value
-    use ModAdvance,  ONLY : iTypeAdvance_B, iTypeAdvance_BP, &
+    use ModFaceFlux, ONLY: calc_face_flux
+    use ModFaceValue, ONLY: calc_face_value
+    use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_
-    use ModGeometry, ONLY : rMin_B
-    use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
+    use ModGeometry, ONLY: rMin_B
+    use ModImplicit, ONLY: UseImplicit, UseFullImplicit, UsePartImplicit, &
          TypeImplCrit, ExplCFL, rImplicit
-    use ModIO,       ONLY: write_prefix, iUnitOut
-    use ModB0,       ONLY: set_b0_face
+    use ModIO, ONLY: write_prefix, iUnitOut
+    use ModB0, ONLY: set_b0_face
     use ModMpi
     use ModParallel, ONLY: nBlockMax_P, MaxBlockDisp_P
     use ModTimeStepControl, ONLY: calc_timestep
@@ -780,7 +780,7 @@ contains
   subroutine load_balance_blocks
 
     use ModMain, ONLY: nIteration
-    use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
+    use ModImplicit, ONLY: UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
     use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
     use ModTimeStepControl, ONLY: UseMaxTimeStep
     use ModPIC, ONLY: DoBalanceActivePicBlock, UsePic

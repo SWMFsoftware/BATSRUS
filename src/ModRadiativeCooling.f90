@@ -72,9 +72,9 @@ contains
   subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling, &
        iError, NameCaller, Xyz_D)
     !$acc routine seq
-    use ModPhysics,    ONLY: No2Si_V, UnitN_
+    use ModPhysics, ONLY: No2Si_V, UnitN_
     use ModVarIndexes, ONLY: Rho_
-    use ModAdvance,    ONLY: State_VGB, MaxDim
+    use ModAdvance, ONLY: State_VGB, MaxDim
     use ModMultiFluid, ONLY: UseMultiIon, ChargeIon_I, iRhoIon_I, MassIon_I
 
     integer, intent(in) :: i, j, k, iBlock
@@ -114,9 +114,9 @@ contains
   real function radiative_cooling(TeSiIn, NumberDensCgs, iError, &
        NameCaller, Xyz_D)
     !$acc routine seq
-    use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
-    use ModLookupTable,   ONLY: interpolate_lookup_table
-    use ModMultiFluid,    ONLY: UseMultiIon
+    use ModPhysics, ONLY: Si2No_V, UnitT_, UnitEnergyDens_
+    use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModMultiFluid, ONLY: UseMultiIon
 
     ! Imput - dimensional, output: dimensionless
     real, intent(in):: TeSiIn, NumberDensCgs
@@ -244,8 +244,8 @@ contains
   !============================================================================
   subroutine add_chromosphere_heating(TeSi_C,iBlock)
     use ModGeometry, ONLY: r_GB
-    use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
-    use ModPhysics,  ONLY: UnitX_, Si2No_V,NameStar,RadiusStar,MassStar
+    use ModConst, ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
+    use ModPhysics, ONLY: UnitX_, Si2No_V,NameStar,RadiusStar,MassStar
     use ModTurbulence, ONLY: CoronalHeating_C
     use ModUtilities, ONLY: i_gang
 

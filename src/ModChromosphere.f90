@@ -93,15 +93,15 @@ contains
   subroutine get_tesi_c(iBlock, TeSi_C)
     !$acc routine vector
 
-    use BATL_lib,      ONLY: Xyz_DGB
-    use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
-    use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
-    use ModSize,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
+    use BATL_lib, ONLY: Xyz_DGB
+    use ModAdvance, ONLY: UseElectronPressure, UseIdealEos
+    use ModAdvance, ONLY: State_VGB, p_, Pe_, Rho_
+    use ModSize, ONLY: nI, nJ, nK
+    use ModPhysics, ONLY: No2Si_V, UnitTemperature_, &
          AverageIonCharge, PePerPtotal
     use ModMultifluid, ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface
-    use ModGeometry,   ONLY: r_GB
+    use ModGeometry, ONLY: r_GB
 
     integer, intent(in)  :: iBlock
     real,    intent(out) :: TeSi_C(nI,nJ,nK)

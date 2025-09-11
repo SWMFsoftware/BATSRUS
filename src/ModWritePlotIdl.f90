@@ -32,16 +32,16 @@ contains
 
     use ModGeometry, ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Coord111_DB
-    use ModIO,       ONLY: &
+    use ModIO, ONLY: &
          DoSaveBinary, TypePlot, PlotDx_DI, PlotRange_EI
     use ModNumConst, ONLY: cPi, cTwoPi
-    use ModKind,     ONLY: nByteReal
-    use ModAdvance,  ONLY: State_VGB, Bx_
-    use ModB0,       ONLY: B0_DGB
-    use ModMain,     ONLY: UseB0
-    use ModMpi,      ONLY: MPI_OFFSET_KIND
-    use BATL_size,   ONLY: nGI, nGJ, nGK, nDim
-    use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, &
+    use ModKind, ONLY: nByteReal
+    use ModAdvance, ONLY: State_VGB, Bx_
+    use ModB0, ONLY: B0_DGB
+    use ModMain, ONLY: UseB0
+    use ModMpi, ONLY: MPI_OFFSET_KIND
+    use BATL_size, ONLY: nGI, nGJ, nGK, nDim
+    use BATL_lib, ONLY: IsRLonLat, IsCylindrical, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Xyz_DGB, x_, y_, z_, Phi_

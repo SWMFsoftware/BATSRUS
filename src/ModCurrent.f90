@@ -6,7 +6,7 @@ module ModCurrent
   use BATL_lib, ONLY: &
        test_start, test_stop
   use ModCoordTransform, ONLY: sph_to_xyz
-  use CON_axes,          ONLY: transform_matrix
+  use CON_axes, ONLY: transform_matrix
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -226,7 +226,7 @@ contains
     ! then use first order scheme at resolution changes,
     ! otherwise use second order scheme when possible.
 
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
+    use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: IsNoBody_B, r_GB
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
          nI, nJ, nK, x_, y_, z_, Used_GB
@@ -512,19 +512,19 @@ contains
        Br_II, Bt_DII, b_DII, &
        Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, FacMin)
 
-    use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
-    use ModMain,           ONLY: tSimulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
+    use ModVarIndexes, ONLY: Bx_, Bz_, nVar
+    use ModMain, ONLY: tSimulation, TypeCoordSystem, nBlock
+    use ModPhysics, ONLY: rCurrents, UnitB_, Si2No_V
 #ifdef _OPENACC
-    use ModPhysics,        ONLY: set_dipole
-    use CON_planet_field,  ONLY: map_planet_field_fast
-    use ModB0,             ONLY: get_b0_dipole
+    use ModPhysics, ONLY: set_dipole
+    use CON_planet_field, ONLY: map_planet_field_fast
+    use ModB0, ONLY: get_b0_dipole
 #else
-    use CON_planet_field,  ONLY: map_planet_field, get_planet_field
+    use CON_planet_field, ONLY: map_planet_field, get_planet_field
 #endif
-    use ModNumConst,       ONLY: cTwoPi, cPi
+    use ModNumConst, ONLY: cTwoPi, cPi
     use ModMpi
-    use BATL_lib,          ONLY: iProc, nProc, iComm
+    use BATL_lib, ONLY: iProc, nProc, iComm
 
     ! Map the 2D spherical grid points from the rIn radius to rCurrents.
     ! The grid is in the TypeCoordFacGrid system (default is SMG).

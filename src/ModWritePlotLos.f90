@@ -66,7 +66,7 @@ contains
     !               also added EUV (3-filters)
     !               and Soft-Xray synthesis capability
 
-    use ModMain,    ONLY: nI, nJ, nK, nStep, tSimulation, Unused_B, &
+    use ModMain, ONLY: nI, nJ, nK, nStep, tSimulation, Unused_B, &
          IsTimeAccurate, nBlock, NameThisComp, TypeCoordSystem,            &
          UseBody, StartTime, iStartTime_I, rLowerModel, rUpperModel
     use ModGeometry, ONLY: &
@@ -684,7 +684,7 @@ contains
 
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-      use BATL_lib,  ONLY: xyz_to_coord, CoordMin_D, CoordMax_D
+      use BATL_lib, ONLY: xyz_to_coord, CoordMin_D, CoordMax_D
       use ModFieldLineThread, ONLY: UseFieldLineThreads
 
       real, intent(in):: XyzStartIn_D(3)
@@ -881,7 +881,7 @@ contains
     !==========================================================================
     logical function do_return(Coord_D, IsThreadedGap)
 
-      use BATL_lib,  ONLY: CoordMin_D, CoordMax_D
+      use BATL_lib, ONLY: CoordMin_D, CoordMax_D
 
       real, intent(in):: Coord_D(MaxDim)
       logical, intent(in), optional:: IsThreadedGap
@@ -937,18 +937,18 @@ contains
     !==========================================================================
     subroutine add_segment(Ds, XyzLos_D, IsThreadedGap, DoTest)
 
-      use ModMain,        ONLY: NameVarLower_V
-      use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
+      use ModMain, ONLY: NameVarLower_V
+      use ModAdvance, ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
-      use ModMultiFluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
+      use ModMultiFluid, ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
-      use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
-      use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_
-      use ModB0,          ONLY: UseB0, B0_DGB
-      use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D, CoordMin_D
-      use ModIO,          ONLY: TempMin_I
+      use ModPhysics, ONLY: AverageIonCharge, PePerPtotal
+      use ModVarIndexes, ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_
+      use ModB0, ONLY: UseB0, B0_DGB
+      use BATL_lib, ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D, CoordMin_D
+      use ModIO, ONLY: TempMin_I
       use ModUserInterface ! user_set_plot_var
-      use ModGeometry,    ONLY: r_GB
+      use ModGeometry, ONLY: r_GB
       use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
 
       real, intent(in):: Ds          ! Length of line segment
@@ -1767,7 +1767,7 @@ contains
       ! Integrate variables from XyzStart_D to XyzEnd_D
       ! The line is split into nSegment segments of length Ds
 
-      use BATL_lib,       ONLY: CoordMin_DB
+      use BATL_lib, ONLY: CoordMin_DB
 
       real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
 
@@ -1804,7 +1804,7 @@ contains
     !==========================================================================
     subroutine dimensionalize_plotvar_los
 
-      use ModConst,   ONLY: cSigmaThomson
+      use ModConst, ONLY: cSigmaThomson
       use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_
 
       !------------------------------------------------------------------------

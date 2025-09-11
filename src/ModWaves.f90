@@ -7,10 +7,10 @@ module ModWaves
        test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
 
-  use ModAdvance,    Only: UseWavePressure
-  use ModPhysics,    ONLY: GammaWave
+  use ModAdvance, ONLY: UseWavePressure
+  use ModPhysics, ONLY: GammaWave
   use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
-  use ModSize,       ONLY: nI, nJ, nK
+  use ModSize, ONLY: nI, nJ, nK
   use omp_lib
 
   implicit none
@@ -309,11 +309,11 @@ contains
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
 
-    use ModAdvance,           ONLY: State_VGB, DtMax_CB
-    use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
+    use ModAdvance, ONLY: State_VGB, DtMax_CB
+    use ModLinearAdvection, ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
-    use ModMain,              ONLY: CFL
-    use BATL_lib,             ONLY: Xyz_DGB, Used_GB
+    use ModMain, ONLY: CFL
+    use BATL_lib, ONLY: Xyz_DGB, Used_GB
 
     integer,intent(in)    ::iBlock
 

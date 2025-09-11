@@ -27,14 +27,14 @@ module ModElectricField
        nBlock, MaxBlock, Unused_B, &
        iProc, iComm, message_pass_cell
 
-  use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: nStep, UseB
-  use ModGeometry,     ONLY: IsBoundary_B
+  use ModAdvance, ONLY: Efield_DGB
+  use ModMain, ONLY: nStep, UseB
+  use ModGeometry, ONLY: IsBoundary_B
   use ModCellBoundary, ONLY: set_cell_boundary, FloatBC_, GradPotBC_
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
-  use ModVarIndexes,   ONLY: IsMhd
-  use ModMultiFluid,   ONLY: UseMultiIon
+  use ModVarIndexes, ONLY: IsMhd
+  use ModMultiFluid, ONLY: UseMultiIon
 
   implicit none
   SAVE
@@ -139,13 +139,13 @@ contains
     ! This will NOT work for Hall MHD
 
     use ModVarIndexes, ONLY: Bx_, Bz_, Ex_, Ez_
-    use ModAdvance,    ONLY: State_VGB, UseEfield
-    use ModB0,         ONLY: UseB0, B0_DGB
+    use ModAdvance, ONLY: State_VGB, UseEfield
+    use ModB0, ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
-    use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
-    use ModCurrent,        ONLY: get_current
-    use BATL_lib,          ONLY: x_, y_, z_,Used_GB
+    use ModCurrent, ONLY: get_current
+    use BATL_lib, ONLY: x_, y_, z_,Used_GB
 
     integer, intent(in):: iBlock
     logical, optional, intent(in) :: DoHallCurrentIn
@@ -219,10 +219,10 @@ contains
 
     use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMhd_VC, &
          State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
-    use ModMain,    ONLY: MaxDim, UseB0
-    use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
+    use ModMain, ONLY: MaxDim, UseB0
+    use ModB0, ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
-    use ModMultiFluid,     ONLY: iRhoIon_I, ChargePerMass_I, nIonFluid
+    use ModMultiFluid, ONLY: iRhoIon_I, ChargePerMass_I, nIonFluid
     use BATL_lib, ONLY: CellVolume_GB, Used_GB
     use ModVarIndexes, ONLY: Bx_, Bz_, nVar
 
@@ -311,12 +311,12 @@ contains
     ! the ion velocity (averaged charge velocity).
 
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModAdvance,    ONLY: State_VGB
-    use ModB0,         ONLY: UseB0, B0_DGB
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
-    use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
-    use BATL_lib,          ONLY: x_, y_, z_, Used_GB
+    use BATL_lib, ONLY: x_, y_, z_, Used_GB
 
     integer, intent(in):: iBlock
 
@@ -553,10 +553,10 @@ contains
   !============================================================================
   subroutine bound_potential
 
-    use ModGeometry,   ONLY: IsBody_B, r_GB
-    use ModPhysics,    ONLY: rBody
+    use ModGeometry, ONLY: IsBody_B, r_GB
+    use ModPhysics, ONLY: rBody
     use ModIeCoupling, ONLY: get_ie_potential
-    use BATL_lib,      ONLY: Xyz_DGB, Used_GB
+    use BATL_lib, ONLY: Xyz_DGB, Used_GB
 
     ! Fill in ghost cells and boundary cells for the potential
 
@@ -672,11 +672,11 @@ contains
     ! This estimate averages the numerical fluxes to the cell centers
     ! for sake of simplicity.
 
-    use ModSize,       ONLY: nI, nJ, nK
+    use ModSize, ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_,By_,Bz_
-    use ModAdvance,    ONLY: &
+    use ModAdvance, ONLY: &
          Flux_VXI, Flux_VYI, Flux_VZI, ExNum_CB, EyNum_CB, EzNum_CB
-    use BATL_lib,      ONLY: CellFace_DB
+    use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
     integer:: iGang

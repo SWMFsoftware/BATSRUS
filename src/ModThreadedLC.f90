@@ -8,17 +8,17 @@ module ModThreadedLC
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_lib, ONLY: test_start, test_stop, iProc, Xyz_DGB
-  use ModChromosphere,    ONLY: TeChromosphereSi
+  use ModChromosphere, ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
        HeatCondParSi, LengthPavrSi_, UHeat_, HeatFluxLength_,&
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_, init_tr
-  use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
+  use ModFieldLineThread, ONLY: BoundaryThreads, BoundaryThreads_B,     &
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
        DoInit_, Done_, Enthalpy_, Heat_, Restart_
-  use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
-  use ModTurbulence,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
+  use ModAdvance, ONLY: UseElectronPressure, UseIdealEos
+  use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        ImbalanceMax
-  use ModTurbulence,   ONLY: QeRatio
+  use ModTurbulence, ONLY: QeRatio
   use ModPhysics, ONLY: Z => AverageIonCharge
   use ModConst, ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use omp_lib
@@ -126,11 +126,11 @@ contains
   subroutine init_threaded_lc
 
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iComm
-    use ModConst,           ONLY: te_ti_exchange_rate! cElectronMass, &
+    use ModConst, ONLY: te_ti_exchange_rate! cElectronMass, &
          ! cEps, cElectronCharge, cTwoPi, cProtonMass
-    use ModMultiFluid,      ONLY: MassIon_I
+    use ModMultiFluid, ONLY: MassIon_I
     use ModFieldLineThread, ONLY:  nPointThreadMax, init_threads
-    use ModPhysics,         ONLY: &
+    use ModPhysics, ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
 
     logical:: DoTest
@@ -262,11 +262,11 @@ contains
     ! solve MHD equations along thread, to link the state above the
     ! inner boundary of the global solar corona to the photosphere
 
-    use ModAdvance,          ONLY: nJ
+    use ModAdvance, ONLY: nJ
     use ModTransitionRegion, ONLY: HeatCondParSi
-    use ModPhysics,      ONLY: InvGammaMinus1,&
+    use ModPhysics, ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
-    use ModLookupTable,  ONLY: interpolate_lookup_table
+    use ModLookupTable, ONLY: interpolate_lookup_table
 
     ! Cell and block indexes for the boundary point
     integer,intent(in):: j, k, iBlock, iAction
@@ -553,9 +553,9 @@ contains
     !==========================================================================
     subroutine advance_thread(IsTimeAccurateThread)
 
-      use ModMain,     ONLY: cfl, Dt, IsTimeAccurate
-      use ModAdvance,  ONLY: DtMax_CB, nJ, nK
-      use ModPhysics,  ONLY: UnitT_, No2Si_V
+      use ModMain, ONLY: cfl, Dt, IsTimeAccurate
+      use ModAdvance, ONLY: DtMax_CB, nJ, nK
+      use ModPhysics, ONLY: UnitT_, No2Si_V
 
       ! Advances the thread solution
       ! If IsTimeAccurateThread, the solution is advanced through the time
@@ -794,7 +794,7 @@ contains
     !==========================================================================
     subroutine get_res_heating(nIterIn)
 
-      use ModTurbulence,  ONLY: rMinWaveReflection
+      use ModTurbulence, ONLY: rMinWaveReflection
 
       integer, intent(in)::nIterIn
       integer:: iPoint
@@ -1144,17 +1144,17 @@ contains
        iImplBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use ModFieldLineThread,     ONLY: b_cme_d
-    use ModMain,       ONLY: nStep, nIteration, tSimulation
-    use ModAdvance,      ONLY: State_VGB
+    use ModFieldLineThread, ONLY: b_cme_d
+    use ModMain, ONLY: nStep, nIteration, tSimulation
+    use ModAdvance, ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nJ, nK
-    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitRhoU_,&
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitRhoU_,&
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
-    use ModVarIndexes,   ONLY: Rho_, p_, Bx_, Bz_, &
+    use ModVarIndexes, ONLY: Rho_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_, WDiff_, nVar
-    use ModImplicit,     ONLY: iTeImpl
-    use ModB0,           ONLY: B0_DGB
-    use ModWaves,        ONLY: WaveFirst_, WaveLast_, UseAwRepresentative
+    use ModImplicit, ONLY: iTeImpl
+    use ModB0, ONLY: B0_DGB
+    use ModWaves, ONLY: WaveFirst_, WaveLast_, UseAwRepresentative
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 

@@ -90,11 +90,11 @@ contains
   !============================================================================
   subroutine read_satellite_parameters(NameCommand)
 
-    use ModIO,        ONLY: nFile, MaxFile, Satellite_, IsDimensionalPlot_I, &
+    use ModIO, ONLY: nFile, MaxFile, Satellite_, IsDimensionalPlot_I, &
          DnOutput_I, DtOutput_I, TypePlot_I, NamePlotDir, TypeCoordPlot_I
     use ModUtilities, ONLY: check_dir
     use ModReadParam, ONLY: read_var
-    use ModIO,        ONLY: NamePrimitiveVarPlot
+    use ModIO, ONLY: NamePrimitiveVarPlot
 
     character(len=*), intent(in) :: NameCommand
 
@@ -311,8 +311,8 @@ contains
   end subroutine set_name_sat
   !============================================================================
   subroutine set_name_file(iSat)
-    use ModMain,   ONLY: nStep, IsTimeAccurate
-    use ModIO,     ONLY: NamePlotDir, StringDateOrTime
+    use ModMain, ONLY: nStep, IsTimeAccurate
+    use ModIO, ONLY: NamePlotDir, StringDateOrTime
     use ModUtilities, ONLY: lower_case
 
     integer, intent(in) :: iSat
@@ -388,7 +388,7 @@ contains
   !============================================================================
   function xyz_sat(NameSat)
 
-    use ModMain,        ONLY: MaxDim
+    use ModMain, ONLY: MaxDim
     ! Name of satellite for which to find Xyz
     character(len=*), intent(in) :: NameSat
     real :: xyz_sat(MaxDim)
@@ -404,12 +404,12 @@ contains
   !============================================================================
   subroutine read_satellite_input_files
 
-    use ModMain,        ONLY: MaxDim, TypeCoordSystem, StartTime
-    use CON_axes,       ONLY: transform_matrix
+    use ModMain, ONLY: MaxDim, TypeCoordSystem, StartTime
+    use CON_axes, ONLY: transform_matrix
     use ModTimeConvert, ONLY: time_int_to_real
-    use ModIoUnit,      ONLY: UnitTmp_
-    use ModIo,          ONLY: iUnitOut, write_prefix
-    use ModKind,        ONLY: Real8_
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModIo, ONLY: iUnitOut, write_prefix
+    use ModKind, ONLY: Real8_
     use ModMpi
 
     integer :: iError, i, iSat , nPoint
@@ -836,10 +836,10 @@ contains
     use ModVarIndexes, ONLY: nVar
     use ModMain, ONLY: tSimulation, TypeCoordSystem
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
-    use ModNumConst,  ONLY: cRadToDeg
-    use CON_axes,     ONLY: transform_matrix
+    use ModNumConst, ONLY: cRadToDeg
+    use CON_axes, ONLY: transform_matrix
     use CON_planet_field, ONLY: map_planet_field
-    use ModPhysics,   ONLY: rBody
+    use ModPhysics, ONLY: rBody
 
     ! Trace position SatXyz_D and return result in SatRay_D on Proc 0
     ! All other processors return 0-s

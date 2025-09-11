@@ -105,7 +105,7 @@ contains
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
          IsIon_I, nIonFluid, UseMultiIon, ElectronPerMass_I, select_fluid
     use ModGeometry, ONLY: r_GB
-    use ModPUI,      ONLY: Pu3_
+    use ModPUI, ONLY: Pu3_
     use BATL_lib, ONLY: nDim, x_, y_, z_
 
     real, intent(in) :: State_V(nVar)      ! input primitive state

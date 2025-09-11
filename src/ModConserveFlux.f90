@@ -19,7 +19,7 @@ module ModConserveFlux
 
   !    UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
-  use ModParallel, ONLY : DiLevel_EB, jBlock_IEB, jProc_IEB
+  use ModParallel, ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
   use BATL_lib, ONLY: &
        IsCartesianGrid, IsCartesian, IsRzGeometry, &
        CellFace_DFB, FaceNormal_DDFB, Unused_BP
@@ -300,7 +300,7 @@ contains
   contains
     !==========================================================================
     subroutine apply_corrected_flux_x(lFaceFrom, lFaceTo)
-      use BATL_lib,  ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
 
       integer, intent(in):: lFaceFrom, lFaceTo
 
@@ -358,7 +358,7 @@ contains
     end subroutine apply_corrected_flux_x
     !==========================================================================
     subroutine apply_corrected_flux_y(lFaceFrom, lFaceTo)
-      use BATL_lib,  ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
 
       integer, intent(in):: lFaceFrom, lFaceTo
 
@@ -404,7 +404,7 @@ contains
     end subroutine apply_corrected_flux_y
     !==========================================================================
     subroutine apply_corrected_flux_z(lFaceFrom, lFaceTo)
-      use BATL_lib,  ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
 
       integer, intent(in):: lFaceFrom, lFaceTo
 
@@ -452,7 +452,7 @@ contains
   end subroutine apply_cons_flux
   !============================================================================
   subroutine apply_bn_face_i(iFaceIn, iFaceOut, iBlock)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! subroutines for applying Bn in generalized coordinates
 
@@ -493,7 +493,7 @@ contains
   end subroutine apply_bn_face_i
   !============================================================================
   subroutine apply_bn_face_j(jFaceIn, jFaceOut, iBlock)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in):: jFaceIn, jFaceOut, iBlock
 
@@ -533,7 +533,7 @@ contains
   end subroutine apply_bn_face_j
   !============================================================================
   subroutine apply_bn_face_k(kFaceIn, kFaceOut, iBlock)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in):: kFaceIn, kFaceOut, iBlock
 

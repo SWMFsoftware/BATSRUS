@@ -126,9 +126,9 @@ contains
     !
     ! Details of the algorithm are to be published later
 
-    use ModMain,     ONLY: iNewGrid, iNewDecomposition, tSimulation
-    use ModPhysics,  ONLY: set_dipole
-    use CON_axes,    ONLY: transform_matrix
+    use ModMain, ONLY: iNewGrid, iNewDecomposition, tSimulation
+    use ModPhysics, ONLY: set_dipole
+    use CON_axes, ONLY: transform_matrix
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     ! remember last call and the last grid number
@@ -188,7 +188,7 @@ contains
 
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModGeometry, ONLY: r_GB, rMin_B
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModMpi
 
     ! Iteration parameters
@@ -814,7 +814,7 @@ contains
       ! return false if the trace exited rTrace or too many integration
       ! steps were Done
 
-      use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
+      use ModPhysics, ONLY: DipoleStrengthSi ! only the sign is needed
       use CON_planet_field, ONLY: map_planet_field, map_planet_field_fast
 
       real, intent(inout):: Xyz_D(3)
@@ -1549,7 +1549,7 @@ contains
     !==========================================================================
     subroutine pass_face(iDir, iFaceMin, iFaceMax)
 
-      use ModParallel, ONLY : Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
+      use ModParallel, ONLY: Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
       use ModMpi
 
       integer, intent(in):: iDir, iFaceMin,iFaceMax
@@ -2390,7 +2390,7 @@ contains
     ! Avoid double-contained subroutine for GPU code (nvfortran 25 bug)
     ! On 1 gpu: finish local copy; on >1 gpus: fill in send buffer
 
-    use ModParallel, ONLY : Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
+    use ModParallel, ONLY: Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
     use ModMpi
 
     integer, intent(in):: iDir, iFaceMin,iFaceMax

@@ -140,7 +140,7 @@ contains
   subroutine read_particle_line_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use ModNumConst,  ONLY: cPi
+    use ModNumConst, ONLY: cPi
 
     character(len=*), intent(in) :: NameCommand
 
@@ -673,7 +673,7 @@ contains
   subroutine get_b_dir(iParticle, DirB_D, DirU_D, StepSize, IsBody)
     use ModMain, ONLY: UseB0, UseRotatingFrame
     use ModB0, ONLY: get_b0
-    use ModPhysics,  ONLY: OmegaBody
+    use ModPhysics, ONLY: OmegaBody
     ! returns the direction of magnetic field for a given particle
     integer, intent(in):: iParticle
     real,    intent(out):: DirB_D(MaxDim)
@@ -973,8 +973,8 @@ contains
 
     ! Save particle data
 
-    use ModMain,    ONLY: nStep, IsTimeAccurate, tSimulation
-    use ModIO,      ONLY: &
+    use ModMain, ONLY: nStep, IsTimeAccurate, tSimulation
+    use ModIO, ONLY: &
          StringDateOrTime, NamePlotDir, &
          TypeFile_I, TypePlot_I, TypePlotFormat_I, Plot_
     use ModPlotFile, ONLY: save_plot_file

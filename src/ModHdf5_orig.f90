@@ -386,7 +386,7 @@ contains
          Coord111_DB
     use ModIO, ONLY: PlotDx_DI
     use ModMpi
-    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
+    use BATL_lib, ONLY: Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
          CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
 
     ! Arguments
@@ -728,9 +728,9 @@ contains
 
     use ModNumConst
     use ModMpi
-    use BATL_lib,  ONLY: CoordMin_DB, CoordMax_DB, MaxDim, &
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, MaxDim, &
          iNode_B, iTree_IA, Coord0_, Level_, iMortonNode_A
-    use BATL_mpi,  ONLY: barrier_mpi
+    use BATL_mpi, ONLY: barrier_mpi
 
     integer,                 intent(in):: nPlotVar
     character(len=80),       intent(in):: NameFile
@@ -1020,10 +1020,10 @@ contains
   !============================================================================
   subroutine write_real_plot_metadata(iFileID,IsDimensionalPlot, IsXZero)
 
-    use ModMain, ONLY : tSimulation
-    use BATL_lib, ONLY : nLevelMax, nDim
-    use ModGeometry, ONLY : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
-    use ModPhysics, ONLY : No2Io_V, UnitX_
+    use ModMain, ONLY: tSimulation
+    use BATL_lib, ONLY: nLevelMax, nDim
+    use ModGeometry, ONLY: xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
+    use ModPhysics, ONLY: No2Io_V, UnitX_
 
     integer(HID_T), intent(in) :: iFileID
     integer(HSIZE_T) :: iData
@@ -1099,10 +1099,10 @@ contains
   !============================================================================
   subroutine write_real_sim_metadata(iFileID,IsDimensionalPlot)
 
-    use ModMain, only : tSimulation
-    use BATL_lib, only : nLevelMax, nDim
-    use ModGeometry, only : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
-    use ModPhysics, ONLY : No2Io_V, UnitX_
+    use ModMain, ONLY: tSimulation
+    use BATL_lib, ONLY: nLevelMax, nDim
+    use ModGeometry, ONLY: xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
+    use ModPhysics, ONLY: No2Io_V, UnitX_
 
     integer (HID_T), intent(in) :: iFileID
     logical, intent (in) :: IsDimensionalPlot
@@ -1172,9 +1172,9 @@ contains
   !============================================================================
   subroutine write_integer_plot_metadata(iFileID, nPlotVar, IsCutFile)
 
-    use BATL_lib, ONLY : nDimAmr, nLevelMax, IsPeriodic_D
-    use ModMain, ONLY : nStep
-    use ModGeometry, ONLY : TypeGeometry
+    use BATL_lib, ONLY: nDimAmr, nLevelMax, IsPeriodic_D
+    use ModMain, ONLY: nStep
+    use ModGeometry, ONLY: TypeGeometry
 
     integer (HID_T), intent(in) :: iFileID, nPlotVar
     logical, intent(in) :: IsCutFile
@@ -1284,8 +1284,8 @@ contains
     ! Not read by plugin at this time  Only exists so that one looking at
     ! the file may know something about the simulation that created it
 
-    use BATL_lib, only : nDim, nDimAmr, nLevelMax
-    use ModMain, only : nStep, nI, nJ, nK
+    use BATL_lib, ONLY: nDim, nDimAmr, nLevelMax
+    use ModMain, ONLY: nStep, nI, nJ, nK
     integer (HID_T), intent(in) :: iFileID, nPlotVar
 
     integer(HSIZE_T) :: iData
