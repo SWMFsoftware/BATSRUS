@@ -25,8 +25,8 @@ contains
 
     ! Calculate the global time step for PC
 
-    use ModMain,            ONLY: Dt
-    use ModPhysics,         ONLY: No2Si_V, UnitT_
+    use ModMain, ONLY: Dt
+    use ModPhysics, ONLY: No2Si_V, UnitT_
     use ModTimeStepControl, ONLY: set_global_timestep
 
     real, intent(out) ::  DtSi
@@ -42,7 +42,7 @@ contains
     use ModPIC, ONLY: nSizeStatus, iPicStatus_I, UseAdaptivePic, &
          pic_set_cell_status, nRegionPic, iPicStatusMax_I
 
-    use ModPIC,      ONLY:DoRestartPicStatus
+    use ModPIC, ONLY:DoRestartPicStatus
 
     integer, intent(inout) :: nInt, nPicGrid
     integer, optional, intent(out):: Int_I(nInt), nSize_I(nPicGrid)
@@ -65,12 +65,12 @@ contains
          SpeciesFirst_, SpeciesLast_, nVar
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iRhoUxIon_I, iPparIon_I, iPIon_I
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
-    use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
-    use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
+    use ModAdvance, ONLY: UseMultiSpecies, nSpecies
+    use ModPhysics, ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
+    use ModPIC, ONLY: XyzMinPic_DI, nRegionPiC, &
          DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, MassUnitPicSi_I, &
          ScalingFactor_I, LenPic_DI, R_DDI, nCellPerPatch
-    use BATL_lib,      ONLY: x_, y_, z_, nDim
+    use BATL_lib, ONLY: x_, y_, z_, nDim
 
     integer, intent(inout) :: nParamInt, nParamReal
 
@@ -269,15 +269,14 @@ contains
   !============================================================================
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
-    use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
-         nI, nJ, nK
-    use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, &
+    use BATL_lib, ONLY: nDim, Xyz_DGB, nBlock, Unused_B, nI, nJ, nK
+    use ModPIC, ONLY: DxyzPic_DI, LenPic_DI, &
          nRegionPic, mhd_to_pic_vec, UseAdaptivePic, &
          is_inside_active_pic_region
-    use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
-    use ModMain,      ONLY: UseB0, UseHyperbolicDivB
-    use ModB0,        ONLY: B0_DGB
-    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_, HypE_
+    use ModPhysics, ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
+    use ModMain, ONLY: UseB0, UseHyperbolicDivB
+    use ModB0, ONLY: B0_DGB
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_, Hyp_, HypE_
     use ModMultiFluid, ONLY: nIonFluid
     use ModVarIndexes, ONLY: DefaultState_V
 
@@ -328,10 +327,10 @@ contains
        XyzMaxRegion_D = LenPic_DI(1:nDim,iRegion) - &
             (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)
 
-       do iBlock=1, nBlock
+       do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          do k = 1,nK; do j = 1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              ! Intersection with body is not handled yet ???
 
@@ -400,10 +399,9 @@ contains
 
   end subroutine GM_get_regions
   !============================================================================
-  subroutine GM_put_from_pc( &
-       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+  subroutine GM_put_from_pc(NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-    use BATL_lib,    ONLY: nDim
+    use BATL_lib, ONLY: nDim
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
