@@ -53,7 +53,7 @@ module ModUser
   ! number density of neutral species
   real, allocatable :: nDenNuSpecies_CBI(:,:,:,:,:)
   ! tempature of neutral species
-  real, allocatable :: TempNuSpecies_CBI(:,:,:,:)
+  real, allocatable :: TempNeu_CB(:,:,:,:)
   ! production rate according to optical depth
   real, allocatable :: Productrate_CB(:,:,:,:)
   ! Ionization rate according to TGCM
@@ -519,8 +519,7 @@ contains
 
        ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
        ! Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*sqrt(TNu_body_dim/Te_dim)
-       Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*&
-            sqrt(300.0/Te_dim)
+       Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*sqrt(300.0/Te_dim)
 
        do iSpecies = 1, nSpecies
           LossSpecies_I = LossSpecies_I + CoeffSpecies_II(iSpecies, :)
@@ -690,8 +689,8 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Allocate some arrays
-    if(.not.allocated(TempNuSpecies_CBI))then
-       allocate(TempNuSpecies_CBI(nI,nJ,nK,MaxBlock))
+    if(.not.allocated(TempNeu_CB))then
+       allocate(TempNeu_CB(nI,nJ,nK,MaxBlock))
        allocate(Productrate_CB(nI,nJ,nK,MaxBlock))
        allocate(Ionizationrate_CBI(nI,nJ,nK,MaxBlock,2))
        allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
@@ -1835,6 +1834,8 @@ contains
   !============================================================================
   subroutine mars_input(iBlock)
 
+    ! Interpolate and extrapolate various quantities from the neutral data file
+    
     use ModMain
     use ModPhysics
     use ModConst
@@ -1843,6 +1844,7 @@ contains
     integer, intent(in) :: iBlock
 
     real, parameter :: TINY=1.0E-12
+
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
     real :: tempICO2p, tempIOp
     real :: xLat, xLong,xAlt
@@ -1875,9 +1877,9 @@ contains
 
     do k = 1, nK
        Theta = (k-1)*dTheta  + Coord111_DB(Theta_,iBlock)
-       Theta = Theta*cRadToDeg ! Convert to degrees
-       kLat=int((theta + 90.0 - Dlat/2)/Dlat+1.0)
-       kp1=min(kLat+1, NLat)
+       Theta = Theta*cRadToDeg
+       kLat = int((theta + 90.0 - Dlat/2)/Dlat+1.0)
+       kp1 = min(kLat+1, NLat)
        kLat = max(kLat,1)
 
        do j = 1, nJ
@@ -1894,28 +1896,14 @@ contains
           jp1   = min(jLong+1, nLong)
           jLong = max(jLong, 1)
 
-          do i = nI, 1, -1
+          do i = 1, nI
              if (r_GB(i,j,k,iBlock) >= rMaxUa) CYCLE
 
              hh = (r_GB(i,j,k,iBlock) - 1)*3396.00
              !                 write(*,*)'hh=', hh, i,j,k,iBlock
-             xLong = (Phi-Long_I(jLong))/Dlong
-             xLat = (Theta-Lat_I(kLat))/Dlat
-             if(hh <= 100.0)then  ! inside the body
-                tempNuSpecies_CBI(i,j,k,iBlock)= &
-                     tempNuSpecies_CBI(i+1,j,k,iBlock)
-                nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) = &
-                     nDenNuSpecies_CBI(i+1,j,k,iBlock,CO2_)
-                nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &
-                     nDenNuSpecies_CBI(i+1,j,k,iBlock,O_)
-
-                ! tempICO2p=max(tempICO2p,TINY)
-                ! tempIOP=max(tempIOp,TINY)
-                Ionizationrate_CBI(i,j,k,iBlock,CO2_) = &
-                     Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
-                Ionizationrate_CBI(i,j,k,iBlock,O_) = &
-                     Ionizationrate_CBI(i+1,j,k,iBlock,O_)
-             elseif(hh <= Alt_I(NAlt))then
+             xLong = (Phi - Long_I(jLong))/Dlong
+             xLat = (Theta - Lat_I(kLat))/Dlat
+             if(hh <= Alt_I(NAlt))then
                 iAlt = int((hh - (Alt_I(1)+Dalt/2))/Dalt+1.0)
                 ip1 = min(iAlt+1,NAlt)
                 if(iAlt < 1)then
@@ -1924,7 +1912,7 @@ contains
                 xalt = (hh-Alt_I(iAlt))/Dalt
 
                 ! interpolate
-                tempNuSpecies_CBI(i,j,k,iBlock) =          &
+                TempNeu_CB(i,j,k,iBlock) =          &
                      ((Temp(jLong,kLat,iAlt)*(1-xLong)       &
                      + xLong*Temp(jp1,kLat,ialt))*(1-xLat) &
                      +(Temp(jLong,kp1,iAlt)*(1-xLong)        &
@@ -1985,32 +1973,35 @@ contains
 
              else  ! hh > Alt_I(NAlt)
 
+                ! In km unit
                 dH= hh - Alt_I(NAlt)
-                tempNuSpecies_CBI(i,j,k,iBlock)= &
+
+                TempNeu_CB(i,j,k,iBlock)= &
                      (Temp(jLong,kLat,NAlt)*(1-xLong) &
                      +xLong*Temp(jp1, kLat,NAlt))*(1-xLat) + &
                      (Temp(jLong,kp1,NAlt)*(1-xLong) &
                      +xLong*Temp(jp1,kp1,NAlt))*xLat
 
-                tempICO2p=&
+                tempICO2p = &
                      (ICO2p(jLong,kLat,NAlt)*(1-xLong) &
                      +xLong*ICO2p(jp1, kLat, NAlt))*(1-xLat)+&
                      (ICO2p(jLong,kp1,NAlt)*(1-xLong) &
                      +xLong*ICO2p(jp1, kp1, NAlt))*xLat
 
-                tempIOP=&
+                tempIOP = &
                      (IOp(jLong,kLat,NAlt)*(1-xLong) &
                      +xLong*IOp(jp1, kLat, NAlt))*(1-xLat)+&
                      (IOp(jLong,kp1,NAlt)*(1-xLong) &
                      +xLong*IOp(jp1, kp1, NAlt))*xLat
 
-                ! grav=3.72/r_GB(i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-                grav = 3.72/(1.0+300.0/3396.0)/(1.0+300.0/3396.0)
+                ! Constant temperature and gravity from 300km to infinity !!!
+                Grav = 3.72*(1.0+300.0/3396.0)**(-2)
 
                 ! in m unit
                 Hscale = cBoltzmann* &
-                     tempNuSpecies_CBI(i,j,k,iBlock)/grav/cProtonMass
+                     TempNeu_CB(i,j,k,iBlock)/grav/cProtonMass
 
+                ! in km unit
                 HCO2 = Hscale/NuMassSpecies_I(CO2_)/1.0e3
                 HO   = Hscale/NuMassSpecies_I(O_)/1.0e3
 
@@ -2063,12 +2054,11 @@ contains
   subroutine ua_input(iBlock)
 
     use ModGeometry, ONLY: TypeGeometry, r_GB
-    use ModPhysics, ONLY: rBody
+    use ModPhysics, ONLY: rBody, No2Si_V, UnitT_, Si2No_V, UnitN_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: h ! Height in km
 
     logical:: DoTest
 
@@ -2079,34 +2069,21 @@ contains
     if(TypeGeometry(1:9) /= 'spherical') &
          call stop_mpi('Invalid TypeGeometry='//TypeGeometry)
 
-    ! Check if block is fully inside the body
-    if (r_GB(nI,1,1,iBlock) < Rbody) RETURN
+    ! Check if block is fully outside rMaxUa
+    if (r_GB(1,1,1,iBlock) > rMaxUa) RETURN
 
-    do k = 1, nK; do j = 1, nJ; do i = nI, 1, -1
-       h = (r_GB(i,j,k,iBlock) - 1)*3396.0
-       if(h <= 100.0)then  ! Under 100 km
-          tempNuSpecies_CBI(i,j,k,iBlock)= &
-               tempNuSpecies_CBI(i+1,j,k,iBlock)
-          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
-               nDenNuSpecies_CBI(i+1,j,k,iBlock,CO2_)
-          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-               nDenNuSpecies_CBI(i+1,j,k,iBlock,O_)
-          Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
-               Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
-          Ionizationrate_CBI(i,j,k,iBlock,O_)=&
-               Ionizationrate_CBI(i+1,j,k,iBlock,O_)
-       elseif(r_GB(i,j,k,iBlock) <= rMaxUa)then
-          tempNuSpecies_CBI(i,j,k,iBlock) &
-               = UaState_VCB(1,i,j,k,iBlock)
-          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &
-               = 1e-6*UaState_VCB(2,i,j,k,iBlock) ! convert from m^-3 to cm^-3
-          nDenNuSpecies_CBI(i,j,k,iBlock,O_) &
-               = 1e-6*UaState_VCB(3,i,j,k,iBlock) ! convert from m^-3 to cm^-3
-          Ionizationrate_CBI(i,j,k,iBlock,CO2_) &
-               = UaState_VCB(4,i,j,k,iBlock)
-          Ionizationrate_CBI(i,j,k,iBlock,O_) &
-               = UaState_VCB(5,i,j,k,iBlock)
-       end if
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(r_GB(i,j,k,iBlock) > rMaxUa) CYCLE
+       TempNeu_CB(i,j,k,iBlock) &              ! in [K] Not used...
+            = UaState_VCB(1,i,j,k,iBlock)
+       nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &  ! convert from m^-3 to cm^-3
+            = UaState_VCB(2,i,j,k,iBlock)*Si2No_V(UnitN_) 
+       nDenNuSpecies_CBI(i,j,k,iBlock,O_) &    ! convert from m^-3 to cm^-3
+            = UaState_VCB(3,i,j,k,iBlock)*Si2No_V(UnitN_)
+       Ionizationrate_CBI(i,j,k,iBlock,CO2_) & ! convert s^-1 to normalized
+            = UaState_VCB(4,i,j,k,iBlock)*No2Si_V(UnitT_)
+       Ionizationrate_CBI(i,j,k,iBlock,O_) &  ! convert s^-1 to normalized
+            = UaState_VCB(5,i,j,k,iBlock)*No2Si_V(UnitT_)
     end do; end do; end do
 
   end subroutine ua_input
@@ -2154,7 +2131,7 @@ contains
           Optdep = max(sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)* &
                CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)), &
                6.0e-3)/cosSZA
-          if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
+          if( Optdep < 11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
              Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
           else
              Productrate_CB(i,j,k,iBlock) = 1.0e-5
@@ -2339,7 +2316,7 @@ contains
 
     select case(NameVar)
     case('tneu')
-       PlotVar_G(1:nI,1:nJ,1:nK) = TempNuSpecies_CBI(:,:,:,iBlock)
+       PlotVar_G(1:nI,1:nJ,1:nK) = TempNeu_CB(:,:,:,iBlock)
        PlotVarBody = TNu_body_dim
        NameTecVar = 'Tneu'
        NameTecUnit = NameTecUnit_V(UnitTemperature_)
@@ -2365,16 +2342,14 @@ contains
        PlotVarBody = BodynDenNuSpDim_I(H_)
        NameTecVar = 'H'
     case('iop')
-       PlotVar_G(1:nI,1:nJ,1:nK) = &
-            Ionizationrate_CBI(:,:,:,iBlock,O_)/No2Io_V(UnitT_) &
-            *nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = Ionizationrate_CBI(:,:,:,iBlock,O_) &
+            *(No2Io_V(UnitN_)/No2Io_V(UnitT_))
        NameTecVar = 'IOp'
        NameTecUnit = trim(NameTecUnit)//'/s'
        NameIdlUnit = trim(NameIdlUnit)//'/s'
     case('ico2p')
-       PlotVar_G(1:nI,1:nJ,1:nK) = &
-            Ionizationrate_CBI(:,:,:,iBlock,CO2_)/No2Io_V(UnitT_) &
-            *nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = Ionizationrate_CBI(:,:,:,iBlock,CO2_) &
+            *(No2Io_V(UnitN_)/No2Io_V(UnitT_))
        NameTecVar = 'ICO2p'
        NameTecUnit = trim(NameTecUnit)//'/s'
        NameIdlUnit = trim(NameIdlUnit)//'/s'
