@@ -160,6 +160,10 @@ module ModFieldLineThread
   public :: beta_thread               ! Accounts for grid sizes in TR and SC
   ! Saves thread state into restart
   public :: save_thread_restart
+
+  ! Visualization, log vars
+  public :: set_ur_top_tr, set_u_top_tr, set_u_bot_tr
+  public :: set_u_min_tr, set_u_max_tr
   ! interface procedure to easy calculate the CME field
   public :: b_cme_d
 
@@ -1939,6 +1943,31 @@ contains
     end subroutine set_plot_var
     !==========================================================================
   end subroutine get_tr_los_image
+  !============================================================================
+  subroutine set_ur_top_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_ur_top_tr
+  !============================================================================
+  subroutine set_u_top_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_top_tr
+  !============================================================================
+  subroutine set_u_bot_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_bot_tr
+  !============================================================================
+  subroutine set_u_min_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_min_tr
+  !============================================================================
+  subroutine set_u_max_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_max_tr
   !============================================================================
 end module ModFieldLineThread
 !==============================================================================
