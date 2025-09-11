@@ -2354,11 +2354,11 @@ contains
        NameTecUnit = trim(NameTecUnit)//'/s'
        NameIdlUnit = trim(NameIdlUnit)//'/s'
     case('prod')
-       PlotVar_G(1:nI,1:nJ,1:nK) = &
-            Productrate_CB(:,:,:,iBlock)/No2Io_V(UnitT_)*No2Io_V(UnitN_)
+       ! This is actually the optical depth
+       PlotVar_G(1:nI,1:nJ,1:nK) = Productrate_CB(:,:,:,iBlock)
        NameTecVar = 'prod'
-       NameTecUnit = trim(NameTecUnit)//'/s'
-       NameIdlUnit = trim(NameIdlUnit)//'/s'
+       NameTecUnit = '1'
+       NameIdlUnit = '1'
     case default
        IsFound = .false.
     end select
