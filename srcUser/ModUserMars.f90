@@ -1835,7 +1835,7 @@ contains
   subroutine mars_input(iBlock)
 
     ! Interpolate and extrapolate various quantities from the neutral data file
-    
+
     use ModMain
     use ModPhysics
     use ModConst
@@ -2077,7 +2077,7 @@ contains
        TempNeu_CB(i,j,k,iBlock) &              ! in [K] Not used...
             = UaState_VCB(1,i,j,k,iBlock)
        nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &  ! convert from m^-3 to cm^-3
-            = UaState_VCB(2,i,j,k,iBlock)*Si2No_V(UnitN_) 
+            = UaState_VCB(2,i,j,k,iBlock)*Si2No_V(UnitN_)
        nDenNuSpecies_CBI(i,j,k,iBlock,O_) &    ! convert from m^-3 to cm^-3
             = UaState_VCB(3,i,j,k,iBlock)*Si2No_V(UnitN_)
        Ionizationrate_CBI(i,j,k,iBlock,CO2_) & ! convert s^-1 to normalized
