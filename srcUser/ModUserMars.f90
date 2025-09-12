@@ -49,7 +49,6 @@ module ModUser
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.0
 
-
   ! UA lookup table index
   integer:: iTableUa = -1
   ! Maximum altitude in UA lookup table [km]
@@ -1818,7 +1817,7 @@ contains
   end subroutine user_get_log_var
   !============================================================================
   subroutine ua_file_input(iBlock)
-    
+
     ! Interpolate neutral quantities from a lookup table
 
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -1851,7 +1850,7 @@ contains
        if(Alt > AltMaxUa)then
           ! Apply isothermal scale height extrapolation
           ! Height above AltMaxUa [m] divided by temperature [K]
-          dHPerT = (Alt - AltMaxUa)*1e3/TempNeu_CB(i,j,k,iBlock) 
+          dHPerT = (Alt - AltMaxUa)*1e3/TempNeu_CB(i,j,k,iBlock)
           Data_V(2) = Data_V(2)*exp(-dHPerT/ScaleHeightFactorCo2)
           Data_V(3) = Data_V(3)*exp(-dHPerT/ScaleHeightFactorO)
        end if
