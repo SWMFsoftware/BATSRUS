@@ -848,7 +848,7 @@ contains
     ! calculate the gradient FaceGrad_DI of field Var_IG
     ! on face iDir of cell i, j, k of block iBlock
 
-    use BATL_lib,      ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
+    use BATL_lib, ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
          CellSize_DB, DiLevelNei_IIIB, x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
@@ -1017,7 +1017,7 @@ contains
        FaceGrad_D, UseFirstOrderBcIn)
     ! calculate the cell face gradient of Scalar_G
 
-    use BATL_lib,      ONLY: IsCartesianGrid
+    use BATL_lib, ONLY: IsCartesianGrid
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
@@ -1061,9 +1061,9 @@ contains
 
     ! calculate the cell face gradient of Scalar_G
 
-    use BATL_lib,      ONLY: IsCartesianGrid
-    use ModMain,       ONLY: x_, y_, z_
-    use BATL_lib,      ONLY: CellSize_DB, DiLevelNei_IIIB
+    use BATL_lib, ONLY: IsCartesianGrid
+    use ModMain, ONLY: x_, y_, z_
+    use BATL_lib, ONLY: CellSize_DB, DiLevelNei_IIIB
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     real, intent(inout) :: Scalar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1257,7 +1257,7 @@ contains
   subroutine get_face_curl(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
        FaceCurl_D)
 
-    use BATL_lib,     ONLY: x_, y_, z_, IsCartesianGrid, IsRzGeometry, &
+    use BATL_lib, ONLY: x_, y_, z_, IsCartesianGrid, IsRzGeometry, &
          CellSize_DB, DiLevelNei_IIIB
 
     integer, intent(in) :: iDir, i, j, k, iBlock

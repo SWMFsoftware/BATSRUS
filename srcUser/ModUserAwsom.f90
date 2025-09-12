@@ -87,8 +87,8 @@ contains
 
     use ModChromosphere, ONLY: NumberDensChromosphereCgs
     use ModReadParam, ONLY: read_line, read_command, read_var
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    use ModMain,      ONLY: UseRotatingFrame
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
+    use ModMain, ONLY: UseRotatingFrame
 
     character(len=100) :: NameCommand
     integer:: iDir
@@ -195,24 +195,24 @@ contains
   subroutine user_init_session
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,   ONLY: EEE_initialize
-    use BATL_lib,      ONLY: iComm
-    use ModMain,       ONLY: tSimulation, TypeCellBc_I, TypeFaceBc_I, &
+    use EEE_ModMain, ONLY: EEE_initialize
+    use BATL_lib, ONLY: iComm
+    use ModMain, ONLY: tSimulation, TypeCellBc_I, TypeFaceBc_I, &
          Body1_, UseFieldLineThreads
     use ModTransitionRegion, ONLY: check_tr_param
-    use ModGeometry,   ONLY: RadiusMin
+    use ModGeometry, ONLY: RadiusMin
     use ModTurbulence, ONLY: rMinWaveReflection, QionRatio_I, QionParRatio_I,&
          UseStochasticHeating, StochasticExponent, StochasticAmplitude, &
          StochasticExponent2, StochasticAmplitude2
-    use ModIO,         ONLY: write_prefix, iUnitOut
-    use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
-    use ModAdvance,    ONLY: UseElectronPressure
+    use ModIO, ONLY: write_prefix, iUnitOut
+    use ModWaves, ONLY: UseWavePressure, UseAlfvenWaves
+    use ModAdvance, ONLY: UseElectronPressure
     use ModVarIndexes, ONLY: WaveFirst_
     use ModMultiFluid, ONLY: MassIon_I
-    use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
+    use ModConst, ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass
-    use ModNumConst,   ONLY: cTwoPi, cDegToRad
-    use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
+    use ModNumConst, ONLY: cTwoPi, cDegToRad
+    use ModPhysics, ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitB_, BodyNDim_I, BodyTDim_I, &
          UnitX_, UnitT_, Gamma, UnitEnergyDens_, UnitU_
 
@@ -737,7 +737,7 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure, Source_VC, LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
     use ModChromosphere, ONLY: DoExtendTransitionRegion, &
@@ -1056,7 +1056,7 @@ contains
     use ModGeometry, ONLY: TypeGeometry
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst, ONLY: cPi
-    use ModIO, ONLY : IsRestart
+    use ModIO, ONLY: IsRestart
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -1600,14 +1600,14 @@ contains
 
     use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
          bAmbientCenterSi_D, bAmbientApexSi_D
-    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
+    use EEE_ModMain, ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
          EEE_get_state_init, EEE_init_cme_parameters
     use ModB0, ONLY: get_b0
     use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
-    use BATL_lib,  ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, Xyz_DGB, &
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, Xyz_DGB, &
          iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
     integer :: i, j, k, iBlock, iError
@@ -1863,7 +1863,7 @@ contains
        OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W,    &
        PlanckOut_W)
 
-    use ModConst, ONLY : cBoltzmann, cPlanckH, cElectronMass, cTwoPi, cPi, &
+    use ModConst, ONLY: cBoltzmann, cPlanckH, cElectronMass, cTwoPi, cPi, &
          cLightSpeed, cElectronCharge, cElectronChargeSquaredJm
     use ModVarIndexes, ONLY: Pe_, Rho_
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, UnitN_
@@ -1877,15 +1877,15 @@ contains
     ! Otherwise they refer to the total (electron + ion) internal energies,
     ! total (electron + ion) pressure, and the total specific heat.
 
-    use ModMain,       ONLY: nI, UseERadInput
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitP_, &
+    use ModMain, ONLY: nI, UseERadInput
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitRho_, UnitP_, &
          InvGammaMinus1, UnitEnergyDens_, UnitX_
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
     use ModConst
-    use ModWaves,      ONLY: FrequencySi_W
+    use ModWaves, ONLY: FrequencySi_W
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index

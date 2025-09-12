@@ -121,7 +121,7 @@ contains
 
     use ModMain
     use ModReadParam
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     integer:: i, j, k
     character (len=100) :: NameCommand, line
@@ -527,7 +527,7 @@ contains
     use ModPointImplicit, ONLY: &
          UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: nI,nJ,nK,nStep
+    use ModMain, ONLY: nI,nJ,nK,nStep
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry, ONLY: Xyz_DGB,r_GB

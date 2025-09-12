@@ -67,7 +67,7 @@ contains
   subroutine error_report(String, Value, iErrorIn, DoShowFirst)
 
     use BATL_lib, ONLY: iComm, iProc, nProc
-    use ModMain, ONLY : nIteration
+    use ModMain, ONLY: nIteration
     use ModIO, ONLY: write_myname
     use ModMpi
 
@@ -279,7 +279,7 @@ contains
   subroutine test_error_report
 
     use BATL_lib, ONLY: iProc
-    use ModMain, ONLY : nIteration
+    use ModMain, ONLY: nIteration
 
     integer:: iError1 = -1, iError2 = -1, iError3 = -1
 
@@ -313,8 +313,8 @@ contains
   !============================================================================
   subroutine get_date_time(iTime_I)
 
-    use ModMain,        ONLY : StartTime, tSimulation
-    use ModTimeConvert, ONLY : time_real_to_int
+    use ModMain, ONLY: StartTime, tSimulation
+    use ModTimeConvert, ONLY: time_real_to_int
 
     integer, intent(out) :: iTime_I(7)
     !--------------------------------------------------------------------------
@@ -324,7 +324,7 @@ contains
   !============================================================================
   subroutine get_time_string
 
-    use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
+    use ModIO, ONLY: StringDateOrTime, NameMaxTimeUnit
     use ModMain, ONLY: StartTime, tSimulation
     use ModTimeConvert, ONLY: TimeType, time_real_to_int
 
@@ -402,10 +402,10 @@ contains
   !============================================================================
   subroutine get_ivar(NameVar, iVar)
 
-    use ModMain,       ONLY: NameVarLower_V
+    use ModMain, ONLY: NameVarLower_V
     use ModVarIndexes, ONLY: NameFluid_I, nVar
     use ModMultiFluid, ONLY: extract_fluid_name
-    use ModUtilities,  ONLY: lower_case
+    use ModUtilities, ONLY: lower_case
 
     character(len=*), intent(inout)  :: NameVar
     integer,intent(out)              :: iVar

@@ -7,7 +7,7 @@ module ModUser
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
-  use ModSize,     ONLY: nI,nJ,nK
+  use ModSize, ONLY: nI,nJ,nK
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_calc_sources_expl,          &
@@ -555,7 +555,7 @@ contains
   subroutine user_read_inputs
     use ModMain
     use ModReadParam
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     integer:: i
     character (len=100) :: NameCommand

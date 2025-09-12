@@ -22,7 +22,7 @@ module ModEnergy
        InvGammaElectronMinus1, pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
-  use ModSaMhd,     ONLY: UseSaMhd, rMinSaMhd
+  use ModSaMhd, ONLY: UseSaMhd, rMinSaMhd
   use ModGeometry, ONLY: r_GB
 
   implicit none

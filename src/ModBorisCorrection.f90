@@ -11,14 +11,14 @@ module ModBorisCorrection
   use ModPhysics, ONLY: c2Light, InvClight2, ClightFactor, Si2No_V, UnitU_
   use ModWaves, ONLY: UseAlfvenWaves
   use ModCoordTransform, ONLY: cross_product
-  use ModMain,    ONLY: UseB0, UseHalfStep, nStage
-  use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
+  use ModMain, ONLY: UseB0, UseHalfStep, nStage
+  use ModB0, ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VC, &
        LeftState_VX, RightState_VX, &
        LeftState_VY, RightState_VY, &
        LeftState_VZ, RightState_VZ
   use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
-  use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
+  use BATL_lib, ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
        x_, y_, z_, iTest, jTest, kTest, &
        get_region_indexes, block_inside_regions, test_start, test_stop

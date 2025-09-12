@@ -103,8 +103,8 @@ contains
   subroutine user_set_ics_island_coalescence(iBlock)
     use ModGeometry, ONLY: Xyz_DGB
     use ModNumConst, ONLY: cPi, cTwoPi
-    use ModAdvance,  ONLY: State_VGB, Rho_, Bx_, By_,  p_, Pe_
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Rho_, Bx_, By_,  p_, Pe_
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
 
     integer, intent(in) :: iBlock
 
@@ -164,8 +164,8 @@ contains
   !============================================================================
   subroutine user_set_ics_flux_rope(iBlock)
     use ModGeometry, ONLY: Xyz_DGB
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
 
     integer, intent(in) :: iBlock
 

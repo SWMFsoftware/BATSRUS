@@ -143,15 +143,15 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use BATL_lib,     ONLY: iTest, jTest, kTest, iProcTest, iBlockTest
+    use BATL_lib, ONLY: iTest, jTest, kTest, iProcTest, iBlockTest
     use ModGeometry, ONLY: Xyz_DGB, xMinBox, xMaxBox, yMinBox, yMaxBox
-    use ModPhysics,  ONLY: ShockLeft_V, ElectronCharge
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, rho_, Ppar_, p_, Pe_, &
+    use ModPhysics, ONLY: ShockLeft_V, ElectronCharge
+    use ModAdvance, ONLY: State_VGB, Bx_, By_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure, Bz_, RhoUx_, RhoUy_, RhoUz_, &
          UseEfield
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
     use ModMultiFluid
-    use ModPhysics,   ONLY: Io2No_V, UnitB_, UnitRho_, UnitP_
+    use ModPhysics, ONLY: Io2No_V, UnitB_, UnitRho_, UnitP_
 
     integer, intent(in) :: iBlock
 
@@ -385,9 +385,9 @@ contains
     ! Integrate abs(By) along the current sheet at a fixed Y value
     ! Divide result by two to be compatible with GEM papers.
 
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B
-    use ModAdvance,  ONLY: By_, State_VGB
-    use BATL_lib,    ONLY: CellFace_DB, CellSize_DB, Xyz_DGB, &
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
+    use ModAdvance, ONLY: By_, State_VGB
+    use BATL_lib, ONLY: CellFace_DB, CellSize_DB, Xyz_DGB, &
          CoordMin_D, CoordMax_D
 
     real, intent(out)            :: VarValue

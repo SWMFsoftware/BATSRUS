@@ -421,9 +421,9 @@ contains
 
   ! Calculate Laplace Phi_GB
   subroutine proj_matvec(Phi_GB,LaplacePhi_GB)
-    use ModMain, ONLY : MaxBlock,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
-    use ModGeometry, ONLY : IsBody_B
-    use ModMain, ONLY : UseConstrainB
+    use ModMain, ONLY: MaxBlock,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
+    use ModGeometry, ONLY: IsBody_B
+    use ModMain, ONLY: UseConstrainB
     use BATL_lib, ONLY: CellSize_DB, nG, message_pass_cell, Used_GB
     use ModCellGradient, ONLY: calc_gradient, calc_divergence
 
@@ -537,7 +537,7 @@ contains
 
     use ModSize, ONLY: x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock, MaxBlock
-    use ModMain, ONLY : Unused_B
+    use ModMain, ONLY: Unused_B
     use BATL_lib, ONLY: CellSize_DB
 
     ! Arguments
@@ -596,9 +596,9 @@ contains
 
     ! Calculate boundary values for Phi_GB for dimensions
 
-    use ModMain, ONLY : MaxBlock, nBlock, Unused_B
-    use ModGeometry, ONLY : IsBody_B
-    use ModParallel, ONLY : Unset_, DiLevel_EB
+    use ModMain, ONLY: MaxBlock, nBlock, Unused_B
+    use ModGeometry, ONLY: IsBody_B
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_lib, ONLY: message_pass_cell, &
          MinI, MaxI, j0_, nJp1_, MinJ, MaxJ, k0_, nKp1_, MinK, MaxK, Used_GB
 
@@ -664,10 +664,10 @@ contains
 
     ! Correct B field by gradient of Phi_GB
 
-    use ModMain, ONLY : nI,nJ,nK
-    use ModVarIndexes, ONLY : Bx_,Bz_
-    use ModAdvance,    ONLY : State_VGB
-    use ModMain, ONLY : UseConstrainB
+    use ModMain, ONLY: nI,nJ,nK
+    use ModVarIndexes, ONLY: Bx_,Bz_
+    use ModAdvance, ONLY: State_VGB
+    use ModMain, ONLY: UseConstrainB
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB, &
          bface_to_bcenter, bound_bface
     use BATL_lib, ONLY: &
@@ -1004,7 +1004,7 @@ contains
   !
   subroutine proj_bicgstab(Rhs_GB,x_GB,nIter,Tol,TypeStop,iInfo)
     use ModMain, ONLY:MaxBlock
-    use ModAdvance, ONLY : Tmp1_GB,Tmp2_GB
+    use ModAdvance, ONLY: Tmp1_GB,Tmp2_GB
 
     ! Arguments
 
@@ -1284,7 +1284,7 @@ contains
   end subroutine proj_bicgstab
   !============================================================================
   subroutine set_block_scalar(a_GB, b)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Set a_GB = b for all used blocks, where b is a scalar
 
@@ -1316,7 +1316,7 @@ contains
   end subroutine set_block_scalar
   !============================================================================
   subroutine set_block_array(a_GB, b_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Do a_GB=b_GB for all used blocks
 
@@ -1348,7 +1348,7 @@ contains
   end subroutine set_block_array
   !============================================================================
   subroutine add_block(a_GB, b_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Do a_GB=a_GB+b_GB for all used blocks
 
@@ -1382,7 +1382,7 @@ contains
   end subroutine add_block
   !============================================================================
   subroutine sub_block(a_GB, b_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Do a_GB=a_GB-b_GB for all used blocks
 
@@ -1416,7 +1416,7 @@ contains
   end subroutine sub_block
   !============================================================================
   subroutine add2_block(a_GB, b_GB, c_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Do a_GB=b_GB+c_GB for all used blocks
 
@@ -1451,7 +1451,7 @@ contains
   end subroutine add2_block
   !============================================================================
   subroutine add_times_block(a_GB, b, c_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! a_GB = a_GB + b_GB*c_GB for all used blocks, where b_GB is a scalar
 
@@ -1484,7 +1484,7 @@ contains
   end subroutine add_times_block
   !============================================================================
   subroutine add2_times_block(a_GB, b_GB, c, d_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! a_GB = b_GB + c*d_GB for all used blocks, where c is a scalar
 
@@ -1520,7 +1520,7 @@ contains
   end subroutine add2_times_block
   !============================================================================
   real function dot_product_block(a_GB, b_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Return a_GB.b_GB = sum(a_GB*b_GB) for all used blocks
 
@@ -1562,7 +1562,7 @@ contains
   end function dot_product_block
   !============================================================================
   real function sum_block(nPe, a_GB)
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Return sum(a_GB) for all used blocks and true cells
     ! Do for each processor separately if nPe=1, otherwise add them all

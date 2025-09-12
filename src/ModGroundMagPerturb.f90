@@ -5,13 +5,13 @@ module ModGroundMagPerturb
 
   use BATL_lib, ONLY: test_start, test_stop, lVerbose, iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
-  use ModKind,           ONLY: Real4_
-  use ModPlanetConst,    ONLY: rPlanet_I, Earth_
-  use ModPhysics,        ONLY: rCurrents, No2Io_V, UnitB_, UnitJ_
+  use ModKind, ONLY: Real4_
+  use ModPlanetConst, ONLY: rPlanet_I, Earth_
+  use ModPhysics, ONLY: rCurrents, No2Io_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, &
        xyz_to_lonlat, lonlat_to_xyz
-  use ModFaceBoundary,   ONLY: RatioOH, UseYoungBc, F107Young
-  use ModConst,          ONLY: cDegToRad, cRadToDeg
+  use ModFaceBoundary, ONLY: RatioOH, UseYoungBc, F107Young
+  use ModConst, ONLY: cDegToRad, cRadToDeg
 
   implicit none
   save
@@ -373,11 +373,11 @@ contains
 
     ! Initialize variables, arrays, and output file.
 
-    use ModNumConst,  ONLY: cDegToRad, cTwoPi
+    use ModNumConst, ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit, open_file
-    use ModMain,      ONLY: nStep
-    use ModIoUnit,    ONLY: io_unit_new
-    use ModIO,        ONLY: NamePlotDir, IsLogNameE
+    use ModMain, ONLY: nStep
+    use ModIoUnit, ONLY: io_unit_new
+    use ModIO, ONLY: NamePlotDir, IsLogNameE
 
     integer            :: i, iTime_I(7)
     character(len=100) :: NameFile
@@ -446,9 +446,9 @@ contains
 
     ! Initialize variables, arrays, and output file.
     use ModUtilities, ONLY: flush_unit, open_file
-    use ModMain,      ONLY: nStep
-    use ModIoUnit,    ONLY: io_unit_new
-    use ModIO,        ONLY: NamePlotDir, IsLogNameE
+    use ModMain, ONLY: nStep
+    use ModIoUnit, ONLY: io_unit_new
+    use ModIO, ONLY: NamePlotDir, IsLogNameE
 
     integer            :: iTime_I(7)
     character(len=100) :: NameFile
@@ -572,17 +572,17 @@ contains
     !
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
-    use ModMain,            ONLY: tSimulation, nStep
-    use CON_planet_field,   ONLY: map_planet_field_fast
+    use ModMain, ONLY: tSimulation, nStep
+    use CON_planet_field, ONLY: map_planet_field_fast
 #ifndef _OPENACC
-    use CON_planet_field,   ONLY: map_planet_field, get_planet_field
-    use ModAdvance,         ONLY: iTypeUpdate, UpdateSlow_
-    use ModPhysics,         ONLY: Si2No_V
+    use CON_planet_field, ONLY: map_planet_field, get_planet_field
+    use ModAdvance, ONLY: iTypeUpdate, UpdateSlow_
+    use ModPhysics, ONLY: Si2No_V
 #endif
-    use ModB0,              ONLY: get_b0_dipole
-    use ModNumConst,        ONLY: cPi, cTwoPi
-    use ModCurrent,         ONLY: calc_field_aligned_current
-    use CON_axes,           ONLY: transform_matrix
+    use ModB0, ONLY: get_b0_dipole
+    use ModNumConst, ONLY: cPi, cTwoPi
+    use ModCurrent, ONLY: calc_field_aligned_current
+    use CON_axes, ONLY: transform_matrix
     use ModMpi
 
     ! use ModPlotFile, ONLY: save_plot_file
@@ -1010,9 +1010,9 @@ contains
   !============================================================================
   subroutine calc_kp
 
-    use CON_axes,      ONLY: transform_matrix
-    use ModPhysics,    ONLY: No2Io_V, UnitB_
-    use ModMain,       ONLY: tSimulation,TypeCoordSystem
+    use CON_axes, ONLY: transform_matrix
+    use ModPhysics, ONLY: No2Io_V, UnitB_
+    use ModMain, ONLY: tSimulation,TypeCoordSystem
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use ModMpi
 
@@ -1139,9 +1139,9 @@ contains
   !============================================================================
   subroutine calc_ae
 
-    use CON_axes,      ONLY: transform_matrix
-    use ModPhysics,    ONLY: No2Io_V, UnitB_
-    use ModMain,       ONLY: tSimulation,TypeCoordSystem
+    use CON_axes, ONLY: transform_matrix
+    use ModPhysics, ONLY: No2Io_V, UnitB_
+    use ModMain, ONLY: tSimulation,TypeCoordSystem
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use ModMpi
 
@@ -1221,7 +1221,7 @@ contains
     ! set nMagnetometer
 
     use ModIoUnit, ONLY: UnitTmp_
-    use ModIO,     ONLY: iUnitOut, Write_prefix
+    use ModIO, ONLY: iUnitOut, Write_prefix
     use ModUtilities, ONLY: open_file, close_file
     use ModMpi
 
@@ -1366,9 +1366,9 @@ contains
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
 
-    use ModMain,   ONLY: nStep
+    use ModMain, ONLY: nStep
     use ModIoUnit, ONLY: io_unit_new
-    use ModIO,     ONLY: NamePlotDir, IsLogNameE
+    use ModIO, ONLY: NamePlotDir, IsLogNameE
     use ModUtilities, ONLY: flush_unit, open_file
 
     character(len=4), intent(in) :: NameGroup
@@ -1442,7 +1442,7 @@ contains
   !============================================================================
   subroutine write_geoindices
 
-    use ModMain,  ONLY: nStep
+    use ModMain, ONLY: nStep
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
@@ -1489,7 +1489,7 @@ contains
 
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use CON_axes, ONLY: transform_matrix
-    use ModMain,  ONLY: nStep, tSimulation, TypeCoordSystem
+    use ModMain, ONLY: nStep, tSimulation, TypeCoordSystem
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
@@ -1671,7 +1671,7 @@ contains
     !==========================================================================
     subroutine write_supermag
 
-      use ModMain,  ONLY: nStep
+      use ModMain, ONLY: nStep
       use ModUtilities, ONLY: flush_unit
       use ModMpi
 
@@ -1825,9 +1825,9 @@ contains
 
       ! For TypeMagFileOut == 'step', write one file for every write step.
 
-      use ModIoUnit,    ONLY: UnitTmp_
+      use ModIoUnit, ONLY: UnitTmp_
       use ModUtilities, ONLY: open_file, close_file
-      use ModIO,        ONLY: NamePlotDir, IsLogNameE
+      use ModIO, ONLY: NamePlotDir, IsLogNameE
 
       integer ::  iTime_I(7), iMag
 

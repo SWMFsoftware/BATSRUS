@@ -38,7 +38,7 @@ module ModUser
        nBlock, MaxBlock, Unused_B, Used_GB, Xyz_DGB
   use ModMain, ONLY: &
        body1_, tSimulation, iStartTime_I
-  use ModPhysics,  ONLY: &
+  use ModPhysics, ONLY: &
        Gamma, GammaMinus1, GammaElectronMinus1, InvGammaMinus1, &
        InvGammaElectronMinus1, GammaMinus1_I, InvGammaMinus1_I, &
        UnitX_, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
@@ -387,14 +387,14 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(FBC)
 
-    use ModMain,           ONLY: FaceBCType
+    use ModMain, ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModWaves,          ONLY: UseAlfvenWaves
-    use ModTurbulence,     ONLY: SigmaD
+    use ModWaves, ONLY: UseAlfvenWaves
+    use ModTurbulence, ONLY: SigmaD
 #ifdef _OPENACC
-    use ModUtilities,      ONLY: norm2
+    use ModUtilities, ONLY: norm2
 #endif
-    use ModPUI,            ONLY: set_pui_state
+    use ModPUI, ONLY: set_pui_state
 
     type(FaceBCType), intent(inout):: FBC
 
@@ -577,9 +577,9 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
-    use ModTurbulence,   ONLY: KarmanTaylorAlpha
-    use ModWaves,        ONLY: UseAlfvenWaves
-    use ModPUI,          ONLY: set_pui_state
+    use ModTurbulence, ONLY: KarmanTaylorAlpha
+    use ModWaves, ONLY: UseAlfvenWaves
+    use ModPUI, ONLY: set_pui_state
 
     ! The ISM enters at the east boundary (negative x)
     ! February 08, 2018 - added the possibility for using user conditions in
@@ -686,12 +686,12 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModWaves,          ONLY: UseAlfvenWaves
-    use ModTurbulence,     ONLY: SigmaD, KarmanTaylorAlpha
+    use ModWaves, ONLY: UseAlfvenWaves
+    use ModTurbulence, ONLY: SigmaD, KarmanTaylorAlpha
 #ifdef _OPENACC
-    use ModUtilities,      ONLY: norm2
+    use ModUtilities, ONLY: norm2
 #endif
-    use ModPUI,            ONLY: set_pui_state
+    use ModPUI, ONLY: set_pui_state
 
     integer, intent(in) :: iBlock
 
@@ -2627,7 +2627,7 @@ contains
        i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
 
     use ModTurbulence, ONLY: KarmanTaylorBeta2AlphaRatio
-    use ModWaves,      ONLY: UseAlfvenWaves
+    use ModWaves, ONLY: UseAlfvenWaves
 
     ! Calculate the photoionization source terms for one cell.
 
@@ -2798,7 +2798,7 @@ contains
        i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
 
     use ModTurbulence, ONLY: KarmanTaylorBeta2AlphaRatio
-    use ModWaves,      ONLY: UseAlfvenWaves
+    use ModWaves, ONLY: UseAlfvenWaves
 
     ! Calculate the electron impact source terms for one cell.
     ! Requires a separate electron pressure
@@ -3287,10 +3287,10 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModLookupTable,   ONLY: i_lookup_table, get_lookup_table
-    use ModWaves,         ONLY: UseWavePressure, UseAlfvenWaves
-    use ModVarIndexes,    ONLY: WaveFirst_
-    use ModTurbulence,    ONLY: KarmanTaylorAlpha
+    use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
+    use ModWaves, ONLY: UseWavePressure, UseAlfvenWaves
+    use ModVarIndexes, ONLY: WaveFirst_
+    use ModTurbulence, ONLY: KarmanTaylorAlpha
 
     real:: IndexMax_I(2)
 

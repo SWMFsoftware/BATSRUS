@@ -9,8 +9,8 @@ module ModGeometry
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize
-  use ModMain,   ONLY: UseBody2, ExtraBc_, SolidBc_
-  use ModIO,     ONLY: iUnitOut, write_prefix
+  use ModMain, ONLY: UseBody2, ExtraBc_, SolidBc_
+  use ModIO, ONLY: iUnitOut, write_prefix
 
   implicit none
   SAVE

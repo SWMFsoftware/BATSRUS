@@ -7,7 +7,7 @@ module GM_couple_pw
 
   use ModUtilities, ONLY: CON_set_do_test, CON_stop
   use BATL_lib, ONLY: nProc, iComm
-  use ModNumConst,   ONLY: cDegToRad
+  use ModNumConst, ONLY: cDegToRad
   use ModMultiFluid, ONLY: nIonFluid
 
   implicit none
@@ -87,14 +87,14 @@ contains
     use CON_coupler, ONLY: PW_, Grid_C
     use ModMain, ONLY: x_, y_,z_, TypeCoordSystem, tSimulation
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, NameVar_V
-    use ModAdvance,    ONLY: UseMultiSpecies
+    use ModAdvance, ONLY: UseMultiSpecies
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
     use ModNumConst, ONLY: cTwoPi,cHalfPi
     use ModTriangulateSpherical, ONLY:trmesh, trplot
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: dir_to_xyz
-    use CON_planet_field,  ONLY: map_planet_field
+    use CON_planet_field, ONLY: map_planet_field
     use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
 

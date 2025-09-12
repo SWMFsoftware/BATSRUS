@@ -174,7 +174,7 @@ contains
 
     use ModMain
     use ModReadParam
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
 
@@ -524,11 +524,11 @@ contains
 
   subroutine user_calc_sources(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK,    &
+    use ModMain, ONLY: nI, nJ, nK,    &
            nIteration, DtMax_B, nStep
-    use ModAdvance,    ONLY: State_VGB, Source_VC
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
-    use ModGeometry,   ONLY: rMin_B, r_GB, Xyz_DGB
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModConst, ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
+    use ModGeometry, ONLY: rMin_B, r_GB, Xyz_DGB
     use ModPhysics
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, IsPointImplSource
 
@@ -937,11 +937,11 @@ contains
   !============================================================================
 
   subroutine user_set_ICs(iBlock)
-    use ModIO,       ONLY: IsRestart
-    use ModMain,     ONLY:      Body1_, UseBody
-    use ModAdvance,  ONLY: State_VGB
+    use ModIO, ONLY: IsRestart
+    use ModMain, ONLY:      Body1_, UseBody
+    use ModAdvance, ONLY: State_VGB
     use ModPhysics
-    use ModConst,    ONLY: cBoltzmann
+    use ModConst, ONLY: cBoltzmann
     use ModGeometry, ONLY: r_GB,Xyz_DGB
 
     integer, intent(in) :: iBlock
@@ -1043,16 +1043,16 @@ contains
 
   subroutine user_set_face_boundary(FBC)
 
-    use ModSize,         ONLY: x_,y_,z_
+    use ModSize, ONLY: x_,y_,z_
     use ModVarIndexes
-    use ModMain,         ONLY: body1_, nStep, tSimulation, IsTimeAccurate, &
+    use ModMain, ONLY: body1_, nStep, tSimulation, IsTimeAccurate, &
          Dt, FaceBCType
-    use ModPhysics,      ONLY: LowDensityRatio,UnitTemperature_, Io2No_V,  &
+    use ModPhysics, ONLY: LowDensityRatio,UnitTemperature_, Io2No_V,  &
          NO2SI_V, UnitP_, UnitRho_, UnitRhoU_, UnitU_, UnitB_, UnitN_, Io2SI_V, &
          rBody,cPi,rPlanetSI,SI2No_V,UnitX_
-    use ModGeometry,      ONLY: r_GB, Xyz_DGB,ExtraBc_
+    use ModGeometry, ONLY: r_GB, Xyz_DGB,ExtraBc_
     use BATL_lib, ONLY: CellSize_DB
-    use ModNumConst, ONLY : cDegToRad, cRadToDeg
+    use ModNumConst, ONLY: cDegToRad, cRadToDeg
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
@@ -1431,8 +1431,8 @@ contains
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: cBoltzmann, Si2No_V, &
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: cBoltzmann, Si2No_V, &
          No2Si_V, UnitN_, UnitP_
     use ModGeometry, ONLY: r_GB
 
@@ -1460,14 +1460,14 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
+    use ModAdvance, ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
          ElectronCharge, ElectronPressureRatio
     use ModVarIndexes, ONLY: Rho_, P_, Pe_
-    use ModConst,      ONLY: cBoltzmann
-    use ModCurrent,    ONLY: get_current
+    use ModConst, ONLY: cBoltzmann
+    use ModCurrent, ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
-    use ModMain,       ONLY: DtMax_B
+    use ModMain, ONLY: DtMax_B
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar

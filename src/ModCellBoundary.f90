@@ -96,7 +96,7 @@ contains
     use ModUserInterface ! user_set_cell_boundary
     use ModThreadedLC, ONLY: set_field_line_thread_bc
     use BATL_lib, ONLY: IsCartesianGrid
-    use ModSaMhd,  ONLY: UseSaMhd
+    use ModSaMhd, ONLY: UseSaMhd
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -470,7 +470,7 @@ contains
       ! Pot(ghost) = Pot(inside2) + (x_ghost - x_inside2).E_inside1
 
       use ModAdvance, ONLY: Efield_DGB
-      use BATL_lib,   ONLY: Xyz_DGB, j2_, k2_, nJm1_, nKm1_
+      use BATL_lib, ONLY: Xyz_DGB, j2_, k2_, nJm1_, nKm1_
 
       integer:: i, j, k
       !------------------------------------------------------------------------
@@ -770,11 +770,11 @@ contains
     !==========================================================================
     subroutine set_fixed_semi_bc
 
-      use ModAdvance,     ONLY: UseIdealEos, UseElectronPressure
-      use ModMultiFluid,  ONLY: iRhoIon_I, iPion_I, UseMultiIon, ChargeIon_I, &
+      use ModAdvance, ONLY: UseIdealEos, UseElectronPressure
+      use ModMultiFluid, ONLY: iRhoIon_I, iPion_I, UseMultiIon, ChargeIon_I, &
            MassIon_I
       use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, iTeImpl
-      use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
+      use ModPhysics, ONLY: AverageIonCharge, PePerPtotal, &
            ElectronPressureRatio
 
       integer :: i, j, k
@@ -839,17 +839,17 @@ contains
     !==========================================================================
     subroutine set_solar_wind_bc
 
-      use ModAdvance,     ONLY: nVar, UseIdealEos, UseElectronPressure
-      use ModGeometry,    ONLY: xMinBox, xMaxBox, &
+      use ModAdvance, ONLY: nVar, UseIdealEos, UseElectronPressure
+      use ModGeometry, ONLY: xMinBox, xMaxBox, &
            yMinBox, yMaxBox, zMinBox, zMaxBox
-      use ModB0,          ONLY: B0_DGB
-      use ModMultiFluid,  ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
+      use ModB0, ONLY: B0_DGB
+      use ModMultiFluid, ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
            iPion_I, UseMultiIon, ChargeIon_I, MassIon_I
-      use ModSolarwind,   ONLY: get_solar_wind_point
-      use ModMain,        ONLY: tSimulation
-      use BATL_lib,       ONLY: Xyz_DGB, IsCartesianGrid
+      use ModSolarwind, ONLY: get_solar_wind_point
+      use ModMain, ONLY: tSimulation
+      use BATL_lib, ONLY: Xyz_DGB, IsCartesianGrid
       use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, iTeImpl
-      use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
+      use ModPhysics, ONLY: AverageIonCharge, PePerPtotal, &
            ElectronPressureRatio
 
       ! index and location of a single point
@@ -934,7 +934,7 @@ contains
     subroutine set_solar_wind_bc_buffer
 
       use ModVarIndexes, ONLY: Bx_, Bz_
-      use ModB0, ONLY : B0_DGB
+      use ModB0, ONLY: B0_DGB
       use BATL_lib, ONLY: Xyz_DGB
 
       ! index and location of a single point
@@ -958,10 +958,10 @@ contains
     !==========================================================================
     subroutine set_radiation_outflow_bc(iVarMin, iVarMax, iSide)
 
-      use ModAdvance,  ONLY: nWave
-      use ModPhysics,  ONLY: Si2No_V, UnitX_
+      use ModAdvance, ONLY: nWave
+      use ModPhysics, ONLY: Si2No_V, UnitX_
       use ModUserInterface ! user_material_properties
-      use BATL_lib,    ONLY: CellSize_DB
+      use BATL_lib, ONLY: CellSize_DB
 
       integer, intent(in) :: iVarMin, iVarMax, iSide
 
@@ -1074,7 +1074,7 @@ contains
     ! This approach is not accurate! If it is smooth near the resolution
     ! change boundary point, it will be fine.
 
-    use BATL_lib,  ONLY: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,DiLevelNei_IIIB,Unset_
+    use BATL_lib, ONLY: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,DiLevelNei_IIIB,Unset_
     use BATL_size, ONLY: nI,nJ,nK
 
     integer, intent(in):: nGhost

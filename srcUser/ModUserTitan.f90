@@ -446,7 +446,7 @@ contains
 
   subroutine user_calc_sources_impl(iBlock)
 
-    use ModAdvance,  ONLY: Source_VC
+    use ModAdvance, ONLY: Source_VC
 
     integer, intent(in) :: iBlock
 
@@ -462,8 +462,8 @@ contains
   !============================================================================
   subroutine user_sources(iBlock, Source_VC)
 
-    use ModAdvance,  ONLY: State_VGB,Flux_VXI,Flux_VYI,Flux_VZI, Vdt_
-    use ModPhysics,  ONLY: InvGammaMinus1, GammaMinus1
+    use ModAdvance, ONLY: State_VGB,Flux_VXI,Flux_VYI,Flux_VZI, Vdt_
+    use ModPhysics, ONLY: InvGammaMinus1, GammaMinus1
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data, &
          MaxBlockData
     use ModVarIndexes
@@ -889,7 +889,7 @@ contains
     use ModMain, ONLY: Body1_,Coord1MinBc_
     use ModAdvance
     use ModGeometry, ONLY:Xyz_DGB,r_GB
-    use ModIO, ONLY : IsRestart
+    use ModIO, ONLY: IsRestart
     use ModPhysics
     use ModMultiFluid
 
@@ -1140,7 +1140,7 @@ contains
   subroutine user_set_face_boundary(FBC)
 
     use ModMain, ONLY: FaceBCType
-    use ModAdvance,  ONLY: nVar
+    use ModAdvance, ONLY: nVar
 
     type(FaceBCType), intent(inout):: FBC
 
@@ -1544,11 +1544,11 @@ contains
 
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
-    use ModGeometry,   ONLY: Xyz_DGB, r_GB
-    use ModMain,       ONLY: Unused_B
+    use ModGeometry, ONLY: Xyz_DGB, r_GB
+    use ModMain, ONLY: Unused_B
     use ModVarIndexes
-    use ModAdvance,    ONLY: State_VGB,Tmp1_GB
-    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModAdvance, ONLY: State_VGB,Tmp1_GB
+    use ModPhysics, ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
     use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out)            :: VarValue
@@ -1600,9 +1600,9 @@ contains
   !============================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
-    use ModPhysics,  ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
+    use ModPhysics, ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
          UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: rMin_B, r_GB
     use ModResistivity, ONLY: Eta0Si
 

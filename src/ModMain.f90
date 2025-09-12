@@ -359,6 +359,7 @@ module ModMain
   ! Neutral state variables received from Upper Atmosphere model
   logical:: IsNewUaState = .false.
   real, allocatable :: UaState_VCB(:,:,:,:,:)
+  real:: rMaxUa = 3.0   ! max radius of UA influence
 
   ! Logical is true if compiled with OpenACC
 #ifdef _OPENACC

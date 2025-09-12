@@ -74,9 +74,9 @@ contains
   !============================================================================
   subroutine init_hall_resist
 
-    use ModConst,   ONLY: cElectronCharge
+    use ModConst, ONLY: cElectronCharge
     use ModPhysics, ONLY: IonMassPerCharge, Si2No_V, UnitX_, UnitCharge_
-    use BATL_lib,   ONLY: get_region_indexes
+    use BATL_lib, ONLY: get_region_indexes
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_hall_resist'
@@ -174,11 +174,11 @@ contains
 
   subroutine set_ion_mass_per_charge_point(State_V, IonMassPerChargeOut)
 
-    use ModAdvance,    ONLY: UseIdealEos, UseMultiSpecies
+    use ModAdvance, ONLY: UseIdealEos, UseMultiSpecies
     use ModVarIndexes, ONLY: nVar, Rho_, &
          SpeciesFirst_, SpeciesLast_, MassSpecies_V
     use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I,ChargeIon_I
-    use ModPhysics,    ONLY: IonMassPerCharge
+    use ModPhysics, ONLY: IonMassPerCharge
     use ModUserInterface
 
     real, intent(in) :: State_V(nVar)

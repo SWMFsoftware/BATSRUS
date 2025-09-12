@@ -389,11 +389,11 @@ contains
   subroutine user_set_face_boundary(FBC)
 
     use ModMain, ONLY: nStep, tSimulation, IsTimeAccurate, Dt, FaceBCType
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I
-    use ModGeometry,    ONLY: ExtraBc_
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I
+    use ModGeometry, ONLY: ExtraBc_
     use BATL_lib, ONLY: CellSize_DB
     use ModGeometry, ONLY: Xyz_DGB
-    use ModNumConst, ONLY : cDegToRad, cRadToDeg
+    use ModNumConst, ONLY: cDegToRad, cRadToDeg
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data

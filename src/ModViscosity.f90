@@ -96,7 +96,7 @@ contains
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nDim, &
          get_region_indexes
     use ModMultiFluid, ONLY: nFluid
-    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_
+    use ModPhysics, ONLY: Si2No_V, UnitX_, UnitT_
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'viscosity_init'
     !--------------------------------------------------------------------------
@@ -225,7 +225,7 @@ contains
        kFace,iBlockFace,iFluidMin,iFluidMax,ViscoCoeff,IsNewBlockVisco)
 
     use ModAdvance, ONLY: State_VGB
-    use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
+    use BATL_lib, ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
     use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
     use ModMain, ONLY: x_

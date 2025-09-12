@@ -82,7 +82,7 @@ contains
 
     use ModReadParam, ONLY: read_var
     use ModVarIndexes, ONLY: NameVar_V, nVar
-    use BATL_lib,     ONLY: DoCritAmr, DoAutoAmr, DoStrictAmr, &
+    use BATL_lib, ONLY: DoCritAmr, DoAutoAmr, DoStrictAmr, &
          read_amr_criteria
 
     character(len=*), intent(in):: NameCommand
@@ -170,16 +170,16 @@ contains
   !============================================================================
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
-    use ModMain,     ONLY: nBlockMax
+    use ModMain, ONLY: nBlockMax
 #ifdef _OPENACC
-    use ModMain,     ONLY: DtMax_B
+    use ModMain, ONLY: DtMax_B
 #endif
-    use ModAdvance,  ONLY: iTypeAdvance_BP, nVar, State_VGB
-    use BATL_lib,    ONLY: &
+    use ModAdvance, ONLY: iTypeAdvance_BP, nVar, State_VGB
+    use BATL_lib, ONLY: &
          MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_, MaxBlock, &
          set_amr_criteria
     use ModMessagePass, ONLY: exchange_messages
-    use ModPartSteady,  ONLY: UsePartSteady
+    use ModPartSteady, ONLY: UsePartSteady
 
     logical, intent(in) :: DoFullMessagePass
     character(len=3), intent(in) :: TypeAmr
@@ -235,27 +235,27 @@ contains
   !============================================================================
   subroutine do_amr
 
-    use ModMain, ONLY : nIJK, MaxBlock, nBlock, nBlockMax, nBlockALL,&
+    use ModMain, ONLY: nIJK, MaxBlock, nBlock, nBlockMax, nBlockALL,&
          UseB, DtMax_B, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, nUsedCell, &
          count_true_cells
-    use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
+    use ModAdvance, ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, SkippedBlock_
     use ModLoadBalance, ONLY: load_balance
     use ModFieldTrace, ONLY: Trace_DSNB
     use ModBlockData, ONLY: clean_block_data
-    use ModIO, ONLY : write_prefix, iUnitOut
+    use ModIO, ONLY: write_prefix, iUnitOut
     use ModMpi
-    use ModB0, ONLY : B0_DGB
+    use ModB0, ONLY: B0_DGB
 
-    use BATL_lib,         ONLY: regrid_batl, Used_GB,&
+    use BATL_lib, ONLY: regrid_batl, Used_GB,&
          iProc, nNode, iTree_IA, nLevelMin, nLevelMax, &
          IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_
 
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
-    use ModMessagePass,   ONLY: exchange_messages
-    use ModPartSteady,    ONLY: UsePartSteady
+    use ModMessagePass, ONLY: exchange_messages
+    use ModPartSteady, ONLY: UsePartSteady
     use ModVarIndexes, ONLY: DefaultState_V
 
     use ModParticles, ONLY: message_pass_particles
@@ -390,18 +390,18 @@ contains
   !============================================================================
   subroutine amr_criteria(Crit_IB)
 
-    use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
-    use ModSaMhd,      ONLY: UseSaMhd
-    use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
+    use ModMain, ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
+    use ModSaMhd, ONLY: UseSaMhd
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
-    use ModB0,         ONLY: B0_DGB
-    use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
+    use ModB0, ONLY: B0_DGB
+    use ModPhysics, ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
          UnitTemperature_
-    use ModCurrent,    ONLY: get_current
-    use BATL_lib,      ONLY: Xyz_DGB, Xyz_DNB, nDim, nI, nJ, nK, nG, &
+    use ModCurrent, ONLY: get_current
+    use BATL_lib, ONLY: Xyz_DGB, Xyz_DNB, nDim, nI, nJ, nK, nG, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
          is_masked_amr_criteria
-    use ModNumConst,   ONLY: cTiny
+    use ModNumConst, ONLY: cTiny
     use ModVarIndexes, ONLY: SignB_
     use ModUserInterface ! user_amr_criteria
 

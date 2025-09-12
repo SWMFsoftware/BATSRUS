@@ -12,7 +12,7 @@ module ModUser
        IMPLEMENTED2 => user_set_ics,             &
        IMPLEMENTED6 => user_set_cell_boundary
 
-  use ModSize,       ONLY: x_, y_, z_
+  use ModSize, ONLY: x_, y_, z_
   use ModVarIndexes
   use ModNumConst, ONLY: cTwoPi, cRadToDeg
 
@@ -75,19 +75,19 @@ contains
 
     use ModGeometry, ONLY: &
          RadiusMin, r_GB
-    use ModAdvance,  ONLY: &
+    use ModAdvance, ONLY: &
          State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, &
          Bx_, By_, Bz_, rho_, p_
     use ModMultiFluid, ONLY:
-    use ModPhysics,  ONLY: &
+    use ModPhysics, ONLY: &
          ShockLeft_V, &
          Io2No_V, &
          UnitU_, UnitB_, &
          Gamma
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use BATL_lib,    ONLY: &
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY: &
          Xyz_DGB
-    use ModIonElectron,   ONLY:
+    use ModIonElectron, ONLY:
 
     integer, intent(in) :: iBlock
 
@@ -174,16 +174,16 @@ contains
     ! set Alfven wave conditions at r minimum boundary
 
     use ModImplicit, ONLY: StateSemi_VGB
-    use ModSize,     ONLY: x_, y_, z_
-    use ModPhysics,  ONLY:&
+    use ModSize, ONLY: x_, y_, z_
+    use ModPhysics, ONLY:&
          Io2No_V, UnitU_, UnitB_, &
          ShockLeft_V
-    use ModMain,     ONLY: tSimulation
-    use ModAdvance,  ONLY: Rho_, Ux_, RhoUx_, RhoUz_, State_VGB,p_
+    use ModMain, ONLY: tSimulation
+    use ModAdvance, ONLY: Rho_, Ux_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: &
          r_GB
     use ModVarIndexes
-    use BATL_lib,    ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in)          :: iBlock, iSide
     character(len=*), intent(in) :: TypeBc

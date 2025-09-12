@@ -10,7 +10,7 @@ module ModHeatFluxCollisionless
   ! The implementation uses an extra variable Ehot_ instead of
   ! actually changing gamma.
 
-  use BATL_lib,      ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -75,11 +75,11 @@ contains
   !============================================================================
   subroutine update_heatflux_collisionless(iBlock)
 
-    use BATL_lib,      ONLY: Xyz_DGB, nI, nJ, nK
+    use BATL_lib, ONLY: Xyz_DGB, nI, nJ, nK
     use ModVarIndexes, ONLY: Pe_, P_, Ehot_
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: InvGammaElectronMinus1
-    use ModEnergy,     ONLY: limit_pressure
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure
+    use ModPhysics, ONLY: InvGammaElectronMinus1
+    use ModEnergy, ONLY: limit_pressure
 
     integer, intent(in) :: iBlock
 
@@ -113,10 +113,10 @@ contains
   subroutine get_gamma_collisionless(x_D, GammaOut)
     !$acc routine seq
 
-    use BATL_lib,   ONLY: MaxDim
+    use BATL_lib, ONLY: MaxDim
     use ModPhysics, ONLY: GammaElectron, InvGammaElectronMinus1
     use ModAdvance, ONLY: UseElectronPressure
-    use ModMain,    ONLY: UseHeatConduction
+    use ModMain, ONLY: UseHeatConduction
 
     real, intent(in) :: x_D(MaxDim)
     real, intent(out) :: GammaOut

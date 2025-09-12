@@ -7,7 +7,7 @@ module ModPIC
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, iComm
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModGridInfo,  ONLY: iPicOn_, iPicOff_, &
+  use ModGridInfo, ONLY: iPicOn_, iPicOff_, &
        get_point_status, &
        set_point_status
   use ModFreq
@@ -139,9 +139,9 @@ contains
   subroutine pic_read_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use BATL_lib,     ONLY: x_, y_, z_, nI, nJ, nK, nDim, MaxBlock,&
+    use BATL_lib, ONLY: x_, y_, z_, nI, nJ, nK, nDim, MaxBlock,&
          get_region_indexes
-    use ModNumConst,  ONLY: cDegToRad
+    use ModNumConst, ONLY: cDegToRad
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z, &
          rot_matrix
 
@@ -362,16 +362,16 @@ contains
   !============================================================================
   subroutine pic_init_region
 
-    use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, &
+    use BATL_lib, ONLY: nDim, find_grid_block, MaxDim, &
          x_, y_, z_, nI, nJ, nK, Unset_
-    use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
+    use ModPhysics, ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, &
          HallFactor_C, set_hall_factor_cell
-    use ModPhysics,    ONLY: IonMassPerCharge
+    use ModPhysics, ONLY: IonMassPerCharge
     use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
     use ModVarIndexes, ONLY: IsMhd
-    use ModMpi,        ONLY: MPI_REAL
-    use ModMain,         ONLY: iNewGrid, iNewDecomposition
+    use ModMpi, ONLY: MPI_REAL
+    use ModMain, ONLY: iNewGrid, iNewDecomposition
 
     ! PIC grid indexes
     integer:: iRegion
@@ -599,8 +599,8 @@ contains
   !============================================================================
   subroutine write_pic_status_file
 
-    use ModUtilities,   ONLY: open_file, close_file
-    use ModIoUnit,      ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
+    use ModIoUnit, ONLY: UnitTmp_
 
     character(len=100) :: NameFile
     logical:: DoTest
@@ -626,8 +626,8 @@ contains
   !============================================================================
   subroutine read_pic_status_file
 
-    use ModUtilities,   ONLY: open_file, close_file
-    use ModIoUnit,      ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
+    use ModIoUnit, ONLY: UnitTmp_
 
     integer:: iError
 
@@ -1287,18 +1287,18 @@ contains
     ! This subroutine takes the PIC xyz coordinate and output
     ! the patch index in iPatchOut_D
 
-    use BATL_lib,        ONLY: nDim, nI, nJ, nK, nG, nBlock, MaxBlock, &
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nG, nBlock, MaxBlock, &
          x_, y_, z_, iNode_B, Unused_B, iProc, &
          message_pass_cell, CellSize_DB
-    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, Bx_, Bz_, Rho_, &
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_, Rho_, &
          x_, y_, z_, Ux_, Uz_, p_, RhoUx_, RhoUz_
-    use ModCurrent,      ONLY: get_current
+    use ModCurrent, ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
-    use ModB0,           ONLY: UseB0, B0_DGB
-    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitU_, &
+    use ModB0, ONLY: UseB0, B0_DGB
+    use ModPhysics, ONLY: Io2No_V, UnitX_, UnitB_, UnitU_, &
          UnitP_, UnitRho_, Gamma
-    use ModMain,         ONLY: iNewGrid, iNewDecomposition
+    use ModMain, ONLY: iNewGrid, iNewDecomposition
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: iPicStatus_CBI(:,:,:,:,:)
@@ -1546,9 +1546,9 @@ contains
   !============================================================================
   subroutine calc_crit_jb(i, j, k, iBlock, FullB_DG, CriteriaB1, CritJB)
 
-    use BATL_lib,         ONLY: CellSize_DB, MinI, MaxI,&
+    use BATL_lib, ONLY: CellSize_DB, MinI, MaxI,&
          MinJ, MaxJ, MinK, MaxK
-    use ModCurrent,       ONLY: get_current
+    use ModCurrent, ONLY: get_current
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CriteriaB1
@@ -1576,9 +1576,9 @@ contains
 
     ! Calculate dx*j/Bperp = dx*j^2/|j x B|
 
-    use BATL_lib,          ONLY: CellSize_DB, MinI, MaxI,&
+    use BATL_lib, ONLY: CellSize_DB, MinI, MaxI,&
          MinJ, MaxJ, MinK, MaxK
-    use ModCurrent,        ONLY: get_current
+    use ModCurrent, ONLY: get_current
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1605,7 +1605,7 @@ contains
   !============================================================================
   subroutine calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
 
-    use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModAdvance, ONLY: nVar, Rho_, p_
     use ModPhysics, ONLY: Gamma
 

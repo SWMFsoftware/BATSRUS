@@ -12,7 +12,7 @@ module ModParticles
        remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, trace_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
-  use BATL_size,        ONLY: BatlNKind=>nKindParticle
+  use BATL_size, ONLY: BatlNKind=>nKindParticle
 
   implicit none
 

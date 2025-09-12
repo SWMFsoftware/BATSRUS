@@ -81,9 +81,9 @@ contains
   !============================================================================
 
   subroutine user_read_inputs
-    use ModMain,      ONLY: lverbose
+    use ModMain, ONLY: lverbose
     use ModReadParam, ONLY: read_var, read_line, read_command
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
     use ModCoronalHeating, ONLY: DtUpdateFlux, UnsignedFluxHeight
 
     character (len=100) :: NameCommand
@@ -147,9 +147,9 @@ contains
   !============================================================================
   subroutine user_init_session
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
-    use ModPhysics,     ONLY: No2Si_V, UnitX_, Si2No_V, UnitRho_, UnitP_, &
+    use ModPhysics, ONLY: No2Si_V, UnitX_, Si2No_V, UnitRho_, UnitP_, &
          UnitEnergyDens_
-    use ModGeometry,    ONLY: zMinBox
+    use ModGeometry, ONLY: zMinBox
 
     real :: InitialState(1:4)
 
@@ -185,8 +185,8 @@ contains
   !============================================================================
   subroutine user_set_ICs(iBlock)
 
-    use ModMain,       ONLY:  Unused_B
-    use ModAdvance,    ONLY: State_VGB
+    use ModMain, ONLY:  Unused_B
+    use ModAdvance, ONLY: State_VGB
     use ModVarIndexes
 
     integer, intent(in) :: iBlock
@@ -231,9 +231,9 @@ contains
     subroutine set_uniform_ICs(iBlock)
 
       use ModLookupTable, ONLY: interpolate_lookup_table
-      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitP_, InvGammaMinus1, &
+      use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, InvGammaMinus1, &
            UnitEnergyDens_, UnitX_, No2Si_V
-      use ModGeometry,    ONLY: Xyz_DGB
+      use ModGeometry, ONLY: Xyz_DGB
 
       integer, intent(in) :: iBlock
 
@@ -295,10 +295,10 @@ contains
     !==========================================================================
     subroutine set_perturbed_ICs(iBlock)
 
-      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitU_, UnitEnergyDens_,&
+      use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, UnitEnergyDens_,&
            UnitP_, UnitX_, No2Si_V
       use ModLookupTable, ONLY: interpolate_lookup_table
-      use ModGeometry,    ONLY: Xyz_DGB
+      use ModGeometry, ONLY: Xyz_DGB
 
       integer, intent(in) :: iBlock
 
@@ -337,9 +337,9 @@ contains
   !============================================================================
 
   subroutine user_initial_perturbation
-    use ModMain,     ONLY: Unused_B, nBlockMax
+    use ModMain, ONLY: Unused_B, nBlockMax
     use ModGeometry, ONLY: Xyz_DGB
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModPhysics
     use ModVarIndexes
 
@@ -429,9 +429,9 @@ contains
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
     use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
-    use ModPhysics,    ONLY: UnitEnergyDens_, InvGammaMinus1, Si2No_V
-    use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: CellSize_DB
+    use ModPhysics, ONLY: UnitEnergyDens_, InvGammaMinus1, Si2No_V
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: CellSize_DB
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -498,10 +498,10 @@ contains
   !============================================================================
   subroutine user_calc_sources_expl(iBlock)
 
-    use ModAdvance,     ONLY: Source_VC, State_VGB
-    use ModPhysics,     ONLY: No2Si_V,UnitEnergyDens_,UnitT_
-    use ModVarIndexes,  ONLY: Energy_, rhoUz_
-    use ModGeometry,    ONLY: Xyz_DGB
+    use ModAdvance, ONLY: Source_VC, State_VGB
+    use ModPhysics, ONLY: No2Si_V,UnitEnergyDens_,UnitT_
+    use ModVarIndexes, ONLY: Energy_, rhoUz_
+    use ModGeometry, ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
 
@@ -542,8 +542,8 @@ contains
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine get_vertical_damping(State_V, Z_V, DampingRhoUz, DampingEnergy)
-    use ModPhysics,     ONLY: Si2No_V, UnitT_
-    use ModVarIndexes,  ONLY: rhoUz_, rho_, nVar
+    use ModPhysics, ONLY: Si2No_V, UnitT_
+    use ModVarIndexes, ONLY: rhoUz_, rho_, nVar
 
     real, intent(in) :: State_V(nVar), Z_V
     real, intent(out):: DampingRhoUz, DampingEnergy
@@ -568,9 +568,9 @@ contains
   !============================================================================
   subroutine get_radiative_cooling(State_V, TeSi, Z_V, RadiativeCooling)
     use ModVarIndexes, ONLY: rho_, nVar
-    use ModPhysics,    ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, UnitT_
+    use ModPhysics, ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, UnitT_
     use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModConst,      ONLY: cProtonMass
+    use ModConst, ONLY: cProtonMass
 
     real, intent(in) :: State_V(1:nVar)
     real, intent(in) :: TeSi
@@ -617,8 +617,8 @@ contains
 
     use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes, ONLY: rho_, p_, ExtraEInt_
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
          UnitEnergyDens_, cProtonMass, InvGammaMinus1
 
     integer, intent(in) :: iBlock
@@ -659,7 +659,7 @@ contains
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G,PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
-    use ModAdvance,  ONLY:State_VGB
+    use ModAdvance, ONLY:State_VGB
 
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
@@ -728,9 +728,9 @@ contains
        PlanckOut_W, EntropyOut)
 
     use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitRho_, InvGammaMinus1
+    use ModPhysics, ONLY: No2Si_V, UnitP_, UnitRho_, InvGammaMinus1
     use ModVarIndexes, ONLY: nVar, Rho_, p_, ExtraEInt_
-    use ModAdvance,    ONLY: nWave
+    use ModAdvance, ONLY: nWave
 
     ! The State_V vector is in normalized units
     real, intent(in) :: State_V(nVar)

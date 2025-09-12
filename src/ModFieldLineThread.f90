@@ -7,13 +7,13 @@ module ModFieldLineThread
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use BATL_lib,      ONLY: &
+  use BATL_lib, ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, &
        iProc, nProc, iComm, nJ, nK, jDim_, kDim_, MaxBlock, CoordMin_D, r_
-  use ModAdvance,    ONLY: UseElectronPressure
-  use ModMain,       ONLY: UseFieldLineThreads, DoThreads_B
-  use ModB0,         ONLY: get_b0
-  use ModPhysics,    ONLY: Z => AverageIonCharge
+  use ModAdvance, ONLY: UseElectronPressure
+  use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
+  use ModB0, ONLY: get_b0
+  use ModPhysics, ONLY: Z => AverageIonCharge
   use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
   use ModTransitionRegion, ONLY: nPointThreadMax=>nPointMax,           &
@@ -160,6 +160,10 @@ module ModFieldLineThread
   public :: beta_thread               ! Accounts for grid sizes in TR and SC
   ! Saves thread state into restart
   public :: save_thread_restart
+
+  ! Visualization, log vars
+  public :: set_ur_top_tr, set_u_top_tr, set_u_bot_tr
+  public :: set_u_min_tr, set_u_max_tr
   ! interface procedure to easy calculate the CME field
   public :: b_cme_d
 
@@ -369,9 +373,9 @@ contains
   !============================================================================
   function b_cme_d(Xyz_D)
     use EEE_ModMain, ONLY: EEE_get_state_BC
-    use ModPhysics,  ONLY: Si2No_V, UnitB_
-    use BATL_lib,    ONLY: MaxDim
-    use ModMain,     ONLY: nStep, nIteration, tSimulation
+    use ModPhysics, ONLY: Si2No_V, UnitB_
+    use BATL_lib, ONLY: MaxDim
+    use ModMain, ONLY: nStep, nIteration, tSimulation
     real :: b_cme_d(MaxDim)
     real, intent(in) ::Xyz_D(MaxDim)
     ! CME parameters, if needed
@@ -384,10 +388,10 @@ contains
   !============================================================================
   subroutine set_threads(NameCaller)
 
-    use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock, MaxDim
+    use BATL_lib, ONLY: MaxBlock, Unused_B, nBlock, MaxDim
     use ModParallel, ONLY: DiLevel_EB, Unset_
-    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
-    use ModMain,     ONLY: nStep
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_
+    use ModMain, ONLY: nStep
     use ModMpi
     character(len=*), intent(in) :: NameCaller
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
@@ -541,13 +545,13 @@ contains
   subroutine set_threads_b(iBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use ModPhysics,  ONLY: No2Si_V, UnitTemperature_, UnitX_, UnitB_
-    use ModMain,       ONLY: DoThreadRestart
+    use ModPhysics, ONLY: No2Si_V, UnitTemperature_, UnitX_, UnitB_
+    use ModMain, ONLY: DoThreadRestart
     use ModGeometry, ONLY: Xyz_DGB
     use ModNumConst, ONLY: cTolerance
     use ModTurbulence, ONLY:PoyntingFluxPerBSi
     use ModCoordTransform, ONLY: rot_xyz_rlonlat
-    use BATL_lib,    ONLY: MaxDim, xyz_to_coord, coord_to_xyz, CoordMin_DB, &
+    use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, CoordMin_DB, &
          CellSize_DB
     integer, intent(in) :: iBlock
     ! Locals:
@@ -878,8 +882,8 @@ contains
     !==========================================================================
     subroutine limit_temperature(BLength, TMax)
 
-      use ModPhysics,      ONLY: UnitX_, Si2No_V, UnitB_
-      use ModLookupTable,  ONLY: interpolate_lookup_table
+      use ModPhysics, ONLY: UnitX_, Si2No_V, UnitB_
+      use ModLookupTable, ONLY: interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
       real :: HeatFluxXLength, Value_V(LengthPavrSi_:DlogLambdaOverDlogT_)
@@ -946,9 +950,9 @@ contains
   !============================================================================
   subroutine read_thread_restart(iBlock)
 
-    use ModMain,       ONLY: NameThisComp
-    use ModIoUnit,     ONLY: UnitTmp_
-    use ModUtilities,  ONLY: open_file, close_file
+    use ModMain, ONLY: NameThisComp
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
     integer, intent(in) :: iBlock
     ! loop variables
     integer :: j, k
@@ -992,8 +996,8 @@ contains
     ! Interpolate the state at the point with coords Coord_D from
     ! BoundaryThreads_B(iBlock)%State_VG(:,:,:)
     ! array, then convert to MHD
-    use ModAdvance,     ONLY: nVar
-    use BATL_lib,       ONLY: CoordMin_DB, CellSize_DB
+    use ModAdvance, ONLY: nVar
+    use BATL_lib, ONLY: CoordMin_DB, CellSize_DB
     use ModInterpolate, ONLY: interpolate_vector
 
     ! Coords of the point in which to interpolate
@@ -1056,8 +1060,8 @@ contains
       ! Convert the state stored in the State_VG array to
       ! the MHD state vector
       use BATL_lib, ONLY: MaxDim, coord_to_xyz
-      use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_, Bx_
-      use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
+      use ModAdvance, ONLY: nVar, Rho_, WaveFirst_, WaveLast_, Bx_
+      use ModPhysics, ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
       use ModTurbulence, ONLY: PoyntingFluxPerB
       use EEE_ModCommonVariables, ONLY: UseCme
       !INPUT:
@@ -1114,22 +1118,22 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : UseElectronPressure, &
+    use ModAdvance, ONLY: UseElectronPressure, &
          UseMultiSpecies
     use ModGeometry
-    use ModPhysics,       ONLY: OmegaBody,  &
+    use ModPhysics, ONLY: OmegaBody,  &
          ElectronPressureRatio, InvGammaMinus1_I, Si2No_V, UnitB_
-    use ModUtilities,     ONLY: lower_case
-    use ModIO,            ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
+    use ModUtilities, ONLY: lower_case
+    use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
          NameUnitUserIdl_I
-    use ModMultiFluid,    ONLY: extract_fluid_name,      &
+    use ModMultiFluid, ONLY: extract_fluid_name,      &
          UseMultiIon, nIonFluid, iPpar, iPFluid=>iP,   &
          IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I
     use ModCoordTransform, ONLY: cross_product
-    use BATL_lib,          ONLY: iNode_B, CellSize_DB
-    use ModB0,             ONLY: get_b0
-    use ModWaves,          ONLY: UseWavePressure
-    use ModTurbulence,   ONLY: PoyntingFluxPerB
+    use BATL_lib, ONLY: iNode_B, CellSize_DB
+    use ModB0, ONLY: get_b0
+    use ModWaves, ONLY: UseWavePressure
+    use ModTurbulence, ONLY: PoyntingFluxPerB
 
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)
@@ -1387,10 +1391,10 @@ contains
   !============================================================================
   subroutine save_thread_restart
 
-    use ModMain,       ONLY: NameThisComp
+    use ModMain, ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
-    use ModIoUnit,     ONLY: UnitTmp_
-    use ModUtilities,  ONLY: open_file, close_file
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
     integer :: j, k, iBlock, nPoint
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'save_thread_restart'
@@ -1419,7 +1423,7 @@ contains
   end subroutine save_thread_restart
   !============================================================================
   subroutine get_restart_file_name(iBlock, NameRestartDir)
-    use BATL_lib,      ONLY: iMortonNode_A, iNode_B
+    use BATL_lib, ONLY: iMortonNode_A, iNode_B
 
     integer, intent(in)          :: iBlock
     character(len=*), intent(in) :: NameRestartDir
@@ -1443,11 +1447,11 @@ contains
   !==========================ROUTINES USED FOR TRIANGULATION===================
   subroutine set_triangulation
 
-    use BATL_lib,               ONLY: nBlock, Unused_B, &
+    use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, x_, y_, z_
     use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph, &
          find_triangle_orig
-    use ModCoordTransform,      ONLY: rlonlat_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModMpi
 
     integer :: i, j, k, iBlock, iBuff, iError
@@ -1548,9 +1552,9 @@ contains
   !============================================================================
   subroutine save_threads_for_plot
 
-    use BATL_lib,               ONLY: nBlock, Unused_B, Xyz_DGB
-    use ModB0,                  ONLY: B0_DGB
-    use ModAdvance,             ONLY: State_VGB
+    use BATL_lib, ONLY: nBlock, Unused_B, Xyz_DGB
+    use ModB0, ONLY: B0_DGB
+    use ModAdvance, ONLY: State_VGB
     use ModTriangulateSpherical, ONLY:fix_state
 
     integer :: i, j, k, iBlock, iBuff
@@ -1623,11 +1627,11 @@ contains
     !==========================================================================
     subroutine state_mhd_to_thread(State_V, Xyz_D, B0_D, StateThread_V)
 
-      use ModPhysics,        ONLY: No2Si_V, UnitTemperature_, &
+      use ModPhysics, ONLY: No2Si_V, UnitTemperature_, &
            UnitEnergyDens_
-      use ModVarIndexes,      ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
-      use ModWaves,           ONLY: WaveFirst_, WaveLast_
-      use  ModTurbulence,   ONLY:PoyntingFluxPerB
+      use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
+      use ModWaves, ONLY: WaveFirst_, WaveLast_
+      use  ModTurbulence, ONLY:PoyntingFluxPerB
       !INPUT:
       ! MHD state vector
       real,    intent(in) :: State_V(nVar)
@@ -1865,7 +1869,7 @@ contains
     !==========================================================================
     subroutine get_te_ptot(TeSi, PTotSi)
 
-      use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB
+      use BATL_lib, ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB
       use ModInterpolate, ONLY: interpolate_vector
       ! OUTPUT:
       real, intent(out) :: TeSi, PTotSi
@@ -1939,6 +1943,31 @@ contains
     end subroutine set_plot_var
     !==========================================================================
   end subroutine get_tr_los_image
+  !============================================================================
+  subroutine set_ur_top_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_ur_top_tr
+  !============================================================================
+  subroutine set_u_top_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_top_tr
+  !============================================================================
+  subroutine set_u_bot_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_bot_tr
+  !============================================================================
+  subroutine set_u_min_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_min_tr
+  !============================================================================
+  subroutine set_u_max_tr(Var_IIB)
+    real, intent(out) :: Var_IIB(nJ,nK, MaxBlock)
+    !--------------------------------------------------------------------------
+  end subroutine set_u_max_tr
   !============================================================================
 end module ModFieldLineThread
 !==============================================================================

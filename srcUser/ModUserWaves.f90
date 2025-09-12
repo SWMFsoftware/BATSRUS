@@ -42,7 +42,7 @@ module ModUser
        IMPLEMENTED8 => user_set_plot_var,               &
        IMPLEMENTED9 => user_update_states
 
-  use ModSize,       ONLY: x_, y_, z_
+  use ModSize, ONLY: x_, y_, z_
   use ModVarIndexes
 
   include 'user_module.h' ! list of public methods
@@ -115,7 +115,7 @@ contains
     use ModReadParam
     ! use ModPhysics,  ONLY: Si2No_V, Io2Si_V,Io2No_V,&
     !      UnitRho_, UnitU_, UnitP_, UnitN_, UnitX_
-    use ModNumConst,  ONLY: cTwoPi,cDegToRad
+    use ModNumConst, ONLY: cTwoPi,cDegToRad
     use ModUtilities, ONLY: split_string, join_string
     use ModInitialState, ONLY: init_initial_state, read_initial_state_param
 
@@ -246,27 +246,27 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: TypeCoordSystem, GravitySi
+    use ModMain, ONLY: TypeCoordSystem, GravitySi
     use ModCalcSource, ONLY: FrictionSi, FrictionUDim_D
     use ModGeometry, ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-    use ModAdvance,  ONLY: &
+    use ModAdvance, ONLY: &
          State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure, UseEfield, UseAnisoPe
     use ModMultiFluid, ONLY: &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
-    use ModPhysics,  ONLY: &
+    use ModPhysics, ONLY: &
          ShockSlope, ShockLeft_V, ShockRight_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
          rPlanetSi, rBody, UnitT_, Gamma_I, nVectorVar, iVectorVar_I
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
-    use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
-    use BATL_lib,    ONLY: &
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
+    use ModConst, ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
+    use BATL_lib, ONLY: &
          nDim, CoordMax_D, CoordMin_D, IsPeriodic_D, CellSize_DB, Xyz_DGB
-    use ModInitialState,  ONLY: get_initial_state
-    use ModIonElectron,   ONLY: &
+    use ModInitialState, ONLY: get_initial_state
+    use ModIonElectron, ONLY: &
          correct_electronfluid_efield , DoCorrectElectronFluid, DoCorrectEfield
 
     integer, intent(in) :: iBlock
@@ -849,14 +849,14 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModMain,       ONLY: TypeCoordSystem
-    use ModPhysics,    ONLY: NameTecUnit_V, NameIdlUnit_V, No2Io_V, No2Si_V, &
+    use ModMain, ONLY: TypeCoordSystem
+    use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, No2Io_V, No2Si_V, &
          Si2No_V, UnitRho_, UnitP_, UnitU_,  UnitT_, Gamma0
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_, p_, Rho_
-    use ModConst,      ONLY: RotationPeriodSun
-    use ModNumConst,   ONLY: cTwoPi
-    use BATL_lib,      ONLY: &
+    use ModConst, ONLY: RotationPeriodSun
+    use ModNumConst, ONLY: cTwoPi
+    use BATL_lib, ONLY: &
          nI, nJ, nK, Xyz_DGB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
 
     integer,          intent(in)   :: iBlock
@@ -1008,13 +1008,13 @@ contains
     !==========================================================================
     subroutine calc_analytic_sln_sphere(iBlock,RhoExact_G,RhoError_G)
 
-      use ModMain,       ONLY: tSimulation, TypeCoordSystem
-      use ModGeometry,   ONLY: Xyz_DGB
-      use ModNumConst,   ONLY: cHalfPi, cTwoPi
-      use ModConst,      ONLY: RotationPeriodSun
-      use ModAdvance,    ONLY: State_VGB
+      use ModMain, ONLY: tSimulation, TypeCoordSystem
+      use ModGeometry, ONLY: Xyz_DGB
+      use ModNumConst, ONLY: cHalfPi, cTwoPi
+      use ModConst, ONLY: RotationPeriodSun
+      use ModAdvance, ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
-      use ModPhysics,    ONLY: Si2No_V,UnitT_
+      use ModPhysics, ONLY: Si2No_V,UnitT_
 
       integer, intent(in)  :: iBlock
       real,    intent(out) :: &
@@ -1070,10 +1070,10 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B
-    use ModAdvance,  ONLY: By_, State_VGB
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
+    use ModAdvance, ONLY: By_, State_VGB
     use ModGeometry, ONLY: zMaxBox, zMinBox
-    use BATL_lib,    ONLY: CellFace_DB, CellSize_DB, Xyz_DGB
+    use BATL_lib, ONLY: CellFace_DB, CellSize_DB, Xyz_DGB
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -1125,7 +1125,7 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(FBC)
 
-    use ModMain,    ONLY: x_, y_, z_, FaceBCType
+    use ModMain, ONLY: x_, y_, z_, FaceBCType
 
     type(FaceBCType) :: FBC
 
@@ -1154,15 +1154,15 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModImplicit, ONLY: StateSemi_VGB
-    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
-    use ModPhysics,  ONLY: Si2No_V, Io2Si_V,&
+    use ModSize, ONLY: nI, nJ, nK, x_, y_, z_
+    use ModPhysics, ONLY: Si2No_V, Io2Si_V,&
          Io2No_V, UnitRho_, UnitU_, UnitP_, UnitN_,&
          UnitT_, ShockLeft_V, ShockRight_V,&
          ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
-    use ModConst,    ONLY: cProtonMass, RotationPeriodSun
-    use ModMain,     ONLY: tSimulation, TypeCoordSystem
-    use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
+    use ModConst, ONLY: cProtonMass, RotationPeriodSun
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use ModAdvance, ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: TypeGeometry, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, r_GB
     use ModVarIndexes
@@ -1398,8 +1398,8 @@ contains
   !============================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
-    use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Rho_
+    use ModSize, ONLY: nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Rho_
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -1433,7 +1433,7 @@ contains
 
     use ModMain, ONLY: UseUserUpdateStates
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, &
+    use ModAdvance, ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, &
          LeftState_VX, RightState_VX, LeftState_VY, RightState_VY, &
          LeftState_VZ, RightState_VZ
     use BATL_lib, ONLY: nDim, nI, nJ, nK
@@ -1498,9 +1498,9 @@ contains
   !============================================================================
   subroutine get_gaussian_field(i, j, k, iBlock, B_D)
 
-    use ModGeometry,    ONLY: Xyz_DGB
-    use ModMain,        ONLY: tSimulation
-    use ModNumConst,    ONLY: cPi
+    use ModGeometry, ONLY: Xyz_DGB
+    use ModMain, ONLY: tSimulation
+    use ModNumConst, ONLY: cPi
     use ModResistivity, ONLY: Eta0
 
     integer, intent(in) :: i, j, k, iBlock

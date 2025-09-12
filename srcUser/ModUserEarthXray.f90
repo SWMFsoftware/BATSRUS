@@ -10,9 +10,9 @@ module ModUser
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc
 
-  use ModSize,       ONLY: nI,nJ,nK,MaxBlock
+  use ModSize, ONLY: nI,nJ,nK,MaxBlock
   use ModVarIndexes, ONLY: nVar
-  use ModMain,       ONLY:  nStep
+  use ModMain, ONLY:  nStep
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &
@@ -111,10 +111,10 @@ contains
 
   subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: tSimulation, dt
+    use ModMain, ONLY: tSimulation, dt
     use ModGeometry, ONLY: r_GB
-    use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
-    use ModPhysics,  ONLY: BodyRho_I, SolarWindRho, rBody
+    use ModAdvance, ONLY: State_VGB, rhoion_, rhosw_
+    use ModPhysics, ONLY: BodyRho_I, SolarWindRho, rBody
     use ModBlockData, ONLY: put_block_data
 
     integer, intent(in) :: iBlock
@@ -150,10 +150,10 @@ contains
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, found)
 
-    use ModMain,      ONLY : tSimulation, IsTimeAccurate
+    use ModMain, ONLY: tSimulation, IsTimeAccurate
     use ModVarIndexes
-    use ModAdvance,   ONLY : State_VGB
-    use ModPhysics,   ONLY : CellState_VI
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: CellState_VI
 
     integer,      intent(in) ::iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -194,7 +194,7 @@ contains
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
-    use ModMain,    ONLY: nStage, tSimulation, dt
+    use ModMain, ONLY: nStage, tSimulation, dt
     use ModBlockData, ONLY: get_block_data, put_block_data, use_block_data
 
     integer,intent(in):: iBlock

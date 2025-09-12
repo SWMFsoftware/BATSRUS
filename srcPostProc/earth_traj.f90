@@ -18,7 +18,7 @@ program earth_traj
   use CON_geopack_internal
   use ModUT
   use ModNumConst
-  use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
+  use ModTimeConvert, ONLY: time_int_to_real, time_real_to_int
   use ModConst
 
   implicit none

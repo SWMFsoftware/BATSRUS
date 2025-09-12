@@ -140,9 +140,9 @@ contains
   subroutine init_mod_resistivity
 
     use ModPhysics, ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
-    use ModConst,   ONLY: cLightSpeed, cElectronCharge, &
+    use ModConst, ONLY: cLightSpeed, cElectronCharge, &
          cElectronMass, cEps, cBoltzmann, cTwoPi
-    use BATL_lib,   ONLY: get_region_indexes
+    use BATL_lib, ONLY: get_region_indexes
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_resistivity'
@@ -200,8 +200,8 @@ contains
   !============================================================================
   subroutine set_resistivity
 
-    use ModMain,    ONLY: nBlock, Unused_B
-    use BATL_lib,   ONLY: message_pass_cell, block_inside_regions
+    use ModMain, ONLY: nBlock, Unused_B
+    use BATL_lib, ONLY: message_pass_cell, block_inside_regions
     use ModUserInterface
 
     real, allocatable:: ResistFactor_G(:,:,:)
@@ -259,11 +259,11 @@ contains
   !============================================================================
   subroutine spitzer_resistivity(iBlock, Eta_G)
 
-    use ModConst,   ONLY: cProtonMass, cElectronCharge
+    use ModConst, ONLY: cProtonMass, cElectronCharge
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitRho_, UnitTemperature_
     use ModAdvance, ONLY: State_VGB, Rho_, P_
-    use ModB0,      ONLY: B0_DGB
-    use ModMain,    ONLY: UseB0
+    use ModB0, ONLY: B0_DGB
+    use ModMain, ONLY: UseB0
 
     ! Compute Spitzer-type, classical resistivity
 
@@ -337,9 +337,9 @@ contains
     ! Eta = Alpha * j'^2    j' = |j|*gridspacing/(|B| + epsilon)
     ! Eta = 0 if j' < JoverBCrit
 
-    use ModCurrent,  ONLY: get_current
-    use ModAdvance,  ONLY: State_VGB
-    use ModB0,       ONLY: B0_DGB
+    use ModCurrent, ONLY: get_current
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain, ONLY: UseB0
 
@@ -385,11 +385,11 @@ contains
   !============================================================================
   subroutine calc_resistivity_source(iBlock)
 
-    use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB, x_, Used_GB
-    use ModCurrent,    ONLY: get_current
-    use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
+    use BATL_lib, ONLY: IsRzGeometry, Xyz_DGB, x_, Used_GB
+    use ModCurrent, ONLY: get_current
+    use ModPhysics, ONLY: GammaElectronMinus1, InvGammaElectronMinus1
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, By_, Bz_, Energy_
-    use ModAdvance,    ONLY: Source_VC, &
+    use ModAdvance, ONLY: Source_VC, &
          UseElectronPressure, UseAnisoPressure, UseAnisoPe
     use omp_lib
 
@@ -492,11 +492,11 @@ contains
   !============================================================================
   subroutine calc_heat_exchange
 
-    use ModMain,       ONLY: Cfl
-    use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
+    use ModMain, ONLY: Cfl
+    use ModPhysics, ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, UseAnisoPe
-    use BATL_lib,      ONLY: nBlock, Unused_B, Used_GB
+    use ModAdvance, ONLY: DtMax_CB, State_VGB, UseAnisoPressure, UseAnisoPe
+    use BATL_lib, ONLY: nBlock, Unused_B, Used_GB
 
     real:: DtLocal
     real:: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -603,8 +603,8 @@ contains
 
     ! Interface for (Semi-)implicit collisional and Hall resistivity
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
+    use ModAdvance, ONLY: State_VGB
+    use ModImplicit, ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
     use BATL_lib, ONLY: nBlock, Unused_B, iProc
 
@@ -710,15 +710,15 @@ contains
   !============================================================================
   subroutine init_impl_hall_resist
 
-    use BATL_lib,        ONLY: nBlock, Unused_B, IsCartesian, &
+    use BATL_lib, ONLY: nBlock, Unused_B, IsCartesian, &
          Xyz_DGB, CellSize_DB, CellFace_DB, FaceNormal_DDFB
-    use ModAdvance,      ONLY: State_VGB
-    use ModMain,         ONLY: UseB0
-    use ModNumConst,     ONLY: i_DD, cPi
-    use ModVarIndexes,   ONLY: Bx_, Bz_
-    use ModMultiFluid,   ONLY: iRhoIon_I
-    use ModB0,           ONLY: B0_DGB
-    use ModHallResist,   ONLY: UseHallResist, &
+    use ModAdvance, ONLY: State_VGB
+    use ModMain, ONLY: UseB0
+    use ModNumConst, ONLY: i_DD, cPi
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModMultiFluid, ONLY: iRhoIon_I
+    use ModB0, ONLY: B0_DGB
+    use ModHallResist, ONLY: UseHallResist, &
          set_hall_factor_face, HallFactor_DF, IsHallBlock, HallCmaxFactor
 
     integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
@@ -1280,7 +1280,7 @@ contains
     use ModFaceGradient, ONLY: set_block_jacobian_face
     use ModImplicit, ONLY: nStencil, UseNoOverlap
     use ModNumConst, ONLY: i_DD, iLeviCivita_III
-    use ModAdvance,  ONLY: B_
+    use ModAdvance, ONLY: B_
     use ModHallResist, ONLY: HallCmaxFactor
 
     integer, intent(in):: iBlock

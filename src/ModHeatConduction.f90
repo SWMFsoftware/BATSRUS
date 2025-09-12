@@ -4,7 +4,7 @@
 
 module ModHeatConduction
 
-  use BATL_lib,     ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -115,7 +115,7 @@ contains
   !============================================================================
   subroutine read_heatconduction_param(NameCommand)
 
-    use ModMain,      ONLY: UseHeatConduction, UseIonHeatConduction
+    use ModMain, ONLY: UseHeatConduction, UseIonHeatConduction
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -165,19 +165,19 @@ contains
   !============================================================================
   subroutine init_heat_conduction
 
-    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
          j0_, nJp1_, k0_, nKp1_, nGang
-    use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
+    use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge, kappa_0_e
-    use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
-    use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
+    use ModImplicit, ONLY: UseSemiImplicit, nVarSemi, iTeImpl
+    use ModMain, ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
     use ModMultiFluid, ONLY: UseMultiIon, MassIon_I
-    use ModNumConst,   ONLY: cTwoPi
+    use ModNumConst, ONLY: cTwoPi
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: UseRadCooling
-    use ModResistivity,  ONLY: UseHeatExchange, UseResistivity
-    use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
+    use ModResistivity, ONLY: UseHeatExchange, UseResistivity
+    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitT_, No2Si_V, UnitN_, &
          ElectronTemperatureRatio, AverageIonCharge, CoulombLog
     use ModVarIndexes, ONLY: nVar
@@ -358,18 +358,18 @@ contains
        StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal,&
        HeatFlux,  IsNewBlockHeatCond)
 
-    use BATL_lib,        ONLY: Xyz_DGB
-    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
+    use BATL_lib, ONLY: Xyz_DGB
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance, ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, InvGammaElectronMinus1
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ehot_
-    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, Ehot_
+    use ModMultifluid, ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
-    use ModMain,         ONLY: UseFieldLineThreads, nDim, nIJK_D
-    use ModGeometry,     ONLY: IsBoundary_B
-    use ModParallel,     ONLY: Unset_, DiLevel_EB
+    use ModMain, ONLY: UseFieldLineThreads, nDim, nIJK_D
+    use ModGeometry, ONLY: IsBoundary_B
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 
@@ -524,18 +524,18 @@ contains
   subroutine get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
-    use BATL_lib,        ONLY: Xyz_DGB
-    use ModAdvance,      ONLY: UseIdealEos, UseElectronPressure
-    use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
-    use ModMain,         ONLY: UseB0
-    use ModNumConst,     ONLY: cTolerance
-    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
+    use BATL_lib, ONLY: Xyz_DGB
+    use ModAdvance, ONLY: UseIdealEos, UseElectronPressure
+    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+    use ModMain, ONLY: UseB0
+    use ModNumConst, ONLY: cTolerance
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          ElectronGyroFreqCoef
-    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
     use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
-    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
+    use ModMultifluid, ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
-    use ModGeometry,     ONLY: r_GB
+    use ModGeometry, ONLY: r_GB
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
@@ -646,11 +646,11 @@ contains
        StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, &
        HeatFlux, IsNewBlockIonHeatCond)
 
-    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance, ONLY: State_VGB, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: InvGammaMinus1
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_
+    use ModPhysics, ONLY: InvGammaMinus1
+    use ModVarIndexes, ONLY: nVar, Rho_, p_
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
@@ -709,10 +709,10 @@ contains
   subroutine get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
-    use ModAdvance,    ONLY: UseIdealEos
-    use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
-    use ModMain,       ONLY: UseB0
-    use ModNumConst,   ONLY: cTolerance
+    use ModAdvance, ONLY: UseIdealEos
+    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+    use ModMain, ONLY: UseB0
+    use ModNumConst, ONLY: cTolerance
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_
     use ModUserInterface ! user_material_properties
 
@@ -762,7 +762,7 @@ contains
   !============================================================================
   real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
 
-    use BATL_lib,    ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
 
@@ -795,11 +795,11 @@ contains
 
     ! Non-split operator, (almost) explicit ei heat energy exchange
 
-    use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
-    use BATL_lib,      ONLY: Used_GB
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, CollisionCoef_II
+    use ModMain, ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
+    use BATL_lib, ONLY: Used_GB
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_, CollisionCoef_II
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
+    use ModAdvance, ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
          UseIdealEos
     use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon, &
          nIonFluid
@@ -915,15 +915,15 @@ contains
   !============================================================================
   subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
     !$acc routine seq
-    use BATL_lib,      ONLY: Xyz_DGB
-    use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
-    use ModB0,         ONLY: B0_DGB
-    use ModConst,      ONLY: cBoltzmann, cElectronmass
-    use ModGeometry,   ONLY: r_GB
-    use ModMain,       ONLY: UseB0
-    use ModNumConst,   ONLY: cTolerance, i_DD
+    use BATL_lib, ONLY: Xyz_DGB
+    use ModAdvance, ONLY: UseIdealEos, UseElectronPressure
+    use ModB0, ONLY: B0_DGB
+    use ModConst, ONLY: cBoltzmann, cElectronmass
+    use ModGeometry, ONLY: r_GB
+    use ModMain, ONLY: UseB0
+    use ModNumConst, ONLY: cTolerance, i_DD
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, UseMultiIon
-    use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
+    use ModPhysics, ONLY: UnitTemperature_, AverageIonCharge, &
          UnitPoynting_, ElectronGyroFreqCoef, UnitN_, Si2No_V, No2Si_V
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, p_, Pe_, Rho_
     use ModRadiativeCooling, ONLY: &
@@ -1083,34 +1083,34 @@ contains
 
     ! Operator split, semi-implicit subroutines
 
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
+    use ModAdvance, ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, DtMax_CB
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
-    use ModImplicit,     ONLY: nBlockSemi, iBlockFromSemi_B, &
+    use ModImplicit, ONLY: nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
-    use ModMain,         ONLY: Dt, IsTimeAccurate, Cfl
-    use ModMultifluid,   ONLY: UseMultiIon, iRhoIon_I, MassIon_I, &
+    use ModMain, ONLY: Dt, IsTimeAccurate, Cfl
+    use ModMultifluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I, &
          ChargeIon_I
-    use ModNumConst,     ONLY: i_DD
-    use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
+    use ModNumConst, ONLY: i_DD
+    use ModPhysics, ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitEnergyDens_, UnitN_, UnitT_, AverageIonCharge, &
          InvGammaElectronMinus1, &
          CollisionCoef_II, GammaMinus1, InvGammaMinus1
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: get_radiative_cooling
-    use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
+    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
-    use BATL_size,       ONLY: nI, nJ, nK, j0_, nJp1_, k0_, nKp1_, &
+    use BATL_size, ONLY: nI, nJ, nK, j0_, nJp1_, k0_, nKp1_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
-    use ModMain,         ONLY: UseFieldLineThreads
-    use ModGeometry,     ONLY: IsBoundary_B
-    use ModParallel,     ONLY: Unset_, DiLevel_EB
-    use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB
-    use ModResistivity,  ONLY: UseHeatExchange
+    use ModMain, ONLY: UseFieldLineThreads
+    use ModGeometry, ONLY: IsBoundary_B
+    use ModParallel, ONLY: Unset_, DiLevel_EB
+    use ModSemiImplVar, ONLY: SemiAll_VCB, DconsDsemiAll_VCB
+    use ModResistivity, ONLY: UseHeatExchange
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
@@ -1425,23 +1425,23 @@ contains
     !$acc routine vector
 
 #ifndef _OPENACC
-    use BATL_lib,        ONLY: store_face_flux
+    use BATL_lib, ONLY: store_face_flux
 #endif
-    use BATL_lib,        ONLY: CellVolume_GB, IsCartesianGrid, &
+    use BATL_lib, ONLY: CellVolume_GB, IsCartesianGrid, &
          DiLevelNei_IIIB
-    use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, &
          iTypeUpdate, UpdateOrig_
     use ModFaceGradient, ONLY: get_face_gradient_simple, set_block_field3, &
          set_block_jacobian_face_simple
-    use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
+    use ModImplicit, ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, SemiStateTmp_VGI, &
          DcoordDxyz_DDFDI, TransGrad_DDGI
-    use ModMain,         ONLY: nI, nJ, nK
-    use ModNumConst,     ONLY: i_DD
-    use ModMultiFluid,   ONLY: UseMultiIon
-    use ModMain,         ONLY: UseFieldLineThreads
-    use ModGeometry,     ONLY: IsBoundary_B
+    use ModMain, ONLY: nI, nJ, nK
+    use ModNumConst, ONLY: i_DD
+    use ModMultiFluid, ONLY: UseMultiIon
+    use ModMain, ONLY: UseFieldLineThreads
+    use ModGeometry, ONLY: IsBoundary_B
     use ModFieldLineThread, ONLY: UseFieldLineThreads
 
     integer, intent(in) :: iBlock
@@ -1585,14 +1585,14 @@ contains
     ! nDimPrecond is the number of dimensions for the preconditioner,
     ! which is 1 for BILU1.
 
-    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceGradient, ONLY: set_block_jacobian_face_simple
-    use ModImplicit,     ONLY: UseNoOverlap, nDiagSemi, iTeImpl, &
+    use ModImplicit, ONLY: UseNoOverlap, nDiagSemi, iTeImpl, &
          DcoordDxyz_DDFDI, TransGrad_DDGI
-    use ModMain,         ONLY: nI, nJ, nK
-    use ModNumConst,     ONLY: i_DD
-    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
-    use ModMultiFluid,   ONLY: UseMultiIon
+    use ModMain, ONLY: nI, nJ, nK
+    use ModNumConst, ONLY: i_DD
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
+    use ModMultiFluid, ONLY: UseMultiIon
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
@@ -1694,16 +1694,16 @@ contains
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
     ! of the extremely advanced PGF90 12.9 compiler
 
-    use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
+    use ModAdvance, ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, DtMax_CB
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
     use BATL_lib, ONLY: Used_GB
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
-    use ModMain,     ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl
-    use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
+    use ModMain, ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl
+    use ModPhysics, ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
          InvGammaMinus1, GammaMinus1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin, pMin_I, PeMin
-    use BATL_lib,    ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB
     use ModMultiFluid, ONLY: UseMultiIon
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless

@@ -32,8 +32,8 @@ contains
   !============================================================================
   subroutine user_read_inputs
     use ModMain
-    use ModReadParam,   ONLY: read_line, read_command, read_var
-    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
+    use ModReadParam, ONLY: read_line, read_command, read_var
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
 
     character (len=100) :: NameCommand
 
@@ -98,10 +98,10 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,      ONLY: nI,nJ,nK
+    use ModMain, ONLY: nI,nJ,nK
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB
-    use ModPhysics,   ONLY: InvGammaMinus1,BodyTDim_I
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: InvGammaMinus1,BodyTDim_I
     use ModGeometry
 
     integer, intent(in) :: iBlock
@@ -128,7 +128,7 @@ contains
     use ModVarIndexes
     use ModSize
     use ModAdvance
-    use ModWaves,   ONLY: UseWavePressure
+    use ModWaves, ONLY: UseWavePressure
 
     integer,intent(in)           :: iBlock
     real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
@@ -157,8 +157,8 @@ contains
   !============================================================================
   subroutine write_spectrogram
 
-    use ModMain,   ONLY: nIteration, MaxBlock,Unused_B,nBlockALL
-    use ModSize,   ONLY: nI,nJ,nK
+    use ModMain, ONLY: nIteration, MaxBlock,Unused_B,nBlockALL
+    use ModSize, ONLY: nI,nJ,nK
     use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
     use ModIoUnit, ONLY: io_unit_new
     use ModVarIndexes
@@ -276,7 +276,7 @@ contains
 
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
-    use ModWaves,    ONLY: FreqMinSI, DeltaLogFrequency
+    use ModWaves, ONLY: FreqMinSI, DeltaLogFrequency
 
     integer                    :: iFreq
     real                       :: LogFreqMin
@@ -302,11 +302,11 @@ contains
   !============================================================================
   subroutine init_wave_spectrum
 
-    use ModMain,        ONLY: Unused_B,MaxBlock
+    use ModMain, ONLY: Unused_B,MaxBlock
     use ModVarIndexes
-    use ModAdvance,     ONLY: State_VGB
-    use ModSize,        ONLY: nI,nJ,nK
-    use ModWaves,       ONLY: DeltaLogFrequency, &
+    use ModAdvance, ONLY: State_VGB
+    use ModSize, ONLY: nI,nJ,nK
+    use ModWaves, ONLY: DeltaLogFrequency, &
          AlfvenPlusFirst_,&
          AlfvenMinusFirst_
 
@@ -343,7 +343,7 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
-    use ModIO,         ONLY: write_myname
+    use ModIO, ONLY: write_myname
 
     character (LEN=10), intent(in):: TypeVar
     real,intent(out)              :: VarValue

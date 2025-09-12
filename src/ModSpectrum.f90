@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSpectrum
 
-  use BATL_lib,          ONLY: iProc
+  use BATL_lib, ONLY: iProc
   use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
@@ -47,13 +47,13 @@ contains
   !============================================================================
   subroutine spectrum_read_table(iFile, UseNbi, UsePhx)
 
-    use ModIoUnit,      ONLY: io_unit_new
-    use ModUtilities,   ONLY: open_file, close_file
-    use ModIO,          ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
+    use ModIoUnit, ONLY: io_unit_new
+    use ModUtilities, ONLY: open_file, close_file
+    use ModIO, ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
          LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, &
          NamePhxTable_I, UseIonFrac_I
     ! response function
-    use ModPlotFile,    ONLY: read_plot_file
+    use ModPlotFile, ONLY: read_plot_file
     ! photoexcitation
     use ModLookupTable, ONLY: init_lookup_table, i_lookup_table, Table_I
 
@@ -355,7 +355,7 @@ contains
          UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModTurbulence,  ONLY: IsOnAwRepresentative, PoyntingFluxPerB
+    use ModTurbulence, ONLY: IsOnAwRepresentative, PoyntingFluxPerB
     use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
 
     integer, intent(in)   :: iFile, nLambda

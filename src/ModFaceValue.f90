@@ -153,8 +153,8 @@ contains
   !============================================================================
   subroutine read_face_value_param(NameCommand)
 
-    use ModReadParam,  ONLY: read_var, lStringLine
-    use ModUtilities,  ONLY: split_string
+    use ModReadParam, ONLY: read_var, lStringLine
+    use ModUtilities, ONLY: split_string
     use ModVarIndexes, ONLY: NameVar_V
 
     character(len=*), intent(in) :: NameCommand
@@ -251,8 +251,8 @@ contains
     use ModSize
     use ModVarIndexes, ONLY: DefaultState_V, nVar, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModParallel,   ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
-    use BATL_lib,  ONLY: Unused_BP
+    use ModParallel, ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
+    use BATL_lib, ONLY: Unused_BP
 
     integer, intent(in) :: iBlock
 
@@ -972,10 +972,10 @@ contains
     use ModB0
     use ModAdvance, ONLY: UseElectronPressure, UseWavePressure, &
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
-    use ModParallel, ONLY : DiLevel_EB
+    use ModParallel, ONLY: DiLevel_EB
     use ModViscosity, ONLY: UseArtificialVisco
-    use ModSaMhd,  ONLY: UseSaMhd, correct_samhd_face_value
-    use BATL_lib,  ONLY: Used_GB
+    use ModSaMhd, ONLY: UseSaMhd, correct_samhd_face_value
+    use BATL_lib, ONLY: Used_GB
     integer, intent(in):: iBlock
     logical, intent(in):: DoResChangeOnly
     logical, intent(in), optional:: DoMonotoneRestrict
@@ -2765,7 +2765,7 @@ contains
   !============================================================================
   subroutine set_low_order_face
 
-    use ModMain,  ONLY: MaxBlock, iMinFace, iMaxFace, jMinFace, jMaxFace, &
+    use ModMain, ONLY: MaxBlock, iMinFace, iMaxFace, jMinFace, jMaxFace, &
          kMinFace, kMaxFace, nIFace, nJFace, nKFace, nOrder, nBlock
     use ModB0
     use ModPhysics, ONLY: Gamma_I
@@ -3117,8 +3117,8 @@ contains
 
     use ModAdvance, ONLY: FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
          Vel_IDGB
-    use BATL_size,   ONLY: nDim, jDim_, kDim_
-    use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
+    use BATL_size, ONLY: nDim, jDim_, kDim_
+    use ModMain, ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
          kMaxFace, nIFace, nJFace, nKFace
     integer, intent(in)::iBlock
 

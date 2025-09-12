@@ -16,7 +16,7 @@ module ModConstrainDivB
   ! Since we switched to BATL, it only works on uniform grid.
 
   use ModSize
-  use ModIO,     ONLY: iUnitOut, write_prefix
+  use ModIO, ONLY: iUnitOut, write_prefix
   use ModUtilities, ONLY: i_gang
 
   implicit none
@@ -113,9 +113,9 @@ contains
 
     ! Calculate VxB from fluxes following Balsara and Spicer
 
-    use ModMain, ONLY : nI,nJ,nK
-    use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
+    use ModMain, ONLY: nI,nJ,nK
+    use ModVarIndexes, ONLY: Bx_,By_,Bz_
+    use ModAdvance, ONLY: Flux_VXI,Flux_VYI,Flux_VZI
     use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
@@ -170,11 +170,11 @@ contains
     ! Apply boundary conditions on VxB
 
     use ModSize
-    use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
-    use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
-    use ModParallel, ONLY : Unset_, DiLevel_EB
-    use ModGeometry, ONLY : IsBody_B
+    use ModMain, ONLY: TypeCellBc_I, Coord1MaxBc_
+    use ModVarIndexes, ONLY: Bx_,By_,Bz_
+    use ModAdvance, ONLY: Flux_VXI,Flux_VYI,Flux_VZI
+    use ModParallel, ONLY: Unset_, DiLevel_EB
+    use ModGeometry, ONLY: IsBody_B
     use ModPhysics, ONLY: SolarWindUx, SolarWindUy, SolarWindUz, &
          SolarWindBx, SolarWindBy, SolarWindBz
     use BATL_lib, ONLY: CellFace_DB, Used_GB
@@ -284,8 +284,8 @@ contains
     ! Use CT scheme for updating the B field so that div B is conserved
 
     use ModSize
-    use ModMain, ONLY : Dt
-    use ModGeometry, ONLY : CellSize_DB
+    use ModMain, ONLY: Dt
+    use ModGeometry, ONLY: CellSize_DB
 
     integer, intent(in) :: iBlock
 
@@ -352,10 +352,10 @@ contains
   subroutine bface_to_bcenter(iBlock)
 
     use ModSize
-    use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : IsBody_B
-    use BATL_lib,  ONLY: Used_GB
+    use ModVarIndexes, ONLY: Bx_,By_,Bz_
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: IsBody_B
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -394,8 +394,8 @@ contains
   subroutine bcenter_to_bface(iBlock)
 
     use ModSize
-    use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : State_VGB
+    use ModVarIndexes, ONLY: Bx_,By_,Bz_
+    use ModAdvance, ONLY: State_VGB
     use ModMain, ONLY: UseConstrainB
 
     integer, intent(in) :: iBlock
@@ -446,7 +446,7 @@ contains
 
     use ModSize
     use ModGeometry, ONLY: IsBody_B
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
 
@@ -483,10 +483,10 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : IsBody_B
-    use ModIO, ONLY : IsRestart
-    use ModPhysics, ONLY : SolarWindBx,SolarWindBy,SolarWindBz
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: IsBody_B
+    use ModIO, ONLY: IsRestart
+    use ModPhysics, ONLY: SolarWindBx,SolarWindBy,SolarWindBz
     use BATL_lib, ONLY: Xyz_DGB, Used_GB
 
     integer, intent(in) :: iBlock

@@ -198,7 +198,7 @@ contains
   subroutine user_calc_sources_impl(iBlock)
 
     use ModPointImplicit, ONLY: UsePointImplicit
-    use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition
+    use ModMain, ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition
     use ModPhysics, ONLY: Rbody,UnitTemperature_, No2Io_V, No2Si_V, Io2No_V,&
          UnitT_,UnitN_,ElectronPressureRatio, &
          GammaMinus1, GammaMinus1_I, InvGammaMinus1, InvGammaMinus1_I
@@ -1734,7 +1734,7 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry,      ONLY: ExtraBc_, Xyz_DGB, xMaxBox
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, xMaxBox
     use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock
@@ -1753,11 +1753,11 @@ contains
 
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
-    use ModGeometry,        ONLY: Xyz_DGB, r_GB
-    use ModAdvance,         ONLY: State_VGB, Tmp1_GB
-    use ModPhysics,         ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModGeometry, ONLY: Xyz_DGB, r_GB
+    use ModAdvance, ONLY: State_VGB, Tmp1_GB
+    use ModPhysics, ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
     use ModWriteLogSatFile, ONLY: calc_sphere
-    use BATL_lib,           ONLY: Unused_B
+    use BATL_lib, ONLY: Unused_B
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: NameVar

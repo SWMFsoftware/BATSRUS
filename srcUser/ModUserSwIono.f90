@@ -68,8 +68,8 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModGeometry, ONLY: r_GB
-    use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
-    use ModPhysics,  ONLY: BodyRho_I, SolarWindRho, rBody
+    use ModAdvance, ONLY: State_VGB, rhoion_, rhosw_
+    use ModPhysics, ONLY: BodyRho_I, SolarWindRho, rBody
 
     integer, intent(in) :: iBlock
     logical:: DoTest
@@ -91,10 +91,10 @@ contains
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, found)
 
-    use ModMain,      ONLY: tSimulation, IsTimeAccurate
+    use ModMain, ONLY: tSimulation, IsTimeAccurate
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB
-    use ModPhysics,   ONLY: CellState_VI
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: CellState_VI
 
     integer,      intent(in) :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc

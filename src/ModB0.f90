@@ -280,7 +280,7 @@ contains
 
     ! Calculate the cell centered B0 for block iBlock
     use ModConst, ONLY: cTiny
-    use ModMain,  ONLY: UseFieldLineThreads, DoThreads_B
+    use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
          CoordMin_D, CoordMin_DB
 
@@ -313,9 +313,9 @@ contains
 
     ! Calculate the face centered B0 for block iBlock
 
-    use ModMain,  ONLY: UseFieldLineThreads
+    use ModMain, ONLY: UseFieldLineThreads
     use ModParallel, ONLY: DiLevel_EB, Unset_
-    use BATL_lib,    ONLY: nDim, CoordMin_DB, CellSize_DB, coord_to_xyz
+    use BATL_lib, ONLY: nDim, CoordMin_DB, CellSize_DB, coord_to_xyz
 
     integer,intent(in)::iBlock
     ! Coords and Xyz for
@@ -538,7 +538,7 @@ contains
 
     ! Calculate div(B0) and curl(B0) for block iBlock
 
-    use ModSize,  ONLY: x_, y_, z_
+    use ModSize, ONLY: x_, y_, z_
     use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
     use ModCoordTransform, ONLY: cross_product
@@ -726,13 +726,13 @@ contains
 
     ! Get B0 at location Xyz_D
 
-    use ModMain,           ONLY : tSimulation, NameThisComp, &
+    use ModMain, ONLY: tSimulation, NameThisComp, &
          TypeCoordSystem
-    use ModPhysics,        ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
+    use ModPhysics, ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
          MonopoleStrength
-    use CON_planet_field,  ONLY: get_planet_field
-    use ModMain,           ONLY: UseBody2, UseUserB0, IsTimeAccurate, StartTime
-    use ModMagnetogram,    ONLY: iTableB0, iTableB0New, get_magnetogram_field
+    use CON_planet_field, ONLY: get_planet_field
+    use ModMain, ONLY: UseBody2, UseUserB0, IsTimeAccurate, StartTime
+    use ModMagnetogram, ONLY: iTableB0, iTableB0New, get_magnetogram_field
     use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
 
     real, intent(in) :: Xyz_D(3)

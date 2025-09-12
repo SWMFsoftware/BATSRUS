@@ -300,7 +300,7 @@ contains
     use ModB0, ONLY: set_b0_cell
     use ModPhysics, ONLY: FaceState_VI, rBody2
     use ModGeometry, ONLY: IsBody_B, IsNoBody_B, rBody2_GB
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModMain, ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
          DtMax_B, IsTimeAccurate, UseDtFixed, Dt
     use ModParallel, ONLY: DiLevel_EB, Unset_

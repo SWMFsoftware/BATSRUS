@@ -2919,7 +2919,7 @@ contains
     use ModIeCoupling, ONLY: dIonoPotential_DII, rIonosphere, &
          dThetaIono, dPhiIono
     use ModCoordTransform, ONLY: xyz_to_dir
-    use CON_planet_field,  ONLY: map_planet_field_fast
+    use CON_planet_field, ONLY: map_planet_field_fast
 
     real, intent(in)    :: tSimulation      ! Simulation time
     real, intent(in)    :: Xyz_D(3)    ! Position vector

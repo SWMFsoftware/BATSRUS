@@ -24,8 +24,8 @@ contains
   !============================================================================
   subroutine user_initial_perturbation
 
-    use ModMain,     ONLY: nBlock, Unused_B
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
+    use ModMain, ONLY: nBlock, Unused_B
+    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
     use ModGeometry, ONLY: Xyz_DGB, yMinBox, yMaxBox, zMinBox, zMaxBox
     use ModNumConst, ONLY: cTwoPi
 

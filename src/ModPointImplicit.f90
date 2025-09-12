@@ -116,8 +116,8 @@ contains
   !============================================================================
   subroutine init_mod_point_impl(init_point_implicit)
 
-    use ModKind,    ONLY: nByteReal
-    use ModMain,    ONLY: nI, nJ, nK, nVar
+    use ModKind, ONLY: nByteReal
+    use ModMain, ONLY: nI, nJ, nK, nVar
 
     optional :: init_point_implicit
 
@@ -247,7 +247,7 @@ contains
   end subroutine clean_mod_point_impl
   !============================================================================
   subroutine read_point_implicit_param
-    use ModReadParam,     ONLY: read_var
+    use ModReadParam, ONLY: read_var
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_point_implicit_param'
@@ -266,13 +266,13 @@ contains
   !============================================================================
   subroutine update_point_implicit(iBlock, calc_point_impl_source)
 
-    use ModMain,    ONLY: &
+    use ModMain, ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, IsTimeAccurate
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, DtMax_CB, &
          DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
     use ModGeometry, ONLY: IsNoBody_B
-    use BATL_lib,    ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V, NameVar_V
     use ModPhysics, ONLY: RhoMin_I

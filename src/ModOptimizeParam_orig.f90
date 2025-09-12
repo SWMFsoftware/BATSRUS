@@ -5,7 +5,7 @@ module ModOptimizeParam
   ! and edited by GM/BATSRUS/Config.pl before compilation.
 
   use ModUtilities, ONLY: CON_stop
-  use BATL_lib,   ONLY: nDim
+  use BATL_lib, ONLY: nDim
 
   ! Variables that may be set to constant values
   use BATL_lib, ONLY: &

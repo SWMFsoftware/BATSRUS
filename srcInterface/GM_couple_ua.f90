@@ -29,9 +29,9 @@ contains
 
     use BATL_lib, ONLY: Xyz_DGB, nBlock, Unused_B, nI, nJ, nK, MaxBlock, &
          test_start ! , iTest, jTest, kTest, iBlockTest
-    use ModMain, ONLY: UaState_VCB
+    use ModMain, ONLY: UaState_VCB, rMaxUa
     use ModGeometry, ONLY: r_GB
-    use ModPhysics, ONLY: No2Si_V, UnitX_, rBody
+    use ModPhysics, ONLY: No2Si_V, UnitX_
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -59,7 +59,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(r_GB(i,j,k,iBlock) > 3.0*rBody) CYCLE ! rMaxUA originally
+          if(r_GB(i,j,k,iBlock) > rMaxUa) CYCLE ! rMaxUA originally
 
           ! Found a point of GM to be set by UA
           iPoint = iPoint + 1

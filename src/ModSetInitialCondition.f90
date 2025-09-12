@@ -551,12 +551,12 @@ contains
   !============================================================================
   subroutine add_rotational_velocity(iSign, iBlockIn)
 
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
-    use ModMain,     ONLY: Unused_B, NameThisComp
-    use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: OmegaBody
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
+    use ModMain, ONLY: Unused_B, NameThisComp
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: OmegaBody
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I
-    use BATL_lib,    ONLY: Xyz_DGB, iProc, Used_GB
+    use BATL_lib, ONLY: Xyz_DGB, iProc, Used_GB
 
     integer, intent(in):: iSign
     integer, optional, intent(in):: iBlockIn

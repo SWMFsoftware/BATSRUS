@@ -159,9 +159,9 @@ contains
   !============================================================================
   subroutine get_ie_potential(Xyz_D, Potential)
 
-    use ModMain,           ONLY: tSimulation, TypeCoordSystem
-    use ModInterpolate,    ONLY: bilinear
-    use CON_planet_field,  ONLY: map_planet_field
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use ModInterpolate, ONLY: bilinear
+    use CON_planet_field, ONLY: map_planet_field
 
     ! Interpolate IE potential to Xyz_D location
     ! Assume equipotential dipole field lines
@@ -286,7 +286,7 @@ contains
 
     ! Calculate cross polar cap potentials for write_logvar
 
-    use ModIO,      ONLY: write_myname
+    use ModIO, ONLY: write_myname
 
     character (len=*), intent(in) :: NameLogvar
     integer :: nWarn = 0 ! warn multiple times to catch multiple log variables
@@ -315,8 +315,8 @@ contains
   !============================================================================
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
-    use ModMain,           ONLY: TypeCoordSystem, MaxDim
-    use CON_planet_field,  ONLY: map_planet_field
+    use ModMain, ONLY: TypeCoordSystem, MaxDim
+    use CON_planet_field, ONLY: map_planet_field
 
     real, intent(in)    :: tSimulation      ! Simulation time
     real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
@@ -419,7 +419,7 @@ contains
   !============================================================================
   subroutine map_jouleheating_to_inner_bc
 
-    use ModMain,    ONLY: tSimulation
+    use ModMain, ONLY: tSimulation
     use ModPhysics, ONLY: rBody
     use CON_planet_field, ONLY: get_planet_field, map_planet_field
 
@@ -462,8 +462,8 @@ contains
     ! Get the Joule heating at the position XyzSm_D (given in SMG)
     ! at the inner boundary.
 
-    use ModMain,           ONLY: tSimulation
-    use CON_planet_field,  ONLY: map_planet_field
+    use ModMain, ONLY: tSimulation
+    use CON_planet_field, ONLY: map_planet_field
 
     real, intent(in)    :: XyzSm_D(3) ! Position vector in SMG
     real, intent(out)   :: JouleHeating    ! Houle heating
@@ -508,8 +508,8 @@ contains
   !============================================================================
   subroutine calc_ie_currents
 
-    use CON_planet_field,  ONLY: get_planet_field
-    use ModMain,           ONLY: tSimulation
+    use CON_planet_field, ONLY: get_planet_field
+    use ModMain, ONLY: tSimulation
 
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitElectric_, UnitJ_
 
@@ -753,13 +753,13 @@ contains
   !============================================================================
   subroutine apply_ie_velocity
 
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, IsTimeAccurate, tSimulation, &
+    use ModMain, ONLY: nI, nJ, nK, nBlock, IsTimeAccurate, tSimulation, &
          Dt, Unused_B, UseB0, UseRotatingBc
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModGeometry, ONLY: r_GB, rMin_B
-    use ModB0,      ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, OmegaBody_D
-    use BATL_lib,   ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB
 
     real :: Factor, RhoUdotB
     real, dimension(3) :: Xyz_D, Uiono_D, RhoUiono_D, RhoU_D, b_D

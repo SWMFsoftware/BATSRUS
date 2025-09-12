@@ -235,9 +235,9 @@ contains
     use ModResistivity, ONLY: UseResistivity, UseResistiveFlux, &
          calc_resistivity_source
     use ModUserInterface
-    use ModBuffer,      ONLY: fix_buffer_grid
+    use ModBuffer, ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, HypEDecay
-    use ModMultiFluid,  ONLY: &
+    use ModMultiFluid, ONLY: &
          MassIon_I, InvMassIon_I, &
          ChargeIon_I, ChargePerMass_I, ElectronPerMass_I, &
          iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
@@ -502,7 +502,7 @@ contains
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
       use ModTimewarp, ONLY: UseTimeWarp, state_to_warp, warp_to_state
-      use BATL_lib,  ONLY: Used_GB
+      use BATL_lib, ONLY: Used_GB
 
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest
@@ -1209,10 +1209,10 @@ contains
   subroutine update_te0
 
     use ModPhysics, ONLY: UnitTemperature_,Si2No_V
-    use ModMain,    ONLY: nBlock, Unused_B, UseERadInput
+    use ModMain, ONLY: nBlock, Unused_B, UseERadInput
     use ModVarIndexes, ONLY: Te0_
     use ModUserInterface ! user_material_properties
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     real:: Te0Si
     integer:: i, j, k, iBlock
@@ -1728,14 +1728,14 @@ contains
     ! TauGlobal is a constant read from PARAM.in.
 
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
          IsTimeAccurate, Cfl, dt
-    use ModB0,      ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
     use ModMultiFluid, ONLY: select_fluid, iP, iPpar
     use ModVarIndexes, ONLY: nFluid
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
@@ -1857,18 +1857,18 @@ contains
   !============================================================================
   subroutine update_b0
 
-    use ModMain,          ONLY: nBlock, Unused_B,      &
+    use ModMain, ONLY: nBlock, Unused_B,      &
          tSimulation, NameThisComp, IsTimeAccurate, DoThreads_B
-    use ModPhysics,       ONLY: ThetaTilt, UseBody2Orbit
+    use ModPhysics, ONLY: ThetaTilt, UseBody2Orbit
     use ModUpdateStateFast, ONLY: update_b0_fast
-    use ModGeometry,      ONLY: IsBody_B
-    use CON_axes,         ONLY: get_axes
-    use ModNumConst,      ONLY: cRadToDeg
-    use ModIO,            ONLY: iUnitOut, write_prefix
-    use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
+    use ModGeometry, ONLY: IsBody_B
+    use CON_axes, ONLY: get_axes
+    use ModNumConst, ONLY: cRadToDeg
+    use ModIO, ONLY: iUnitOut, write_prefix
+    use ModB0, ONLY: B0_DGB, set_b0_cell, set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
-    use ModMessagePass,    ONLY: exchange_messages
-    use BATL_lib,  ONLY: Used_GB
+    use ModMessagePass, ONLY: exchange_messages
+    use BATL_lib, ONLY: Used_GB
 
     integer :: iBlock
 
@@ -1952,7 +1952,7 @@ contains
     ! their mass density weighted average, and/or the ion temperature of the
     ! individual fluids equal to their number density weighted average.
 
-    use BATL_lib,      ONLY: nI, nJ, nK, Used_GB
+    use BATL_lib, ONLY: nI, nJ, nK, Used_GB
     use ModMultiFluid, ONLY: nIonFluid, iRhoIon_I, &
          iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
          MassIon_I, InvMassIon_I

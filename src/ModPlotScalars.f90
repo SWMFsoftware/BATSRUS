@@ -8,7 +8,7 @@ module ModPlotScalars
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
-  use ModNumConst,  ONLY: cRadtoDeg, cDegToRad
+  use ModNumConst, ONLY: cRadtoDeg, cDegToRad
 
   implicit none
 

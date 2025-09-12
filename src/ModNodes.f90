@@ -7,7 +7,7 @@ module ModNodes
        test_start, test_stop, iProc
 
   use ModSize
-  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModIO, ONLY: iUnitOut, write_prefix
 
   implicit none
   save

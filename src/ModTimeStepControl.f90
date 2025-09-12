@@ -60,10 +60,10 @@ contains
   !============================================================================
   subroutine read_time_step_control_param(NameCommand)
 
-    use ModMain,       ONLY: NameVarLower_V
+    use ModMain, ONLY: NameVarLower_V
     use ModReadParam
     use ModVarIndexes, ONLY: nVar
-    use ModUtilities,  ONLY: split_string
+    use ModUtilities, ONLY: split_string
 
     character(len=*), intent(in):: NameCommand
 
@@ -126,10 +126,10 @@ contains
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, Dt, DtFixed, DtMax_B, Cfl, &
          UseDtLimit, DtLimit, rLocalTimeStep, UseUserTimeStep
-    use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
+    use ModAdvance, ONLY: DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, DoUpdate_V
     use ModGeometry, ONLY: IsNoBody_B, rMin_B, r_GB
-    use BATL_lib,  ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
     use ModCoronalHeating, ONLY: get_cell_heating
     use ModTurbulence, ONLY: UseAlfvenWaveDissipation
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
@@ -315,8 +315,8 @@ contains
   !============================================================================
   subroutine enforce_cfl(iBlock)
 
-    use ModSize,    ONLY: nI, nJ, nK
-    use ModMain,    ONLY: DtMax_B
+    use ModSize, ONLY: nI, nJ, nK
+    use ModMain, ONLY: DtMax_B
     use ModAdvance, ONLY: DtMax_CB
 
     integer, intent(in)::iBlock
@@ -336,16 +336,16 @@ contains
   subroutine set_global_timestep(TimeSimulationLimit)
 
     use ModMain
-    use ModAdvance,  ONLY: DtMax_CB, State_VGB, rho_, Bx_, Bz_, P_, &
+    use ModAdvance, ONLY: DtMax_CB, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
-    use ModB0,       ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: IsNoBody_B
     use ModImplicit, ONLY: UsePartImplicit
-    use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, No2Io_V, &
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
     use ModNumConst
     use ModMpi
-    use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB, &
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
          MaxNode, nNode, iNode_B, iTimeLevel_A, nTimeLevel, Used_GB
 
     real, intent(in):: TimeSimulationLimit ! Simulation time not to be exceeded
@@ -556,13 +556,13 @@ contains
   !============================================================================
   subroutine control_time_step
 
-    use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
+    use ModMain, ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
          DtFixed, DtFixedOrig, UseDtFixed, tSimulation, &
          DtLimit, DtLimitOrig, UseDtLimit, UseLocalTimeStep
-    use ModAdvance,  ONLY: Rho_, p_, &
+    use ModAdvance, ONLY: Rho_, p_, &
          State_VGB, StateOld_VGB, DtMax_CB
-    use ModPhysics,  ONLY: No2Si_V, UnitT_
-    use BATL_lib,    ONLY: Used_GB
+    use ModPhysics, ONLY: No2Si_V, UnitT_
+    use BATL_lib, ONLY: Used_GB
     use ModMpi
 
     integer:: iBlock, i, j, k, iError

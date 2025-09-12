@@ -6,8 +6,8 @@ program select_snapshot
   ! Read a *.outs IDL file of type ascii/real4/real8, select snapshots,
   ! then write it into a new file, of any type of ascii/real4/real8
 
-  use ModIoUnit,    ONLY: io_unit_new
-  use ModPlotFile,  ONLY: save_plot_file, read_plot_file
+  use ModIoUnit, ONLY: io_unit_new
+  use ModPlotFile, ONLY: save_plot_file, read_plot_file
   use ModUtilities, ONLY: split_string, CON_stop
 
   implicit none

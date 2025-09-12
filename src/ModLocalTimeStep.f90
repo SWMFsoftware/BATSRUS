@@ -60,26 +60,26 @@ contains
   !============================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
-    use ModMain,       ONLY: tSimulation, Dt, DtMax_B, Cfl, iStage, nStage,&
+    use ModMain, ONLY: tSimulation, Dt, DtMax_B, Cfl, iStage, nStage,&
          nOrder, nOrderProlong
-    use ModFaceFlux,   ONLY: calc_face_flux
-    use ModFaceValue,  ONLY: calc_face_value
-    use ModAdvance,    ONLY: nFluid, nVar, State_VGB, &
+    use ModFaceFlux, ONLY: calc_face_flux
+    use ModFaceValue, ONLY: calc_face_value
+    use ModAdvance, ONLY: nFluid, nVar, State_VGB, &
          Flux_VXI, Flux_VYI, Flux_VZI
-    use ModB0,         ONLY: set_b0_face
+    use ModB0, ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
-    use ModGeometry,     ONLY: IsBody_B, IsBoundary_B
+    use ModGeometry, ONLY: IsBody_B, IsBoundary_B
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModCellBoundary, ONLY: set_cell_boundary
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitT_
     use ModCalcSource, ONLY: calc_source
     use ModTimeStepControl, ONLY: calc_timestep, DtMin, DtMax
-    use ModBlockData,  ONLY: set_block_data
+    use ModBlockData, ONLY: set_block_data
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModUpdateState, ONLY: update_state
-    use BATL_lib,      ONLY: Unused_B, min_tree_level,  &
+    use BATL_lib, ONLY: Unused_B, min_tree_level,  &
          message_pass_cell, store_face_flux, apply_flux_correction
 
     real, intent(in) :: TimeSimulationLimit
@@ -318,11 +318,11 @@ contains
 
   subroutine set_local_time_step(TimeSimulationLimit)
 
-    use ModGeometry,   ONLY: IsNoBody_B, CellSize1Min, CellSize1Max
-    use ModMain,       ONLY: tSimulation, Cfl, DtMax_B
-    use ModAdvance,    ONLY: DtMax_CB
-    use BATL_lib,      ONLY: CellSize_DB, Unused_B, Used_GB
-    use ModPhysics,    ONLY: No2Si_V, UnitT_, Si2No_V
+    use ModGeometry, ONLY: IsNoBody_B, CellSize1Min, CellSize1Max
+    use ModMain, ONLY: tSimulation, Cfl, DtMax_B
+    use ModAdvance, ONLY: DtMax_CB
+    use BATL_lib, ONLY: CellSize_DB, Unused_B, Used_GB
+    use ModPhysics, ONLY: No2Si_V, UnitT_, Si2No_V
     use ModMpi
 
     real, intent(in) :: TimeSimulationLimit

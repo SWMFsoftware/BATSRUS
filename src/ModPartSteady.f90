@@ -14,15 +14,15 @@ module ModPartSteady
   ! already evolving blocks.
 
   use ModVarIndexes, ONLY: nVar
-  use ModSize,       ONLY: MaxBlock, nI, nJ, nK, x_
-  use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &
+  use ModSize, ONLY: MaxBlock, nI, nJ, nK, x_
+  use ModMain, ONLY: iNewDecomposition, nBlock, nBlockMax, &
        IsTimeAccurate, nStep
-  use ModGeometry,   ONLY: CellSize_DB, CellSize1Min
-  use ModParallel,   ONLY: Unset_, DiLevel_EB, jProc_IEB, jBlock_IEB
-  use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
+  use ModGeometry, ONLY: CellSize_DB, CellSize1Min
+  use ModParallel, ONLY: Unset_, DiLevel_EB, jProc_IEB, jBlock_IEB
+  use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VGB
-  use BATL_lib,      ONLY: Unused_B, Unused_BP
+  use BATL_lib, ONLY: Unused_B, Unused_BP
   use ModMpi
 
   implicit none

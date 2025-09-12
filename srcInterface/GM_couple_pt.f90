@@ -21,10 +21,10 @@ contains
 
     use ModPhysics, ONLY: Si2No_V, No2Si_V, iUnitCons_V, UnitX_
     use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_
-    use ModB0,      ONLY: UseB0, get_b0, B0_DGB
+    use ModB0, ONLY: UseB0, get_b0, B0_DGB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use ModVarIndexes, ONLY: nVar
-    use BATL_lib,   ONLY: iProc, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+    use BATL_lib, ONLY: iProc, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          find_grid_block
     use ModInterpolate, ONLY: trilinear
 

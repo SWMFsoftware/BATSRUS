@@ -122,7 +122,7 @@ contains
 
     use ModMain
     use ModReadParam
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
     logical:: DoTest
@@ -348,7 +348,7 @@ contains
 
     use ModPointImplicit, ONLY:
 
-    use ModMain,    ONLY: nI, nJ, nK
+    use ModMain, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry, ONLY:r_GB
     use ModVarIndexes
@@ -550,7 +550,7 @@ contains
     use ModAdvance, ONLY: State_VGB, UseMultiSpecies
     use ModMain
     use ModPhysics, ONLY: cBoltzmann, No2Si_V, UnitN_, UnitP_
-    use CON_planet,  ONLY: NamePlanet
+    use CON_planet, ONLY: NamePlanet
 
     integer,intent(in):: iBlock
     integer:: i,j,k

@@ -9,7 +9,7 @@ module ModImCoupling
 
   use ModMain, ONLY: DoAnisoPressureIMCoupling, &
        DoCoupleImPressure, DoCoupleImDensity
-  use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
+  use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure, &
        UseMultiSpecies, nSpecies, State_VGB
   use ModVarIndexes, ONLY: nFluid, Rho_, RhoUz_, Bx_, Bz_, Pe_, Ppar_, &
        SpeciesFirst_
@@ -155,13 +155,13 @@ contains
   subroutine get_im_pressure(iBlock)
     !$acc routine vector
 
-    use ModMain,     ONLY : DoFixPolarRegion, rFixPolarRegion, &
+    use ModMain, ONLY: DoFixPolarRegion, rFixPolarRegion, &
          dLatSmoothIm, UseB0
-    use ModFieldTrace, ONLY : Trace_DSNB
-    use ModPhysics,  ONLY : &
+    use ModFieldTrace, ONLY: Trace_DSNB
+    use ModPhysics, ONLY: &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
-    use ModGeometry, ONLY : r_GB, Xyz_DGB, z_
-    use ModB0,       ONLY: B0_DGB
+    use ModGeometry, ONLY: r_GB, Xyz_DGB, z_
+    use ModB0, ONLY: B0_DGB
 
     integer, intent(in)  :: iBlock
 
@@ -415,7 +415,7 @@ contains
     use ModMain, ONLY: iNewGrid, iNewDecomposition, TauCoupleIm, &
          IsTimeAccurate, Dt, RhoMinDimIm
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
-    use ModMultiFluid, ONLY : iRho_I, iP_I, &
+    use ModMultiFluid, ONLY: iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTraceFast, ONLY: trace_field_grid, Trace_DSNB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu

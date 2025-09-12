@@ -45,7 +45,7 @@ contains
   !============================================================================
   subroutine user_read_inputs
     use ModReadParam, ONLY: read_line, read_command, read_var
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
@@ -137,10 +137,10 @@ contains
   !============================================================================
   subroutine user_calc_sources_expl(iBlock)
 
-    use ModAdvance,     ONLY: Source_VC, State_VGB
-    use ModGeometry,    ONLY: Xyz_DGB, r_GB, rMin_B
-    use ModPhysics,     ONLY: gBody
-    use ModConst,       ONLY: cProtonMass, cPi
+    use ModAdvance, ONLY: Source_VC, State_VGB
+    use ModGeometry, ONLY: Xyz_DGB, r_GB, rMin_B
+    use ModPhysics, ONLY: gBody
+    use ModConst, ONLY: cProtonMass, cPi
 
     integer, intent(in) :: iBlock
 
@@ -303,7 +303,7 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModGeometry, ONLY: r_GB
-    use ModConst,    ONLY: cProtonMass
+    use ModConst, ONLY: cProtonMass
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -373,7 +373,7 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB
 
     real, intent(out) :: VarValue
     character (len=*), intent(in) :: TypeVar
@@ -465,13 +465,13 @@ contains
   end subroutine integrate_shell_volume
   !============================================================================
   subroutine user_initial_perturbation
-    use ModMain,        ONLY: nBlockMax, Unused_B
-    use ModGeometry,    ONLY: r_GB, Xyz_DGB
-    use ModAdvance,     ONLY: State_VGB
-    use ModPhysics,     ONLY: Io2No_V, UnitRho_
-    use ModSize,        ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModIO,          ONLY: IsRestart
-    use ModConst,       ONLY: cPi
+    use ModMain, ONLY: nBlockMax, Unused_B
+    use ModGeometry, ONLY: r_GB, Xyz_DGB
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics, ONLY: Io2No_V, UnitRho_
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModIO, ONLY: IsRestart
+    use ModConst, ONLY: cPi
 
     integer :: i, j, k, iBlock
     real :: Hz, Rxy
@@ -525,12 +525,12 @@ contains
 
     ! Apply user defined face boundary condition
 
-    use ModMain,           ONLY: FaceBCType, UseIe, UseRotatingBc, Body1_
+    use ModMain, ONLY: FaceBCType, UseIe, UseRotatingBc, Body1_
     use ModCoordTransform, ONLY: cross_product
-    use ModIeCoupling,     ONLY: calc_inner_bc_velocity
-    use ModPhysics,        ONLY: OmegaBody_D, BodyRho_I, Io2No_V, UnitRho_
-    use ModVarIndexes,     ONLY: DefaultState_V
-    use ModConst,          ONLY: cPi
+    use ModIeCoupling, ONLY: calc_inner_bc_velocity
+    use ModPhysics, ONLY: OmegaBody_D, BodyRho_I, Io2No_V, UnitRho_
+    use ModVarIndexes, ONLY: DefaultState_V
+    use ModConst, ONLY: cPi
 
     type(FaceBCType) :: FBC
 

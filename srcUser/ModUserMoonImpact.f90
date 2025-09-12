@@ -33,13 +33,13 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use CON_planet,     ONLY: RadiusPlanet, MassPlanet
-    use ModNumConst,    ONLY: cPi
-    use ModPhysics,     ONLY: Si2No_V,No2Si_V,UnitRho_, &
+    use CON_planet, ONLY: RadiusPlanet, MassPlanet
+    use ModNumConst, ONLY: cPi
+    use ModPhysics, ONLY: Si2No_V,No2Si_V,UnitRho_, &
          UnitP_, UnitX_
-    use ModIO,          ONLY: write_myname
+    use ModIO, ONLY: write_myname
     use ModResistivity, ONLY: Si2NoEta
-    use ModGeometry,    ONLY: TypeGeometry
+    use ModGeometry, ONLY: TypeGeometry
 
     integer :: iLayer=0
     character(len=*), parameter:: FMT1 = "(A22,E10.3)"
@@ -191,9 +191,9 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: r_GB
-    use ModSize,       ONLY: nI, nJ, nK, nG
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: r_GB
+    use ModSize, ONLY: nI, nJ, nK, nG
     use ModVarIndexes
     use ModMultiFluid, ONLY: select_fluid, nFluid, iP, &
          iRho, iRhoUx, iRhoUz
@@ -224,19 +224,19 @@ contains
   !============================================================================
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: r_GB, rMin_B
-    use ModSize,       ONLY: nI, nJ, nK, nG
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: r_GB, rMin_B
+    use ModSize, ONLY: nI, nJ, nK, nG
     use ModVarIndexes
-    use BATL_lib,      ONLY: Xyz_DGB
-    use ModMain,       ONLY: UseResistivePlanet, tSimulation, nIteration
-    use ModPhysics,    ONLY:  cProtonMass, cBoltzmann, Si2No_V,No2Si_V,&
+    use BATL_lib, ONLY: Xyz_DGB
+    use ModMain, ONLY: UseResistivePlanet, tSimulation, nIteration
+    use ModPhysics, ONLY:  cProtonMass, cBoltzmann, Si2No_V,No2Si_V,&
          UnitRho_,UnitP_, UnitX_, UnitTemperature_, UnitU_, &
          UnitB_, SolarWindRho
     use ModMultiFluid, ONLY: select_fluid, nFluid, iP, &
          iRho, iRhoUx,iUx,iUz,iRhoUz, MassIon_I
     use BATL_grid, ONLY: CellSize_DB
-    use ModB0,        ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB
 
     ! This subroutine needs to be described here!!!
 
@@ -352,7 +352,7 @@ contains
   subroutine user_set_resistivity(iBlock, Eta_G)
 
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModGeometry,   ONLY: r_GB, rMin_B
+    use ModGeometry, ONLY: r_GB, rMin_B
     use ModResistivity, ONLY: Eta0
     integer, intent(in) :: iBlock
     real, intent(out) :: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)

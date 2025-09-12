@@ -251,7 +251,7 @@ contains
 
   subroutine read_responsefunction
 
-    use ModPlotFile,         ONLY: read_plot_file
+    use ModPlotFile, ONLY: read_plot_file
 
     character(len=*), parameter:: NameSub = 'read_responsefunction'
     !--------------------------------------------------------------------------
@@ -278,7 +278,7 @@ contains
 
   subroutine calc_dem
 
-    use ModPlotFile, ONLY          : save_plot_file
+    use ModPlotFile, ONLY: save_plot_file
 
     integer                        :: nLogTeDEM
     integer                        :: iTe, i, j, k
@@ -428,7 +428,7 @@ contains
   !============================================================================
   subroutine save_all
 
-    use ModPlotFile, ONLY          : save_plot_file
+    use ModPlotFile, ONLY: save_plot_file
 
     character                      :: Namefile
 
@@ -1065,9 +1065,9 @@ contains
 
   subroutine read_data
 
-    use ModPlotFile,         ONLY: read_plot_file
-    use ModUtilities,        ONLY: split_string, lower_case
-    use ModCoordTransform,   ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
+    use ModPlotFile, ONLY: read_plot_file
+    use ModUtilities, ONLY: split_string, lower_case
+    use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
 
     character(len=200)          :: StringHeader
     character(len=200)          :: NameVar
