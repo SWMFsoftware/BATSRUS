@@ -10,10 +10,12 @@ module ModUser
   use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, &
        SpeciesFirst_, SpeciesLast_, MassSpecies_V
   use ModAdvance, ONLY: nSpecies
-  use ModPhysics, ONLY: BodyRhoSpecies_I
+  use ModPhysics, ONLY: BodyRhoSpecies_I, rPlanetSi
   use ModMain, ONLY: IsNewUaState, UaState_VCB, rMaxUa
   use BATL_lib, ONLY: nI, nJ, nK, &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc, &
+       Xyz_DGB, CellVolume_GB, Used_GB, Unused_B
+  use ModGeometry, ONLY: TypeGeometry, r_GB
   use ModUtilities, ONLY: open_file, close_file, upper_case
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
   use ModIoUnit, ONLY: UnitTmp_
@@ -46,6 +48,13 @@ module ModUser
 
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.0
+
+  ! UA lookup table index
+  integer:: iTableUa = -1
+  ! Maximum altitude in UA lookup table [km]
+  real:: AltMaxUa = -1.0
+  ! ScaleHeight = ScaleHeightFactor*TempNeu in SI units
+  real:: ScaleHeightFactorCo2 = -1.0, ScaleHeightFactorO = -1.0
 
   ! Mars stuff
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=8, MaxReactions=10
@@ -129,7 +138,7 @@ module ModUser
        [2.6e-17,1.5e-17,0.0,1.5e-17,1.5e-17,0.0,1.5e-17,2.6e-17]
 
   real, dimension(MaxNuSpecies), parameter:: &
-       NuMassSpecies_I=[44,16,1,16,16,1,16, 44]
+       NuMassSpecies_I = [44, 16, 1, 16, 16, 1, 16, 44]
   !  NuMassSpecies_I(CO2_)=44	! atm
   !  NuMassSpecies_I(O_)=16	! atm
 
@@ -175,16 +184,7 @@ module ModUser
   logical :: UseChargeEx = .true.
   logical :: UseChapman = .false.
 
-  ! Variables for Mars atmosphere lookup table generated with TGCM
-  integer:: nLong, nLat, nAlt
-  real, allocatable, dimension(:) :: Long_I, Lat_I, Alt_I
-  real, allocatable, dimension(:,:,:):: Temp, Den_CO2, Den_O, ICO2p, IOp
-
-  ! True if atmosphere model is coupled or read from file
-  logical :: UseFileAtm = .false.
-  ! Filename of atmosphere model output
-  character(len=60):: NameFileAtm = "???"
-
+  ! Some backward compatibility stuff
   logical:: UseOldEnergy = .true.
 
 contains
@@ -287,17 +287,6 @@ contains
        case("#CHAPMAN", "#USECHAPMAN")
           call read_var('UseChapman', UseChapman)
 
-       case("#MARSATMOSPHEREFILE", "#USEMARSATM")
-          call read_var('UseFileAtm', UseFileAtm)
-          if(UseFileAtm)then
-             call read_var('NameFileAtm', NameFileAtm)
-             ! The size should be in the file !!!
-             ! Lookup table is the correct approach !!!
-             call read_var('nLon', nLong)
-             call read_var('nLat', nLat)
-             call read_var('nAlt', nAlt)
-          end if
-
        case('#POINTIMPLICITREGION')
           call read_var('rPointImplicit', rPointImplicit)
 
@@ -369,10 +358,8 @@ contains
     use ModAdvance, ONLY: State_VGB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
-    use ModGeometry, ONLY: r_GB
     use ModPhysics, ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
          No2Io_V, No2Si_V, UnitT_, UnitN_, UnitTemperature_
-    use BATL_lib, ONLY: CellVolume_GB
     use ModPointImplicit, ONLY: UsePointImplicit
 
     integer, intent(in) :: iBlock
@@ -680,9 +667,14 @@ contains
     use ModMain
     use ModPhysics
     use ModVarIndexes
+    use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
 
     integer:: iBoundary, i, j, k, m, n
     character(len=100):: StringLine
+
+    ! Upper coordinate limits of UA lookup table and gravity at max altitude
+    real:: CoordMaxUa_D(3), Gravity
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
@@ -722,26 +714,21 @@ contains
        call close_file
     end if
 
-    if(UseFileAtm)then
-       call open_file(FILE=NameFileAtm, STATUS="old")
-       allocate(Long_I(nLong), Lat_I(nLat), Alt_I(nAlt), &
-            Temp(nLong,nLat,nAlt), &
-            Den_CO2(nLong,nLat,nAlt), Den_O(nLong,nLat,nAlt), &
-            ICO2p(nLong,nLat,nAlt), IOp(nLong,nLat,nAlt))
-
-       read(UnitTmp_,*) StringLine
-       write(*,*) trim(StringLine), Nalt
-       do k = 1, NAlt; do j=1, NLat; do i=1, NLong
-          read(UnitTmp_,*) Long_I(i), Lat_I(j), Alt_I(k), &
-               Temp(i,j,k), Den_CO2(i,j,k), Den_O(i,j,k), &
-               ICO2p(i,j,k), IOp(i,j,k)
-       end do; end do; end do
-       call close_file
-       write(*,*)Long_I(Nlong),Lat_I(NLat),Alt_I(Nalt)
-       write(*,*)Long_I(1),Lat_I(1),Alt_I(1)
-       write(*,*)'Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)=',&
-            Den_O(Nlong,Nlat,Nalt), ICO2p(Nlong,Nlat,Nalt),&
-            IOp(Nlong,Nlat,Nalt)
+    ! Check for the "UADATA" lookup table
+    iTableUa = i_lookup_table('UADATA')
+    if(iTableUa > 0)then
+       call get_lookup_table(iTableUa, IndexMax_I=CoordMaxUa_D)
+       AltMaxUa = CoordMaxUa_D(3) ! in km
+       ! Gravitational accleration at AltMaxUa
+       Gravity = cGravitation*MassBodySi/(rPlanetSi + AltMaxUa*1e3)**2
+       ! Coefficients for isothermal scaleheight approximation in SI units
+       ScaleHeightFactorCo2 = &
+            cBoltzmann/(Gravity*NuMassSpecies_I(CO2_)*cProtonMass)
+       ScaleHeightFactorO = &
+            cBoltzmann/(Gravity*NuMassSpecies_I(O_)*cProtonMass)
+       if(DoTest) write(*,*) NameSub, &
+            ': AltMaxUa, Gravity, ScaleHeightFactorCo2, O=', &
+            AltMaxUa, Gravity, ScaleHeightFactorCo2, ScaleHeightFactorO
     end if
 
     ! For Outer Boundaries
@@ -780,8 +767,6 @@ contains
 
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY: r_GB
-    use BATL_lib, ONLY: Xyz_DGB, Used_GB
     use ModPhysics
     use ModNumConst
     use ModMultiFluid
@@ -1784,7 +1769,6 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
-    use ModGeometry, ONLY: Xyz_DGB,r_GB
     use ModMain, ONLY: Unused_B
     use ModVarIndexes, ONLY: &
          Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUz_
@@ -1832,228 +1816,71 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
-  subroutine mars_input(iBlock)
+  subroutine ua_file_input(iBlock)
 
-    ! Interpolate and extrapolate various quantities from the neutral data file
+    ! Interpolate neutral quantities from a lookup table
 
-    use ModMain
-    use ModPhysics
-    use ModConst
-    use ModGeometry, ONLY: r_GB,CellSize_DB, Coord111_DB, TypeGeometry
+    use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
+    use ModNumConst, ONLY: cRadToDeg
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
 
-    real, parameter :: TINY=1.0E-12
-
-    real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
-    real :: tempICO2p, tempIOp
-    real :: xLat, xLong,xAlt
-    real :: Dlong, Dlat, Dalt
-    integer :: i,j,k
-    integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp -----
+    integer:: i, j, k
+    real:: r, Lon, Lat, Alt, dHPerT, Data_V(5)
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'mars_input'
+    character(len=*), parameter:: NameSub = 'ua_file_input'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(TypeGeometry(1:9) /= 'spherical') &
-         call stop_mpi('Unknown geometry type = '//TypeGeometry)
+    ! check if the bottom of the block is outside rMaxUa
+    if (r_GB(1,1,1,iBlock) > rMaxUa) RETURN
 
-    ! the whole block is inside the body
-    if (r_GB(nI,1,1,iBlock) < Rbody) RETURN
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(r_GB(i,j,k,iBlock) > rMaxUa) CYCLE
 
-    ! the bottom of the block is outside rMaxUa
-    if (r_GB(1,1,1,iBlock) >= rMaxUa) RETURN
+       call xyz_to_rlonlat(Xyz_DGB(:,i,j,k,iBlock), r, Lon, Lat)
+       Lon = Lon*cRadToDeg
+       Lat = Lat*cRadToDeg
+       Alt = ((r - 1)*rPlanetSi)*1e-3 ! altitude in km
+       call interpolate_lookup_table(iTableUa, Lon, Lat, Alt, Data_V, &
+            DoExtrapolate=.false.)
+       TempNeu_CB(i,j,k,iBlock) = Data_V(1) ! Neutral temperature [K]
+       if(Alt > AltMaxUa)then
+          ! Apply isothermal scale height extrapolation
+          ! Height above AltMaxUa [m] divided by temperature [K]
+          dHPerT = (Alt - AltMaxUa)*1e3/TempNeu_CB(i,j,k,iBlock)
+          Data_V(2) = Data_V(2)*exp(-dHPerT/ScaleHeightFactorCo2)
+          Data_V(3) = Data_V(3)*exp(-dHPerT/ScaleHeightFactorO)
+       end if
 
-    dR     = CellSize_DB(x_,iBlock)
-    dPhi   = CellSize_DB(y_,iBlock)
-    dTheta = CellSize_DB(z_,iBlock)
-
-    Dlong = Long_I(2) - Long_I(1)
-    Dlat  = Lat_I(2) - Lat_I(1)
-    Dalt  = Alt_I(2) - Alt_I(1)
-
-    do k = 1, nK
-       Theta = (k-1)*dTheta  + Coord111_DB(Theta_,iBlock)
-       Theta = Theta*cRadToDeg
-       kLat = int((theta + 90.0 - Dlat/2)/Dlat+1.0)
-       kp1 = min(kLat+1, NLat)
-       kLat = max(kLat,1)
-
-       do j = 1, nJ
-          Phi = (j-1)*dPhi  + Coord111_DB(Phi_,iBlock)
-          if(Long_I(1) < 0.0)then
-             ! Shift to -pi to +pi range
-             if(Phi > cPi) Phi = Phi - cTwoPi
-             Phi = Phi*cRadToDeg ! Convert to degrees
-             jLong = int((Phi+180)/Dlong + 1.0)
-          else
-             Phi = Phi*cRadToDeg ! Convert to degrees
-             jLong = int(Phi/Dlong + 1.0)
-          end if
-          jp1   = min(jLong+1, nLong)
-          jLong = max(jLong, 1)
-
-          do i = 1, nI
-             if (r_GB(i,j,k,iBlock) >= rMaxUa) CYCLE
-
-             hh = (r_GB(i,j,k,iBlock) - 1)*3396.00
-             !                 write(*,*)'hh=', hh, i,j,k,iBlock
-             xLong = (Phi - Long_I(jLong))/Dlong
-             xLat = (Theta - Lat_I(kLat))/Dlat
-             if(hh <= Alt_I(NAlt))then
-                iAlt = int((hh - (Alt_I(1)+Dalt/2))/Dalt+1.0)
-                ip1 = min(iAlt+1,NAlt)
-                if(iAlt < 1)then
-                   write(*,*)'wrong ialt',iAlt
-                end if
-                xalt = (hh-Alt_I(iAlt))/Dalt
-
-                ! interpolate
-                TempNeu_CB(i,j,k,iBlock) =          &
-                     ((Temp(jLong,kLat,iAlt)*(1-xLong)       &
-                     + xLong*Temp(jp1,kLat,ialt))*(1-xLat) &
-                     +(Temp(jLong,kp1,iAlt)*(1-xLong)        &
-                     + xLong*Temp(jp1,kp1,ialt))*xLat)*(1-xAlt)&
-                     +((Temp(jLong,kLat,ip1)*(1-xLong)       &
-                     + xLong*Temp(jp1,kLat,ip1))*(1-xLat)   &
-                     +(Temp(jLong,kp1,ip1)*(1-xLong)         &
-                     + xLong*Temp(jp1,kp1,ip1))*xLat)*xAlt
-
-                nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
-                     ((Den_CO2(jLong,kLat,iAlt)*(1-xLong) &
-                     + xLong*Den_CO2(jp1,kLat,ialt))*(1-xLat) + &
-                     (Den_CO2(jLong,kp1,iAlt)*(1-xLong) &
-                     +xLong*Den_CO2(jp1,kp1,iAlt))*xLat)*(1-xAlt) + &
-                     ((Den_CO2(jLong,kLat,ip1)*(1-xLong) &
-                     + xLong*Den_CO2(jp1, kLat, ip1))*(1-xLat)+&
-                     (Den_CO2(jLong,kp1,ip1)*(1-xLong) &
-                     + xLong*Den_CO2(jp1, kp1, ip1))*xLat)*xAlt
-
-                nDenNuSpecies_CBI(i,j,k,iBlock,O_)=&
-                     ((Den_O(jLong,kLat,iAlt)*(1-xLong) &
-                     +xLong*Den_O(jp1, kLat, ialt))*(1-xLat)+&
-                     (Den_O(jLong,kp1,iAlt)*(1-xLong) &
-                     +xLong*Den_O(jp1, kp1, ialt))*xLat)*(1-xAlt)+&
-                     ((Den_O(jLong,kLat,ip1)*(1-xLong) &
-                     +xLong*Den_O(jp1, kLat, ip1))*(1-xLat)+&
-                     (Den_O(jLong,kp1,ip1)*(1-xLong) &
-                     +xLong*Den_O(jp1, kp1, ip1))*xLat)*xAlt
-
-                tempICO2p=&
-                     ((ICO2p(jLong,kLat,iAlt)*(1-xLong) &
-                     +xLong*ICO2p(jp1, kLat, ialt))*(1-xLat)+&
-                     (ICO2p(jLong,kp1,iAlt)*(1-xLong) &
-                     +xLong*ICO2p(jp1, kp1, ialt))*xLat)*(1-xAlt)+&
-                     ((ICO2p(jLong,kLat,ip1)*(1-xLong) &
-                     +xLong*ICO2p(jp1, kLat, ip1))*(1-xLat)+&
-                     (ICO2p(jLong,kp1,ip1)*(1-xLong) &
-                     +xLong*ICO2p(jp1, kp1, ip1))*xLat)*xAlt
-
-                tempIOP=&
-                     ((IOp(jLong,kLat,iAlt)*(1-xLong) + &
-                     xLong*IOp(jp1,kLat,ialt))*(1-xLat)+&
-                     (IOp(jLong,kp1,iAlt)*(1-xLong) &
-                     +xLong*IOp(jp1,kp1,ialt))*xLat)*(1-xAlt) +&
-                     ((IOp(jLong,kLat,ip1)*(1-xLong) &
-                     +xLong*IOp(jp1,kLat,ip1))*(1-xLat)+&
-                     (IOp(jLong,kp1,ip1)*(1-xLong) &
-                     +xLong*IOp(jp1,kp1,ip1))*xLat)*xAlt
-
-                tempICO2p = max(tempICO2p, TINY)
-                tempIOP = max(tempIOp, TINY)
-                ! Ionizationrate_CBI(i,j,k,iBlock,CO2_)
-                !   =tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-                ! Ionizationrate_CBI(i,j,k,iBlock,O_)
-                !   =tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-                Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
-                Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
-
-             else  ! hh > Alt_I(NAlt)
-
-                ! In km unit
-                dH= hh - Alt_I(NAlt)
-
-                TempNeu_CB(i,j,k,iBlock)= &
-                     (Temp(jLong,kLat,NAlt)*(1-xLong) &
-                     +xLong*Temp(jp1, kLat,NAlt))*(1-xLat) + &
-                     (Temp(jLong,kp1,NAlt)*(1-xLong) &
-                     +xLong*Temp(jp1,kp1,NAlt))*xLat
-
-                tempICO2p = &
-                     (ICO2p(jLong,kLat,NAlt)*(1-xLong) &
-                     +xLong*ICO2p(jp1, kLat, NAlt))*(1-xLat)+&
-                     (ICO2p(jLong,kp1,NAlt)*(1-xLong) &
-                     +xLong*ICO2p(jp1, kp1, NAlt))*xLat
-
-                tempIOP = &
-                     (IOp(jLong,kLat,NAlt)*(1-xLong) &
-                     +xLong*IOp(jp1, kLat, NAlt))*(1-xLat)+&
-                     (IOp(jLong,kp1,NAlt)*(1-xLong) &
-                     +xLong*IOp(jp1, kp1, NAlt))*xLat
-
-                ! Constant temperature and gravity from 300km to infinity !!!
-                Grav = 3.72*(1.0+300.0/3396.0)**(-2)
-
-                ! in m unit
-                Hscale = cBoltzmann* &
-                     TempNeu_CB(i,j,k,iBlock)/grav/cProtonMass
-
-                ! in km unit
-                HCO2 = Hscale/NuMassSpecies_I(CO2_)/1.0e3
-                HO   = Hscale/NuMassSpecies_I(O_)/1.0e3
-
-                nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
-                     ((Den_CO2(jLong,kLat,NAlt)*(1-xLong) &
-                     +xLong*Den_CO2(jp1, kLat,Nalt))*(1-xLat)+&
-                     (Den_CO2(jLong,kp1,NAlt)*(1-xLong) &
-                     +xLong*Den_CO2(jp1,kp1,Nalt))*xLat)&
-                     *exp(-dH/HCO2)
-                nDenNuSpecies_CBI(i,j,k,iBlock,O_)=&
-                     ((Den_O(jLong,kLat,NAlt)*(1-xLong) &
-                     +xLong*Den_O(jp1, kLat,Nalt))*(1-xLat)+&
-                     (Den_O(jLong,kp1,NAlt)*(1-xLong) &
-                     +xLong*Den_O(jp1,kp1,Nalt))*xLat)&
-                     *exp(-dH/HO)
-
-                tempICO2p = max(tempICO2p, TINY)
-                tempIOP   = max(tempIOp, TINY)
-                ! Ionizationrate_CBI(i,j,k,iBlock,CO2_)
-                !   =tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-                ! Ionizationrate_CBI(i,j,k,iBlock,O_)
-                !   =tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-                Ionizationrate_CBI(i,j,k,iBlock,CO2_) = tempICO2p
-                Ionizationrate_CBI(i,j,k,iBlock,O_)   = tempIOP
-
-             end if ! hh < or > 300km
-          end do
-       end do
-    end do
+       nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)  = Data_V(2) ! 1/cc
+       nDenNuSpecies_CBI(i,j,k,iBlock,O_)    = Data_V(3) ! 1/cc
+       Ionizationrate_CBI(i,j,k,iBlock,CO2_) = Data_V(4) ! 1/s
+       Ionizationrate_CBI(i,j,k,iBlock,O_)   = Data_V(5) ! 1/s
+    end do; end do; end do
 
     if(DoTest)then
-       write(*,*)'Mars input end', &
-            dR,dPhi,dTheta, iBlock, &
-            maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)),&
-            minval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)),&
-            maxval(r_GB(nI,:,:,iBlock)),&
-            minval(r_GB(1,:,:,iBlock))
-       write(*,*)'Mars input end2',&
-            iBlock, maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),&
-            minval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),&
-            maxval(Ionizationrate_CBI(nI,:,:,iBlock,CO2_)),&
-            minval(Ionizationrate_CBI(nI,:,:,iBlock,O_)),&
-            maxval(r_GB(nI,:,:,iBlock)),&
-            minval(r_GB(1,:,:,iBlock))
+       write(*,*) NameSub, ": rMax, rMin=", &
+            r_GB(nI,1,1,iBlock), r_GB(1,1,1,iBlock)
+       write(*,*) NameSub, ": max(nCo2), min(nCo2), max(nO), min(nO)=", &
+            maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)), &
+            minval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)), &
+            maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),   &
+            minval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_))
+       write(*,*) NameSub, ": max(iCo2p), min(iCo2p), max(iOp), min(iOp)=", &
+            maxval(Ionizationrate_CBI(nI,:,:,iBlock,CO2_)), &
+            minval(Ionizationrate_CBI(nI,:,:,iBlock,CO2_)), &
+            maxval(Ionizationrate_CBI(nI,:,:,iBlock,O_)),   &
+            minval(Ionizationrate_CBI(nI,:,:,iBlock,O_))
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine mars_input
+  end subroutine ua_file_input
   !============================================================================
   subroutine ua_input(iBlock)
 
-    use ModGeometry, ONLY: TypeGeometry, r_GB
     use ModPhysics, ONLY: rBody, No2Si_V, UnitT_, Si2No_V, UnitN_
 
     integer, intent(in) :: iBlock
@@ -2092,7 +1919,6 @@ contains
 
     ! Set neutral density and some related variables
 
-    use ModGeometry, ONLY: Xyz_DGB, r_GB
     use ModPhysics, ONLY: rBody
 
     integer, intent(in):: iBlock
@@ -2222,10 +2048,10 @@ contains
     end do; end do; end do
 
     if(IsNewUaState) call ua_input(iBlock)
-    if(UseFileAtm) call mars_input(iBlock)
+    if(iTableUa > 0) call ua_file_input(iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if( (IsNewUaState .or. UseFileAtm) &
+       if( (IsNewUaState .or. iTableUa > 0) &
             .and. r_GB(i,j,k,iBlock) <= rMaxUa)then
           ! Inside neutral model
           if(UseHotO) nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &

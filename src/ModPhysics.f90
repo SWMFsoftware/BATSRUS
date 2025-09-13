@@ -136,10 +136,11 @@ module ModPhysics
 
   ! General Body parameters
   character(len=2):: NamePlanetRadius = 'R ' ! can be 'km' if there is no body
-  real:: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
+  real:: rPlanetSi = 0.0, rBody = 0.0, rCurrents = 0.0
   !$acc declare create(rBody)
-  real:: gBody=0.0
-  real:: RotPeriodSi=0.0, OmegaBody=0.0
+  real:: MassBodySi = 0.0
+  real:: gBody = 0.0
+  real:: RotPeriodSi = 0.0, OmegaBody = 0.0
   !$acc declare create(OmegaBody, gBody)
 
   ! The dimensional quantities are given for individual ion and neutral fluids
@@ -331,7 +332,6 @@ contains
          UseEfield, UseAnisoPe
     use BATL_lib, ONLY: IsCartesian
 
-    real:: MassBodySi
     real:: pCoef
     real:: Charge_I(nIonFluid+1)
     integer:: i, iBoundary, iFluid, iIon, jIon
