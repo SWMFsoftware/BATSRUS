@@ -3135,8 +3135,6 @@ contains
 
       use ModSemiImplVar, ONLY: UseSemiImplicit, TypeSemiImplicit
       use ModSemiImplicit, ONLY: SemiParam
-      use ModResistivity, ONLY: UseResistivity, TypeResistivity, Eta0Si, &
-           DoResistiveFlux, UseJouleHeating, UseHeatExchange
       !------------------------------------------------------------------------
       NamePlotDir(1:2) = NameThisComp ! fix default plot dir name
 
