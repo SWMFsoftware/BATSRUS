@@ -101,6 +101,10 @@ contains
     real(Real4_):: Xyz_D(MaxDim)
     real(Real4_), allocatable:: PlotVar_V(:)
 
+    character(len=:), allocatable:: CharBuffer
+    integer, parameter:: nCharPerReal = 14
+    integer:: nCharMax, iChar, nCharPerLine
+
     ! Interpolation
     integer:: Di, Dj, Dk
     real:: CoefL, CoefR
@@ -146,12 +150,28 @@ contains
              write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V
           end do; end do; end do
        else
+         
+          nCharPerLine = (nDim + nPlotVar)*nCharPerReal + 1
+          nCharMax = nCharPerLine* &
+               (kMax - kMin + 1)*(jMax - jMin + 1)*(iMax - iMin + 1)
+          
+          allocate(character(len=nCharMax):: CharBuffer)
+          iChar = 1
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
              call set_xyz_state
-             write(UnitTmp_,"(50(ES14.6))") Xyz_D(1:nDim), PlotVar_V
+             write(CharBuffer(iChar:iChar+nCharPerLine-2), '(50(ES14.6))') &
+                  Xyz_D(1:nDim), PlotVar_V
+             iChar = iChar + nCharPerLine
+             CharBuffer(iChar-1:iChar-1) = CharNewLine
           end do; end do; end do
+          
+          ! Why 'iChar-2'? There is no need to explicitly write add the
+          ! last newline character
+          write(UnitTmp_, '(a)') CharBuffer(1:iChar-2)
+          
+          deallocate(CharBuffer)
        end if
     end if
 
