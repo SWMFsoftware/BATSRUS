@@ -158,7 +158,7 @@ rundir:
 		touch ${DIR}/share/JobScripts/job._TMP_${MACHINE}; \
 		touch ${DIR}/share/JobScripts/_TMP_.${MACHINE}.pl; \
 		cp ${DIR}/share/JobScripts/job.*${MACHINE}* ${RUNDIR}/; \
-		cp ${DIR}/share/JobScripts/*.${MACHINE}*.pl ${RUNDIR}/; \
+		cp ${DIR}/share/JobScripts/*.${MACHINE}*.[ps][lh] ${RUNDIR}/; \
 		rm -f ${RUNDIR}/*_TMP_* ${DIR}/share/JobScripts/*_TMP_*; \
 		cp -f Param/EARTH/PARAM.in ${RUNDIR}/PARAM.in; \
 		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
