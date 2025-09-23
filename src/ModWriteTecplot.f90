@@ -169,7 +169,7 @@ contains
           
           ! Why 'iChar-2'? There is no need to explicitly write add the
           ! last newline character
-          write(UnitTmp_, '(a)') CharBuffer(1:iChar-2)
+          if(iChar > 1) write(UnitTmp_, '(a)') CharBuffer(1:iChar-2)
           
           deallocate(CharBuffer)
        end if
