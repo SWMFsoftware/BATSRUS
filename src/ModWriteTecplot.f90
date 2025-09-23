@@ -137,7 +137,8 @@ contains
           iRecData = nint(CellIndex_GB(i,j,k,iBlock))
           ! Skip points outside the cut
           if(iRecData == 0) CYCLE
-          call set_xyz_state
+          call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
+               Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
           write(UnitTmp_, StringFormat, REC=iRecData) &
                Xyz_D(1:nDim), PlotVar_V, CharNewLine
        end do; end do; end do
@@ -146,31 +147,33 @@ contains
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
-             call set_xyz_state
+             call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
+                  Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
              write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V
           end do; end do; end do
        else
-         
+
           nCharPerLine = (nDim + nPlotVar)*nCharPerReal + 1
           nCharMax = nCharPerLine* &
                (kMax - kMin + 1)*(jMax - jMin + 1)*(iMax - iMin + 1)
-          
+
           allocate(character(len=nCharMax):: CharBuffer)
           iChar = 1
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
-             call set_xyz_state
+             call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
+                  Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
              write(CharBuffer(iChar:iChar+nCharPerLine-2), '(50(ES14.6))') &
                   Xyz_D(1:nDim), PlotVar_V
              iChar = iChar + nCharPerLine
              CharBuffer(iChar-1:iChar-1) = CharNewLine
           end do; end do; end do
-          
+
           ! Why 'iChar-2'? There is no need to explicitly write add the
           ! last newline character
           if(iChar > 1) write(UnitTmp_, '(a)') CharBuffer(1:iChar-2)
-          
+
           deallocate(CharBuffer)
        end if
     end if
@@ -180,44 +183,57 @@ contains
     if(DoTest) write(*,*) NameSub,' finished'
 
     call test_stop(NameSub, DoTest, iBlock)
-  contains
-    !==========================================================================
-    subroutine set_xyz_state
-
-      ! Interpolate variables and coordinates to cut planes
-      ! Set the coordinates and fix them to fill the hole at the pole
-      !------------------------------------------------------------------------
-      if(iCutDim == 0)then
-         Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
-         PlotVar_V = PlotVar_GV(i,j,k,1:nPlotVar)
-      else
-         ! Interpolate using precalculated coefficients
-         Xyz_D     = CoefL*Xyz_DGB(:,i  ,j,k,iBlock) &
-              +      CoefR*Xyz_DGB(:,i+Di,j+Dj,k+Dk,iBlock)
-         PlotVar_V = CoefL*PlotVar_GV(i  ,j,k,1:nPlotVar) &
-              +      CoefR*PlotVar_GV(i+Di,j+Dj,k+Dk,1:nPlotVar)
-      end if
-
-      ! No need to push points to the pole if there is no axis
-      ! or the 2D cut is along the Phi direction
-      if(.not.IsAnyAxis .or. iCutDim == Phi_) RETURN
-
-      if(IsLatitudeAxis)then
-         if(  k == 1  .and. CoordMin_DB(Lat_,iBlock) <= -cHalfPi .or. &
-              k == nK .and. CoordMax_DB(Lat_,iBlock) >= +cHalfPi) &
-              Xyz_D(1:2) = 0
-      elseif(IsSphericalAxis)then
-         if(  j == 1  .and. CoordMin_DB(Theta_,iBlock) <= 0 .or. &
-              j == nJ .and. CoordMax_DB(Theta_,iBlock) >= cPi) &
-              Xyz_D(1:2) = 0
-      elseif(IsCylindricalAxis)then
-         if(  i == 1 .and. CoordMin_DB(r_,iBlock) <= 0) &
-              Xyz_D(1:2) = 0
-      end if
-    end subroutine set_xyz_state
-    !==========================================================================
   end subroutine write_tecplot_data
-  !============================================================================
+  !==========================================================================
+  subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
+       Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
+    use ModKind, ONLY: Real4_
+    use BATL_lib, ONLY: MaxDim, Phi_, Theta_, Lat_, nJ, nK, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, r_, &
+         CoordMin_DB, CoordMax_DB, IsAnyAxis, IsLatitudeAxis, &
+         IsSphericalAxis, IsCylindricalAxis 
+    use ModNumConst, ONLY: cPi, cHalfPi
+    use ModIO, ONLY: MaxPlotvar
+
+    ! Interpolate variables and coordinates to cut planes
+    ! Set the coordinates and fix them to fill the hole at the pole
+    !------------------------------------------------------------------------
+    integer, intent(in):: iBlock, i, j, k, Di, Dj, Dk, nPlotVar
+    real(Real4_), intent(out):: Xyz_D(MaxDim)
+    real(Real4_), intent(out):: PlotVar_V(nPlotVar)
+    real, intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real, intent(in):: CoefL, CoefR
+
+
+    if(iCutDim == 0)then
+       Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
+       PlotVar_V = PlotVar_GV(i,j,k,1:nPlotVar)
+    else
+       ! Interpolate using precalculated coefficients
+       Xyz_D     = CoefL*Xyz_DGB(:,i  ,j,k,iBlock) &
+            +      CoefR*Xyz_DGB(:,i+Di,j+Dj,k+Dk,iBlock)
+       PlotVar_V = CoefL*PlotVar_GV(i  ,j,k,1:nPlotVar) &
+            +      CoefR*PlotVar_GV(i+Di,j+Dj,k+Dk,1:nPlotVar)
+    end if
+
+    ! No need to push points to the pole if there is no axis
+    ! or the 2D cut is along the Phi direction
+    if(.not.IsAnyAxis .or. iCutDim == Phi_) RETURN
+
+    if(IsLatitudeAxis)then
+       if(  k == 1  .and. CoordMin_DB(Lat_,iBlock) <= -cHalfPi .or. &
+            k == nK .and. CoordMax_DB(Lat_,iBlock) >= +cHalfPi) &
+            Xyz_D(1:2) = 0
+    elseif(IsSphericalAxis)then
+       if(  j == 1  .and. CoordMin_DB(Theta_,iBlock) <= 0 .or. &
+            j == nJ .and. CoordMax_DB(Theta_,iBlock) >= cPi) &
+            Xyz_D(1:2) = 0
+    elseif(IsCylindricalAxis)then
+       if(  i == 1 .and. CoordMin_DB(r_,iBlock) <= 0) &
+            Xyz_D(1:2) = 0
+    end if
+  end subroutine set_xyz_state
+  !==========================================================================
   function int2str(i) result(String)
 
     ! Convert integer to string of the same length
