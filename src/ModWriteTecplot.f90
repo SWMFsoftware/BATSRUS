@@ -71,6 +71,7 @@ module ModWriteTecplot
 
   ! Global cell index. It is a real array for sake of message passing only.
   real, allocatable:: CellIndex_GB(:,:,:,:)
+  !$acc declare create(CellIndex_GB)
 
   ! Total number of cells written into file
   integer:: nPointAll
@@ -104,17 +105,20 @@ contains
     real(Real4_), allocatable:: PlotVar_V(:)
 
     integer(Int1_), allocatable:: Ascii_I(:)
+    !$acc declare create(Ascii_I)
     integer, parameter:: nCharPerReal = 14
     integer:: nCharPerLine, nChar
 
     integer:: iCount, iLoc
     integer:: iMark_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !$acc declare create(iMark_G)
 
     integer(int1_), parameter:: iCharNewLine = ichar(CharNewLine)
 
     ! Interpolation
     integer:: Di, Dj, Dk
     real:: CoefL, CoefR
+    !$acc declare create(Di, Dj, Dk, CoefL, CoefR)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_data'
@@ -130,6 +134,8 @@ contains
        ! Check if block is inside cut and set interpolation info if needed
        if(do_skip_block(iBlock, Di, Dj, Dk, CoefL, CoefR)) RETURN
     endif
+
+    call timing_start(NameSub)
 
     iMin = IjkMin_D(1); iMax = IjkMax_D(1)
     jMin = IjkMin_D(2); jMax = IjkMax_D(2)
@@ -160,6 +166,7 @@ contains
           end do; end do; end do
        else
 
+          ! Add a new line character to the end of each line.
           nCharPerLine = (nDim + nPlotVar)*nCharPerReal + 1
 
           iMark_G = 0
@@ -171,9 +178,11 @@ contains
           end do; end do; end do
           nChar = iCount - 1
 
+          !$acc update device(PlotVar_GV, iMark_G, Di, Dj, dk, CoefL, CoefR)
+
           allocate(Ascii_I(nChar))          
-!!!$acc parallel loop gang vector collapse(3) private(Xyz_D, PlotVar_V) &
-!!!$acc copyin(Di, Dj, Dk, CoefL, CoefR, PlotVar_GV) copyout(Ascii_I)
+
+         !$acc parallel loop gang vector collapse(3) private(Xyz_D, PlotVar_V)
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
@@ -196,6 +205,8 @@ contains
              Ascii_I(iLoc) = iCharNewLine             
           end do; end do; end do
 
+          !$acc update host(Ascii_I)
+
           ! Why is it 'nChar-1'? There is no need to explicitly write add the
           ! last newline character
           if(nChar > 1) write(UnitTmp_, '(999999999A)') char(Ascii_I(1:nChar-1))
@@ -207,6 +218,8 @@ contains
     deallocate(PlotVar_V)
 
     if(DoTest) write(*,*) NameSub,' finished'
+
+    call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_tecplot_data
@@ -459,6 +472,8 @@ contains
     ! average index.
     call message_pass_cell(1, CellIndex_GB, nProlongOrderIn=1, &
          NameOperatorIn='min')
+
+    !$acc update device(CellIndex_GB)
 
     ! switch off "fake" periodicity so there are no connections
     call set_tree_periodic(.false.)

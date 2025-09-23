@@ -69,6 +69,7 @@ contains
 
     ! Plot variables
     real:: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    !$acc declare create(PlotVar_GV)
     real:: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
     real:: PlotVarBody_V(MaxPlotvar)
     logical:: UsePlotVarBody_V(MaxPlotvar)
