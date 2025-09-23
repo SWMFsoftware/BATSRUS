@@ -44,7 +44,7 @@ module ModWriteTecplot
 
   character(len=23), public:: StringDateTime
   character(len=22), public:: StringNandT
-  character, public, parameter:: CharNewLine = new_line('a')
+  character, public, parameter:: CharNewLine = new_line('a')    
   integer,   public:: lRecConnect = 2**nDim*11+1
 
   ! Dimensionality of plot
@@ -64,6 +64,7 @@ module ModWriteTecplot
 
   ! The dimension normal to the cut plane (=0 for no cut or 3D cut box)
   integer:: iCutDim
+  !$acc declare create(iCutDim)
 
   ! iPlot_D is 1 if the plot has non-zero width in that dimension
   integer:: iPlot_D(3)
@@ -87,23 +88,29 @@ contains
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
          r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
+    use ModUtilities, ONLY: real_to_ascii_code
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO, ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
-    use ModKind, ONLY: Real4_
+    use ModKind, ONLY: Real4_, Int1_
 
     integer, intent(in):: iBlock, nPlotVar
     real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
 
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
-    integer:: iRecData
+    integer:: iRecData, iVar
 
     real(Real4_):: Xyz_D(MaxDim)
     real(Real4_), allocatable:: PlotVar_V(:)
 
-    character(len=:), allocatable:: CharBuffer
+    integer(Int1_), allocatable:: Ascii_I(:)
     integer, parameter:: nCharPerReal = 14
-    integer:: nCharMax, iChar, nCharPerLine
+    integer:: nCharPerLine, nChar
+
+    integer:: iCount, iLoc
+    integer:: iMark_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    integer(int1_), parameter:: iCharNewLine = ichar(CharNewLine)
 
     ! Interpolation
     integer:: Di, Dj, Dk
@@ -154,27 +161,46 @@ contains
        else
 
           nCharPerLine = (nDim + nPlotVar)*nCharPerReal + 1
-          nCharMax = nCharPerLine* &
-               (kMax - kMin + 1)*(jMax - jMin + 1)*(iMax - iMin + 1)
 
-          allocate(character(len=nCharMax):: CharBuffer)
-          iChar = 1
+          iMark_G = 0
+          iCount = 1
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
+             iMark_G(i,j,k) = iCount 
+             iCount = iCount + nCharPerLine
+          end do; end do; end do
+          nChar = iCount - 1
+
+          allocate(Ascii_I(nChar))          
+!!!$acc parallel loop gang vector collapse(3) private(Xyz_D, PlotVar_V) &
+!!!$acc copyin(Di, Dj, Dk, CoefL, CoefR, PlotVar_GV) copyout(Ascii_I)
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
              call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
                   Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
-             write(CharBuffer(iChar:iChar+nCharPerLine-2), '(50(ES14.6))') &
-                  Xyz_D(1:nDim), PlotVar_V
-             iChar = iChar + nCharPerLine
-             CharBuffer(iChar-1:iChar-1) = CharNewLine
+
+             iLoc = iMark_G(i,j,k)
+             do iVar = 1, nDim 
+                call real_to_ascii_code(real(Xyz_D(iVar)), 6, nCharPerReal, &
+                     Ascii_I(iLoc:iLoc+nCharPerReal-1))
+                iLoc = iLoc + nCharPerReal
+             end do
+
+             do iVar = 1, nPlotVar
+                call real_to_ascii_code(real(PlotVar_V(iVar)), 6, nCharPerReal, &
+                     Ascii_I(iLoc:iLoc+nCharPerReal-1))
+                iLoc = iLoc + nCharPerReal
+             end do
+
+             Ascii_I(iLoc) = iCharNewLine             
           end do; end do; end do
 
-          ! Why 'iChar-2'? There is no need to explicitly write add the
+          ! Why is it 'nChar-1'? There is no need to explicitly write add the
           ! last newline character
-          if(iChar > 1) write(UnitTmp_, '(a)') CharBuffer(1:iChar-2)
+          if(nChar > 1) write(UnitTmp_, '(999999999A)') char(Ascii_I(1:nChar-1))
 
-          deallocate(CharBuffer)
+          deallocate(Ascii_I)
        end if
     end if
 
@@ -187,6 +213,7 @@ contains
   !==========================================================================
   subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
        Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
+    !$acc routine seq
     use ModKind, ONLY: Real4_
     use BATL_lib, ONLY: MaxDim, Phi_, Theta_, Lat_, nJ, nK, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, r_, &
@@ -344,6 +371,7 @@ contains
              if(iPlot_D(iCutDim) == 0) EXIT
           end do
        end if
+       !$acc update device(iCutDim)
 
        if(DoTest .or. nPlotDim == 1)then
           write(*,*) NameSub,' CutMin_D=',  CutMin_D
