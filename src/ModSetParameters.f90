@@ -1757,6 +1757,7 @@ contains
 
        case("#SAVETECBINARY")
           call read_var('DoSaveTecBinary', DoSaveTecBinary)
+          !$acc update device(DoSaveTecBinary)
 
        case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
           call read_region_param(NameCommand, UseStrictIn=UseStrict)

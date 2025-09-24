@@ -5,8 +5,12 @@
 module ModWriteTecplot
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose, iProc, nProc, iComm
+       test_start, test_stop, lVerbose, iProc, nProc, iComm, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nIjk_D, MaxBlock, &
+       nI, nJ, nK
   use ModBatsrusUtility, ONLY: get_date_time, get_time_string, stop_mpi
+
+  use ModKind, ONLY: Int1_
 
   ! Save cell centered data into Tecplot files
   !
@@ -33,7 +37,10 @@ module ModWriteTecplot
 
   private ! except
 
-  public:: write_tecplot_data      ! write plot variables for 1 block
+  public:: write_tecplot_init      ! initialize variables
+  public:: write_tecplot_count     ! count number of bytes written
+  public:: write_tecplot_get_data  ! get data for one block
+  public:: write_tecplot_write_data ! write data
   public:: write_tecplot_head      ! write header information
   public:: write_tecplot_connect   ! write connectivity file(s)
   public:: write_tecplot_setinfo   ! set some variables to be written as AUX
@@ -44,7 +51,7 @@ module ModWriteTecplot
 
   character(len=23), public:: StringDateTime
   character(len=22), public:: StringNandT
-  character, public, parameter:: CharNewLine = new_line('a')    
+  character, public, parameter:: CharNewLine = new_line('a')
   integer,   public:: lRecConnect = 2**nDim*11+1
 
   ! Dimensionality of plot
@@ -53,14 +60,13 @@ module ModWriteTecplot
   ! Local variables
   character(len=23):: StringDateTime0
 
-  ! Index limits inside the block based on the cut
-  integer:: IjkMin_D(3), IjkMax_D(3)
-
   ! Cuts
   logical:: DoCut
+  !$acc declare create(DoCut)
 
   ! Generalized coordinate limits of the cut box/slice
   real:: CutMin_D(3), CutMax_D(3)
+  !$acc declare create(CutMin_D, CutMax_D)
 
   ! The dimension normal to the cut plane (=0 for no cut or 3D cut box)
   integer:: iCutDim
@@ -81,69 +87,132 @@ module ModWriteTecplot
 
   character(len=80):: StringFormat
 
+  ! One byte integer array that stores the ascii codes of the 
+  ! data to be written
+  integer(Int1_), allocatable:: iAscii_I(:)
+  !$acc declare create(iAscii_I, iMark_GI)
+
+  ! The starting position of each cell's data in iAscii_I
+  integer, allocatable:: iMark_GI(:,:,:,:)
+  
+  ! Corresponding to the format (ES14.6)
+  integer, parameter:: nCharPerReal = 14, nFrac = 6
+
+  integer:: nCharPerLine, nCharMax, nChar
+  !$acc declare create(nCharPerLine)
+  
+  integer, public, parameter:: nBlockPerPatch = 128
+
 contains
   !============================================================================
-  subroutine write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
+  subroutine write_tecplot_init(nPlotVar)
+    integer, intent(in):: nPlotVar
 
-    use BATL_lib, ONLY: MaxDim, nDim, nJ, nK, nIjk_D, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+    integer:: nCharPerLineNew
+
+    !--------------------------------------------------------------------------
+    if(.not.allocated(iMark_GI))then
+       allocate(iMark_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlockPerPatch))
+    end if
+
+    if(.not.allocated(iAscii_I))then
+       nCharPerLine = 0
+       nCharMax = 0
+    end if
+
+    nCharPerLineNew = (nDim + nPlotVar)*nCharPerReal + 1
+
+    if(nCharPerLineNew > nCharPerLine)then
+       nCharPerLine = nCharPerLineNew
+       !$acc update device(nCharPerLine)
+       nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
+            nCharPerLine*nBlockPerPatch
+
+       if(allocated(iAscii_I)) deallocate(iAscii_I)
+       allocate(iAscii_I(nCharMax))
+    end if
+  end subroutine write_tecplot_init
+  !============================================================================
+  subroutine write_tecplot_count(iBlockMin, iBlockMax)
+    integer, intent(in):: iBlockMin, iBlockMax
+
+    integer:: i, j, k, iCount
+
+    integer:: iBlock
+
+    !--------------------------------------------------------------------------
+    iMark_GI = 0
+    iCount = 1
+    do iBlock = iBlockMin, iBlockMax
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
+          iMark_GI(i,j,k,iBlock-iBlockMin+1) = iCount
+          iCount = iCount + nCharPerLine
+       end do; end do; end do
+    end do
+    nChar = iCount - 1
+
+    !$acc update device(iMark_GI)
+
+  end subroutine write_tecplot_count
+  !============================================================================
+
+  subroutine write_tecplot_get_data(iBlock, iBlockMin, nPlotVar, PlotVar_VGB)
+    !$acc routine vector
+
+    use BATL_lib, ONLY: MaxDim, nDim, nJ, nK, Xyz_DGB, &
          r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModUtilities, ONLY: real_to_ascii_code
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO, ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
-    use ModKind, ONLY: Real4_, Int1_
+    use ModKind, ONLY: Real4_
 
-    integer, intent(in):: iBlock, nPlotVar
-    real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    integer, intent(in):: iBlock, iBlockMin, nPlotVar
+    real,    intent(in):: PlotVar_VGB(&
+         nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-    integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
+    integer:: i, j, k
     integer:: iRecData, iVar
 
     real(Real4_):: Xyz_D(MaxDim)
-    real(Real4_), allocatable:: PlotVar_V(:)
+    real(Real4_):: PlotVar_V(MaxPlotvar)
 
-    integer(Int1_), allocatable:: Ascii_I(:)
-    !$acc declare create(Ascii_I)
-    integer, parameter:: nCharPerReal = 14
-    integer:: nCharPerLine, nChar
+    integer:: iLoc
 
-    integer:: iCount, iLoc
-    integer:: iMark_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    !$acc declare create(iMark_G)
+    ! Index limits inside the block based on the cut
+    integer:: IjkMin_D(3), IjkMax_D(3)
+
+    integer:: iMin, iMax, jMin, jMax, kMin, kMax
 
     integer(int1_), parameter:: iCharNewLine = ichar(CharNewLine)
 
     ! Interpolation
     integer:: Di, Dj, Dk
     real:: CoefL, CoefR
-    !$acc declare create(Di, Dj, Dk, CoefL, CoefR)
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'write_tecplot_data'
+
+    character(len=*), parameter:: NameSub = 'write_tecplot_get_data'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(DoTest) write(*,*) NameSub,' starting with nPlotVar=', nPlotVar
-
     IjkMin_D = 1
     IjkMax_D = nIjk_D
 
+    Di = 0; Dj = 0; Dk = 0
+    CoefL = 1.0; CoefR = 0.0
     if(DoCut)then
        ! Check if block is inside cut and set interpolation info if needed
-       if(do_skip_block(iBlock, Di, Dj, Dk, CoefL, CoefR)) RETURN
+       if(do_skip_block(iBlock, Di, Dj, Dk, &
+            CoefL, CoefR, IjkMin_D, IjkMax_D)) RETURN
     endif
-
-    call timing_start(NameSub)
 
     iMin = IjkMin_D(1); iMax = IjkMax_D(1)
     jMin = IjkMin_D(2); jMax = IjkMax_D(2)
     kMin = IjkMin_D(3); kMax = IjkMax_D(3)
 
-    allocate(PlotVar_V(nPlotVar))
-
     if(DoSaveOneTecFile)then
+#ifndef _OPENACC
        write(StringFormat, '(a,i2,a)') "(", nDim+nPlotVar, "(ES14.6), a)"
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           ! Record index is the global cell index
@@ -151,109 +220,91 @@ contains
           ! Skip points outside the cut
           if(iRecData == 0) CYCLE
           call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-               Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
+               Xyz_D, PlotVar_V, PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
           write(UnitTmp_, StringFormat, REC=iRecData) &
                Xyz_D(1:nDim), PlotVar_V, CharNewLine
        end do; end do; end do
+#endif
     else
+
        if(DoSaveTecBinary)then
+#ifndef _OPENACC
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
              call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-                  Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
+                  Xyz_D, PlotVar_V, PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
              write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V
           end do; end do; end do
+#endif
        else
-
           ! Add a new line character to the end of each line.
           nCharPerLine = (nDim + nPlotVar)*nCharPerReal + 1
 
-          iMark_G = 0
-          iCount = 1
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
-             iMark_G(i,j,k) = iCount 
-             iCount = iCount + nCharPerLine
-          end do; end do; end do
-          nChar = iCount - 1
-
-          !$acc update device(PlotVar_GV, iMark_G, Di, Dj, dk, CoefL, CoefR)
-
-          allocate(Ascii_I(nChar))          
-
-         !$acc parallel loop gang vector collapse(3) private(Xyz_D, PlotVar_V)
+          !$acc loop vector collapse(3) private(Xyz_D, PlotVar_V)
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
              call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-                  Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
+                  Xyz_D, PlotVar_V(1:nPlotVar), &
+                  PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
 
-             iLoc = iMark_G(i,j,k)
-             do iVar = 1, nDim 
-                call real_to_ascii_code(real(Xyz_D(iVar)), 6, nCharPerReal, &
-                     Ascii_I(iLoc:iLoc+nCharPerReal-1))
+             iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+             do iVar = 1, nDim
+                call real_to_ascii_code(real(Xyz_D(iVar)), nFrac, &
+                     nCharPerReal, iAscii_I(iLoc:iLoc+nCharPerReal-1))
                 iLoc = iLoc + nCharPerReal
              end do
 
              do iVar = 1, nPlotVar
-                call real_to_ascii_code(real(PlotVar_V(iVar)), 6, nCharPerReal, &
-                     Ascii_I(iLoc:iLoc+nCharPerReal-1))
+                call real_to_ascii_code(real(PlotVar_V(iVar)), nFrac, &
+                     nCharPerReal, iAscii_I(iLoc:iLoc+nCharPerReal-1))
                 iLoc = iLoc + nCharPerReal
              end do
 
-             Ascii_I(iLoc) = iCharNewLine             
+             iAscii_I(iLoc) = iCharNewLine
           end do; end do; end do
-
-          !$acc update host(Ascii_I)
-
-          ! Why is it 'nChar-1'? There is no need to explicitly write add the
-          ! last newline character
-          if(nChar > 1) write(UnitTmp_, '(999999999A)') char(Ascii_I(1:nChar-1))
-
-          deallocate(Ascii_I)
        end if
     end if
+  end subroutine write_tecplot_get_data
+  !============================================================================
+  subroutine write_tecplot_write_data
+    use ModIoUnit, ONLY: UnitTmp_
+    !--------------------------------------------------------------------------
 
-    deallocate(PlotVar_V)
+    !$acc update host(iAscii_I)
+    write(UnitTmp_) iAscii_I(1:nChar)
 
-    if(DoTest) write(*,*) NameSub,' finished'
-
-    call timing_stop(NameSub)
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine write_tecplot_data
-  !==========================================================================
+  end subroutine write_tecplot_write_data
+  !============================================================================
   subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-       Xyz_D, PlotVar_V, PlotVar_GV, CoefL, CoefR)
+       Xyz_D, PlotVar_V, PlotVar_VG, CoefL, CoefR)
     !$acc routine seq
     use ModKind, ONLY: Real4_
     use BATL_lib, ONLY: MaxDim, Phi_, Theta_, Lat_, nJ, nK, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, r_, &
-         CoordMin_DB, CoordMax_DB, IsAnyAxis, IsLatitudeAxis, &
-         IsSphericalAxis, IsCylindricalAxis 
+         Xyz_DGB, r_, CoordMin_DB, CoordMax_DB, IsAnyAxis, &
+         IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO, ONLY: MaxPlotvar
 
     ! Interpolate variables and coordinates to cut planes
     ! Set the coordinates and fix them to fill the hole at the pole
-    !------------------------------------------------------------------------
     integer, intent(in):: iBlock, i, j, k, Di, Dj, Dk, nPlotVar
     real(Real4_), intent(out):: Xyz_D(MaxDim)
     real(Real4_), intent(out):: PlotVar_V(nPlotVar)
-    real, intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real, intent(in):: PlotVar_VG(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(in):: CoefL, CoefR
 
-
+    !--------------------------------------------------------------------------
     if(iCutDim == 0)then
        Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
-       PlotVar_V = PlotVar_GV(i,j,k,1:nPlotVar)
+       PlotVar_V = PlotVar_VG(:,i,j,k)
     else
        ! Interpolate using precalculated coefficients
        Xyz_D     = CoefL*Xyz_DGB(:,i  ,j,k,iBlock) &
             +      CoefR*Xyz_DGB(:,i+Di,j+Dj,k+Dk,iBlock)
-       PlotVar_V = CoefL*PlotVar_GV(i  ,j,k,1:nPlotVar) &
-            +      CoefR*PlotVar_GV(i+Di,j+Dj,k+Dk,1:nPlotVar)
+       PlotVar_V = CoefL*PlotVar_VG(:,i  ,j,k) &
+            +      CoefR*PlotVar_VG(:,i+Di,j+Dj,k+Dk)
     end if
 
     ! No need to push points to the pole if there is no axis
@@ -273,7 +324,7 @@ contains
             Xyz_D(1:2) = 0
     end if
   end subroutine set_xyz_state
-  !==========================================================================
+  !============================================================================
   function int2str(i) result(String)
 
     ! Convert integer to string of the same length
@@ -332,6 +383,8 @@ contains
 
     integer:: i0, i1, j0, j1, k0, k1, i, j, k
 
+    integer:: IjkMin_D(3), IjkMax_D(3)
+
     ! Cell index to be written into the connectivity file
     integer, allocatable:: iCell_G(:,:,:)
 
@@ -354,6 +407,7 @@ contains
     call test_start(NameSub, DoTest)
 
     DoCut = nDim == 3 .and. TypePlot(1:2) /= '3d'
+    !$acc update device(DoCut)
 
     ! Set iPlotDim_D to 0 in ignored dimensions
     iPlot_D = 0
@@ -373,6 +427,7 @@ contains
     if(DoCut)then
        CutMin_D = PlotRange_EI(1:5:2,iFile)
        CutMax_D = PlotRange_EI(2:6:2,iFile)
+       !$acc update device(CutMin_D, CutMax_D)
 
        ! Set iPlot_D to 0 in 0 width cut direction
        where(CutMin_D == CutMax_D) iPlot_D = 0
@@ -407,7 +462,8 @@ contains
              if(iStage == nStage) CellIndex_GB(:,:,:,iBlock) = 0
 
              ! Check if block is inside cut and set IjkMin_D, IjkMax_D...
-             if(do_skip_block(iBlock)) CYCLE
+             if(do_skip_block(iBlock, &
+                  IjkMin_D=IjkMin_D, IjkMax_D=IjkMax_D)) CYCLE
 
              if(iStage < nStage)then
                 ! Just count the number of cells inside the cut
@@ -1059,7 +1115,9 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_setinfo
   !============================================================================
-  logical function do_skip_block(iBlock, Di, Dj, Dk, CoefL, CoefR)
+  logical function do_skip_block(iBlock, Di, Dj, Dk, CoefL, CoefR, &
+       IjkMin_D, IjkMax_D)
+    !$acc routine seq
 
     ! Set the logical value to false if the block is unused
     ! or if it is outside the cut.
@@ -1071,13 +1129,14 @@ contains
     ! interpolation coefficients to interpolate onto the cut plane.
 
     use BATL_lib, ONLY: Unused_B, CoordMin_DB, CoordMax_DB, CellSize_DB, &
-         nIjk_D, Phi_
+         Phi_
     use ModNumConst, ONLY: i_DD, cPi, cHalfPi
 
     integer, intent(in):: iBlock
 
     integer, intent(out), optional:: Di, Dj, Dk
     real,    intent(out), optional:: CoefL, CoefR
+    integer, intent(out), optional:: IjkMin_D(3), IjkMax_D(3)
 
     ! Arrays describing block geometry
     real:: BlockMin_D(3), BlockMax_D(3), CellSize_D(3)
@@ -1122,10 +1181,15 @@ contains
     ! that there are at least 1 cells in zero-width directions,
     ! and 2 cells in non-zero width directions.
     CellSize_D = CellSize_DB(:,iBlock)
-    IjkMin_D = max(1, &
-         nint(-0.01 +          (CutMin_D - BlockMin_D)/CellSize_D))
-    IjkMax_D = min(nIJK_D, &
-         nint(0.01 + iPlot_D + (CutMax_D - BlockMin_D)/CellSize_D))
+    if(present(IjkMin_D)) then
+       IjkMin_D = max(1, &
+            nint(-0.01 +          (CutMin_D - BlockMin_D)/CellSize_D))
+    end if
+
+    if(present(IjkMax_D)) then
+       IjkMax_D = min(nIJK_D, &
+            nint(0.01 + iPlot_D + (CutMax_D - BlockMin_D)/CellSize_D))
+    end if
 
     ! Nothing else to do if there is no 2D cut or Di is not present
     if(iCutDim == 0 .or. .not. present(Di)) RETURN
