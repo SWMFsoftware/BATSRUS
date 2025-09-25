@@ -90,10 +90,11 @@ module ModWriteTecplot
   ! One byte integer array that stores the ascii codes of the 
   ! data to be written
   integer(Int1_), allocatable:: iAscii_I(:)
-  !$acc declare create(iAscii_I, iMark_GI)
+  !$acc declare create(iAscii_I)
 
   ! The starting position of each cell's data in iAscii_I
   integer, allocatable:: iMark_GI(:,:,:,:)
+  !$acc declare create(iMark_GI)
   
   ! Corresponding to the format (ES14.6)
   integer, parameter:: nCharPerReal = 14, nFrac = 6
