@@ -589,195 +589,192 @@ contains
        end if
     end if
 
+    nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))       
 
     nBrick = 0
     do iStage = 1, nStage
-       nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))       
-       do iPatch = 1, nPatch
+       do iPatch = 1, nPatch; do iPass = 1, nPass
+          iBlockMin = (iPatch-1)*nBlockPerPatch + 1
+          iBlockMax = min(iPatch*nBlockPerPatch, nBlock)
 
-          do iPass = 1, nPass
-             iBlockMin = (iPatch-1)*nBlockPerPatch + 1
-             iBlockMax = min(iPatch*nBlockPerPatch, nBlock)
+          if(iPass == 2) then
+             !$acc update device(iMark_GI)
+          end if
 
-             if(iPass == 2) then
-                !$acc update device(iMark_GI)
-             end if
+          iLoc = 1
+          !$acc parallel loop gang if(iPass==2) private(iCell_G)
+          do iBlock = iBlockMin, iBlockMax
+             ! Check if block is used and inside cut
+             if(do_skip_block(iBlock)) CYCLE
 
-             iLoc = 1
-             !$acc parallel loop gang if(iPass==2) private(iCell_G)
-             do iBlock = iBlockMin, iBlockMax
-                ! Check if block is used and inside cut
-                if(do_skip_block(iBlock)) CYCLE
+             call set_connect(i0, i1, j0, j1, k0, k1, iBlock, &
+                  iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)               
 
-                call set_connect(i0, i1, j0, j1, k0, k1, iBlock, &
-                     iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)               
-
-                if(DoSaveTecBinary) then
+             if(DoSaveTecBinary) then
 #ifndef _OPENACC
-                   ! Right now binary format only works for 3D.
-                   ! Loop over the "lower-left" corner of the bricks
-                   do k = k0, k1; do j = j0, j1; do i = i0, i1
-                      ! Skip bricks that are not fully inside/usable
-                      if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
-                           CYCLE
-                      if(iPass==1) nBrick = nBrick + 1
+                ! Right now binary format only works for 3D.
+                ! Loop over the "lower-left" corner of the bricks
+                do k = k0, k1; do j = j0, j1; do i = i0, i1
+                   ! Skip bricks that are not fully inside/usable
+                   if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
+                        CYCLE
+                   if(iPass==1) nBrick = nBrick + 1
 
-                      ! In stage 1 only count bricks
-                      if(iStage < nStage) CYCLE
+                   ! In stage 1 only count bricks
+                   if(iStage < nStage) CYCLE
 
-                      write(UnitTmp_) &
-                           iCell_G(i  ,j  ,k  ), &
-                           iCell_G(i+1,j  ,k  ), &
-                           iCell_G(i+1,j+1,k  ), &
-                           iCell_G(i  ,j+1,k  ), &
-                           iCell_G(i  ,j  ,k+1), &
-                           iCell_G(i+1,j  ,k+1), &
-                           iCell_G(i+1,j+1,k+1), &
-                           iCell_G(i  ,j+1,k+1)
-                   end do; end do; end do
+                   write(UnitTmp_) &
+                        iCell_G(i  ,j  ,k  ), &
+                        iCell_G(i+1,j  ,k  ), &
+                        iCell_G(i+1,j+1,k  ), &
+                        iCell_G(i  ,j+1,k  ), &
+                        iCell_G(i  ,j  ,k+1), &
+                        iCell_G(i+1,j  ,k+1), &
+                        iCell_G(i+1,j+1,k+1), &
+                        iCell_G(i  ,j+1,k+1)
+                end do; end do; end do
 #endif
-                else ! ASCII format
-                   ! Loop over the "lower-left" corner of the bricks
-                   !$acc loop vector collapse(3)
-                   do k = k0, k1; do j = j0, j1; do i = i0, i1
-                      ! Skip bricks that are not fully inside/usable
-                      if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
-                           CYCLE
-                      if(iPass==1) nBrick = nBrick + 1
+             else ! ASCII format
+                ! Loop over the "lower-left" corner of the bricks
+                !$acc loop vector collapse(3)
+                do k = k0, k1; do j = j0, j1; do i = i0, i1
+                   ! Skip bricks that are not fully inside/usable
+                   if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
+                        CYCLE
+                   if(iPass==1) nBrick = nBrick + 1
 
-                      nIntPerLine = 4
-                      if(nPlotDim==3) nIntPerLine = 8
+                   nIntPerLine = 4
+                   if(nPlotDim==3) nIntPerLine = 8
 
-                      if(iPass < nPass) then
-                         iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
-                         iLoc = iLoc + nIntPerLine*nCharPerInt + 1
-                         CYCLE
+                   if(iPass < nPass) then
+                      iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
+                      iLoc = iLoc + nIntPerLine*nCharPerInt + 1
+                      CYCLE
+                   else
+                      iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+                   end if
+
+                   ! In stage 1 only count bricks
+                   if(iStage < nStage) CYCLE
+
+                   if(nPlotDim == 3)then
+                      if(DoSaveOneTecFile)then
+#ifndef _OPENACC
+                         write(UnitTmp_,'(8i11,a)', REC=nBrick) &
+                              iCell_G(i  ,j  ,k  ), &
+                              iCell_G(i+1,j  ,k  ), &
+                              iCell_G(i+1,j+1,k  ), &
+                              iCell_G(i  ,j+1,k  ), &
+                              iCell_G(i  ,j  ,k+1), &
+                              iCell_G(i+1,j  ,k+1), &
+                              iCell_G(i+1,j+1,k+1), &
+                              iCell_G(i  ,j+1,k+1), &
+                              CharNewLine
+#endif
                       else
-                         iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+
+                         call int_to_ascii_code(iCell_G(i+1,j+1,k  ),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i  ,j+1,k  ),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i+1,j+1,k+1),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i  ,j+1,k+1),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         iAscii_I(iLoc) = ichar(CharNewLine)
+                         iLoc = iLoc + 1
                       end if
-
-                      ! In stage 1 only count bricks
-                      if(iStage < nStage) CYCLE
-
-                      if(nPlotDim == 3)then
-                         if(DoSaveOneTecFile)then
+                   elseif(.not.IsPlotDim3)then
 #ifndef _OPENACC
-                            write(UnitTmp_,'(8i11,a)', REC=nBrick) &
-                                 iCell_G(i  ,j  ,k  ), &
-                                 iCell_G(i+1,j  ,k  ), &
-                                 iCell_G(i+1,j+1,k  ), &
-                                 iCell_G(i  ,j+1,k  ), &
-                                 iCell_G(i  ,j  ,k+1), &
-                                 iCell_G(i+1,j  ,k+1), &
-                                 iCell_G(i+1,j+1,k+1), &
-                                 iCell_G(i  ,j+1,k+1), &
-                                 CharNewLine
-#endif
-                         else
-
-                            call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-
-                            call int_to_ascii_code(iCell_G(i+1,j+1,k  ),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i  ,j+1,k  ),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i+1,j+1,k+1),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i  ,j+1,k+1),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            iAscii_I(iLoc) = ichar(CharNewLine)
-                            iLoc = iLoc + 1
-                         end if
-                      elseif(.not.IsPlotDim3)then
-#ifndef _OPENACC
-                         if(DoSaveOneTecFile)then
-                            write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                                 iCell_G(i  ,j  ,k), &
-                                 iCell_G(i+1,j  ,k), &
-                                 iCell_G(i+1,j+1,k), &
-                                 iCell_G(i  ,j+1,k), &
-                                 CharNewLine
-                         else
-                            write(UnitTmp_,'(4i11)') &
-                                 iCell_G(i  ,j  ,k), &
-                                 iCell_G(i+1,j  ,k), &
-                                 iCell_G(i+1,j+1,k), &
-                                 iCell_G(i  ,j+1,k)
-                         end if
-#endif
-                      elseif(.not.IsPlotDim2)then
-                         if(DoSaveOneTecFile)then
-#ifndef _OPENACC
-                            write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                                 iCell_G(i  ,j,k  ), &
-                                 iCell_G(i+1,j,k  ), &
-                                 iCell_G(i+1,j,k+1), &
-                                 iCell_G(i  ,j,k+1), &
-                                 CharNewLine
-#endif
-                         else
-                            call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
-                                 iAscii_I(iLoc:iLoc+10), .true.)
-                            iLoc = iLoc + 11
-                            iAscii_I(iLoc) = ichar(CharNewLine)
-                            iLoc = iLoc + 1
-                         end if
-                      elseif(.not.IsPlotDim1)then
-#ifndef _OPENACC
-                         if(DoSaveOneTecFile)then
-                            write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                                 iCell_G(i,j  ,k  ), &
-                                 iCell_G(i,j+1,k  ), &
-                                 iCell_G(i,j+1,k+1), &
-                                 iCell_G(i,j  ,k+1), &
-                                 CharNewLine
-                         else
-                            write(UnitTmp_,'(4i11)') &
-                                 iCell_G(i,j  ,k  ), &
-                                 iCell_G(i,j+1,k  ), &
-                                 iCell_G(i,j+1,k+1), &
-                                 iCell_G(i,j  ,k+1)
-                         end if
-#endif
+                      if(DoSaveOneTecFile)then
+                         write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                              iCell_G(i  ,j  ,k), &
+                              iCell_G(i+1,j  ,k), &
+                              iCell_G(i+1,j+1,k), &
+                              iCell_G(i  ,j+1,k), &
+                              CharNewLine
+                      else
+                         write(UnitTmp_,'(4i11)') &
+                              iCell_G(i  ,j  ,k), &
+                              iCell_G(i+1,j  ,k), &
+                              iCell_G(i+1,j+1,k), &
+                              iCell_G(i  ,j+1,k)
                       end if
-                   end do; end do; end do
+#endif
+                   elseif(.not.IsPlotDim2)then
+                      if(DoSaveOneTecFile)then
+#ifndef _OPENACC
+                         write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                              iCell_G(i  ,j,k  ), &
+                              iCell_G(i+1,j,k  ), &
+                              iCell_G(i+1,j,k+1), &
+                              iCell_G(i  ,j,k+1), &
+                              CharNewLine
+#endif
+                      else
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
+                              iAscii_I(iLoc:iLoc+10), .true.)
+                         iLoc = iLoc + 11
+                         iAscii_I(iLoc) = ichar(CharNewLine)
+                         iLoc = iLoc + 1
+                      end if
+                   elseif(.not.IsPlotDim1)then
+#ifndef _OPENACC
+                      if(DoSaveOneTecFile)then
+                         write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                              iCell_G(i,j  ,k  ), &
+                              iCell_G(i,j+1,k  ), &
+                              iCell_G(i,j+1,k+1), &
+                              iCell_G(i,j  ,k+1), &
+                              CharNewLine
+                      else
+                         write(UnitTmp_,'(4i11)') &
+                              iCell_G(i,j  ,k  ), &
+                              iCell_G(i,j+1,k  ), &
+                              iCell_G(i,j+1,k+1), &
+                              iCell_G(i,j  ,k+1)
+                      end if
+#endif
+                   end if
+                end do; end do; end do
 
-                end if
-
-             end do ! iBlock
-
-             if(iPass == 1) nCharTotal = iLoc - 1
-
-             if(iPass == nPass) then
-                !$acc update host(iAscii_I(1:nCharTotal))
-                write(UnitTmp_) iAscii_I(1:nCharTotal)
              end if
-          end do ! iPass
-       end do ! iPatch
+
+          end do ! iBlock
+
+          if(iPass == 1) nCharTotal = iLoc - 1
+
+          if(iPass == nPass) then
+             !$acc update host(iAscii_I(1:nCharTotal))
+             write(UnitTmp_) iAscii_I(1:nCharTotal)
+          end if
+       end do; end do ! iPatch, iPass
 
        if(iStage < nStage)then
           ! Collect number of bricks from all processors
