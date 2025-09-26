@@ -80,7 +80,6 @@ module ModVarIndexes
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
   ! Species
   integer, parameter :: SpeciesFirst_   = 1
   integer, parameter :: SpeciesLast_    = 1

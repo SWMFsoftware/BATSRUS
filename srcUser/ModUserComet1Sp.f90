@@ -121,7 +121,7 @@ contains
 
     use ModMain
     use ModReadParam
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
     integer:: i, j, k
     character (len=100) :: NameCommand, line
@@ -148,7 +148,7 @@ contains
           call read_var('kin_in',kin_in)
           call read_var('jpattern' ,jpattern)
           call read_var('Tion', Tion)
-          
+
           ! Convert comet input parameters to SI
           kin=kin_in*1E-6
           Unr=Unr_in*1E3
@@ -263,7 +263,6 @@ contains
        DoInitialize = .False.
     endif
 
-    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ICs
   !============================================================================
@@ -295,35 +294,34 @@ contains
   end subroutine user_init_point_implicit
   !============================================================================
 
-  !subroutine user_calc_sources(iBlock)
+  ! subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
     ! If there is no explicit source term, the subroutine user_expl_source
     ! and the corresponding calls can be removed.
 
-    !use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
+    ! use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
 
-    !integer, intent(in) :: iBlock
+    ! integer, intent(in) :: iBlock
 
-    !logical:: DoTest
-    !character(len=*), parameter:: NameSub = 'user_calc_sources'
+    ! logical:: DoTest
+    ! character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-    !call test_start(NameSub, DoTest, iBlock)
-    !if(.not.UsePointImplicit)then
+    ! call test_start(NameSub, DoTest, iBlock)
+    ! if(.not.UsePointImplicit)then
        ! Add all source terms if we do not use the point implicit scheme
      !  call user_expl_source(iBlock)
      !  call user_impl_source(iBlock)
-    !elseif(IsPointImplSource)then
+    ! elseif(IsPointImplSource)then
        ! Add implicit sources only
      !  call user_impl_source(iBlock)
-    !else
+    ! else
        ! Add explicit sources only
      !  call user_expl_source(iBlock)
-    !end if
+    ! end if
 
-    !call test_stop(NameSub, DoTest, iBlock)
-  !end subroutine user_calc_sources
-  !============================================================================
+    ! call test_stop(NameSub, DoTest, iBlock)
+  ! end subroutine user_calc_sources
   subroutine user_expl_source(iBlock)
 
     integer, intent(in) :: iBlock
@@ -340,9 +338,8 @@ contains
     ! The friction force is proportional to the velocity and the density.
 
     use ModPointImplicit, ONLY:
-      
 
-    use ModMain,    ONLY: nI,nJ,nK,nStep
+    use ModMain, ONLY: nI,nJ,nK,nStep
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry, ONLY: Xyz_DGB,r_GB
@@ -369,7 +366,7 @@ contains
          sMasseta, Losse, chargexchg, Unx, Uny, Unz, ux, uy, uz
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_impl_source'
+    character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -427,7 +424,7 @@ contains
        !! fi multiplicator value for the ionization frequency (including enhanced electron impact in ion pile up reagion)
        fi = 1.0	!       set f_i=1 for all r
 
-       !do k=1,nK ;   do j=1,nJ ;   do i=1,nI
+       ! do k=1,nK ;   do j=1,nJ ;   do i=1,nI
        !   if (rkm(i,j,k) >= 5000. .and. rkm(i,j,k) < 10000.) then
        !      fi(i,j,k) = 1.0+0.77*log(rkm(i,j,k)/5000.)
        !   elseif (rkm(i,j,k) >= 10000. .and. rkm(i,j,k) < 50000.) then
@@ -435,7 +432,7 @@ contains
        !   else
        !      fi(i,j,k) = 1.0
        !   endif
-       !end do;  end do ; end do
+       ! end do;  end do ; end do
 
        sMass = Qprod * mbar * fi * &
             exp(-r_GB(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/lambda) / &
@@ -470,21 +467,21 @@ contains
               ( 2.0 * NO2SI_V(UnitRho_) * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) )
 
     ! Standard Profile
-    !where  (rkm <= 1584.893)
+    ! where  (rkm <= 1584.893)
     !   Te = 1.E+2
-    !end where
-    !where (rkm > 1584.893 .and. rkm <= 6918.310)
+    ! end where
+    ! where (rkm > 1584.893 .and. rkm <= 6918.310)
     !   Te = 10.**( 1.143  * logR -  1.667 )
-    !end where
-    !where (rkm > 6918.310 .and. rkm <= 1.E+4)
+    ! end where
+    ! where (rkm > 6918.310 .and. rkm <= 1.E+4)
     !   Te = 10.**(10.965  * logR - 39.3735)
-    !end where
-    !where (rkm > 1.E+4 .and. rkm <= 1.E+5)
+    ! end where
+    ! where (rkm > 1.E+4 .and. rkm <= 1.E+5)
     !   Te = 10.**( 0.5135 * logR +  2.43)
-    !end where
-    !where (rkm > 1.E+5)
+    ! end where
+    ! where (rkm > 1.E+5)
     !   Te = 1.E+5
-    !end where
+    ! end where
 
     !********   modification Apr 03 yingdong for Borelley //start  *********
     if ( jet_width < 1e-6 ) then
@@ -647,7 +644,7 @@ contains
     !     endif
     !    close(321)
 
-    !if(IsPointImplMatrixSet)then
+    ! if(IsPointImplMatrixSet)then
        ! Set the non-zero dS/dU matrix elements here
        !      term3    = (5.-3.*Gamma)*(sMasseta+Losse)
        !      term4    = 1.5*(sMasseta+Losse)	! for energy source
