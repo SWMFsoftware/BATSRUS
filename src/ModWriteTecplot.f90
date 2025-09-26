@@ -98,10 +98,10 @@ module ModWriteTecplot
   !$acc declare create(iMark_GI)
 
   ! Corresponding to the format (ES14.6)
-  integer, parameter:: nCharPerReal = 14, nFrac = 6
+  integer, parameter:: nWidthReal = 14, nFrac = 6
 
   ! Corresponding to the format (i11)
-  integer, parameter:: nCharPerInt = 11
+  integer, parameter:: nWidthInt = 11
 
   integer:: nCharPerLine, nCharMax, nChar
   !$acc declare create(nCharPerLine)
@@ -133,7 +133,7 @@ contains
     if(present(nIntegerIn)) nInteger = nIntegerIn
 
     ! We add 1 for the new line character
-    nCharPerLineNew = nReal*nCharPerReal + nInteger*nCharPerInt + 1
+    nCharPerLineNew = nReal*nWidthReal + nInteger*nWidthInt + 1
 
     if(nCharPerLineNew /= nCharPerLine)then
        if(nCharPerLineNew > nCharPerLine) then
@@ -254,7 +254,7 @@ contains
 #endif
        else
           ! Add a new line character to the end of each line.
-          nCharPerLine = (nDim + nPlotVar)*nCharPerReal + 1
+          nCharPerLine = (nDim + nPlotVar)*nWidthReal + 1
 
           !$acc loop vector collapse(3) private(Xyz_D, PlotVar_V)
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -267,14 +267,14 @@ contains
              iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
              do iVar = 1, nDim
                 call real_to_ascii_code(real(Xyz_D(iVar)), nFrac, &
-                     nCharPerReal, iAscii_I(iLoc:iLoc+nCharPerReal-1))
-                iLoc = iLoc + nCharPerReal
+                     nWidthReal, iAscii_I(iLoc:iLoc+nWidthReal-1))
+                iLoc = iLoc + nWidthReal
              end do
 
              do iVar = 1, nPlotVar
                 call real_to_ascii_code(real(PlotVar_V(iVar)), nFrac, &
-                     nCharPerReal, iAscii_I(iLoc:iLoc+nCharPerReal-1))
-                iLoc = iLoc + nCharPerReal
+                     nWidthReal, iAscii_I(iLoc:iLoc+nWidthReal-1))
+                iLoc = iLoc + nWidthReal
              end do
 
              iAscii_I(iLoc) = iCharNewLine
@@ -446,7 +446,7 @@ contains
          NameFile, DoCut
 
     allocate( &
-         CellIndex_GB(0:nI+1,0:nJ+1,k0_:nKp1_,MaxBlock))         
+         CellIndex_GB(0:nI+1,0:nJ+1,k0_:nKp1_,MaxBlock))
 
     if(DoCut)then
        CutMin_D = PlotRange_EI(1:5:2,iFile)
@@ -481,7 +481,7 @@ contains
        nStage = min(2, nProc)
 
        iCell = 0
-       do iStage = 1, nStage          
+       do iStage = 1, nStage
           do iBlock = 1, nBlock
              if(iStage == nStage) CellIndex_GB(:,:,:,iBlock) = 0
 
@@ -524,7 +524,7 @@ contains
        end do
        ! Store total number of points saved when running on 1 processor
        if(nStage == 1) nPointAll = iCell
-    else       
+    else
        ! Full 2D or 3D plot
        ! count number of cells written by processors before this one
        nBlockBefore = 0
@@ -589,10 +589,10 @@ contains
        end if
     end if
 
-    nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))       
 
     nBrick = 0
     do iStage = 1, nStage
+       nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))
        do iPatch = 1, nPatch; do iPass = 1, nPass
           iBlockMin = (iPatch-1)*nBlockPerPatch + 1
           iBlockMax = min(iPatch*nBlockPerPatch, nBlock)
@@ -608,7 +608,7 @@ contains
              if(do_skip_block(iBlock)) CYCLE
 
              call set_connect(i0, i1, j0, j1, k0, k1, iBlock, &
-                  iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)               
+                  iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)
 
              if(DoSaveTecBinary) then
 #ifndef _OPENACC
@@ -648,7 +648,7 @@ contains
 
                    if(iPass < nPass) then
                       iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
-                      iLoc = iLoc + nIntPerLine*nCharPerInt + 1
+                      iLoc = iLoc + nIntPerLine*nWidthInt + 1
                       CYCLE
                    else
                       iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
@@ -672,52 +672,59 @@ contains
                               CharNewLine
 #endif
                       else
-
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-
-                         call int_to_ascii_code(iCell_G(i+1,j+1,k  ),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i  ,j+1,k  ),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i+1,j+1,k+1),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i  ,j+1,k+1),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)                             
+                         iLoc = iLoc + nWidthInt                         
+                         call int_to_ascii_code(iCell_G(i+1,j+1,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i  ,j+1,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j+1,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i  ,j+1,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
                          iAscii_I(iLoc) = ichar(CharNewLine)
                          iLoc = iLoc + 1
                       end if
                    elseif(.not.IsPlotDim3)then
-#ifndef _OPENACC
                       if(DoSaveOneTecFile)then
+#ifndef _OPENACC
                          write(UnitTmp_,'(4i11,a)', REC=nBrick) &
                               iCell_G(i  ,j  ,k), &
                               iCell_G(i+1,j  ,k), &
                               iCell_G(i+1,j+1,k), &
                               iCell_G(i  ,j+1,k), &
                               CharNewLine
-                      else
-                         write(UnitTmp_,'(4i11)') &
-                              iCell_G(i  ,j  ,k), &
-                              iCell_G(i+1,j  ,k), &
-                              iCell_G(i+1,j+1,k), &
-                              iCell_G(i  ,j+1,k)
-                      end if
 #endif
+                      else
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j+1,k), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i  ,j+1,k), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         iAscii_I(iLoc) = ichar(CharNewLine)
+                         iLoc = iLoc + 1
+                      end if
                    elseif(.not.IsPlotDim2)then
                       if(DoSaveOneTecFile)then
 #ifndef _OPENACC
@@ -729,38 +736,48 @@ contains
                               CharNewLine
 #endif
                       else
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
-                              iAscii_I(iLoc:iLoc+10), .true.)
-                         iLoc = iLoc + 11
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
                          iAscii_I(iLoc) = ichar(CharNewLine)
                          iLoc = iLoc + 1
                       end if
                    elseif(.not.IsPlotDim1)then
-#ifndef _OPENACC
                       if(DoSaveOneTecFile)then
+#ifndef _OPENACC                        
                          write(UnitTmp_,'(4i11,a)', REC=nBrick) &
                               iCell_G(i,j  ,k  ), &
                               iCell_G(i,j+1,k  ), &
                               iCell_G(i,j+1,k+1), &
                               iCell_G(i,j  ,k+1), &
                               CharNewLine
+#endif                              
                       else
-                         write(UnitTmp_,'(4i11)') &
-                              iCell_G(i,j  ,k  ), &
-                              iCell_G(i,j+1,k  ), &
-                              iCell_G(i,j+1,k+1), &
-                              iCell_G(i,j  ,k+1)
+                         call int_to_ascii_code(iCell_G(i,j  ,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i,j+1,k  ), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i,j+1,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         call int_to_ascii_code(iCell_G(i,j  ,k+1), &
+                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                         iLoc = iLoc + nWidthInt
+                         iAscii_I(iLoc) = ichar(CharNewLine)
+                         iLoc = iLoc + 1
                       end if
-#endif
+
                    end if
                 end do; end do; end do
 
