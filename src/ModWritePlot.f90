@@ -145,6 +145,8 @@ contains
 
     ! Initialize stuff
 
+    call timing_start('write_plot1')
+
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
@@ -296,12 +298,18 @@ contains
     ! (nDim + nPlotVar)*14 data, plus a new line character
     lRecData = (nDim + nPlotVar)*14 + 1
 
+    call timing_stop('write_plot1')
+
     if(TypePlotFormat_I(iFile)=='tcp')then
+       call timing_start('tecplot1')
+
        ! At most 8 cells (integers) per line for connectivity
        call write_tecplot_init(0, 8)
        ! Calculate and write connectivity file
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))
+
+       call timing_stop('tecplot1')  
        ! Open one file for data
        NameFileNorth = trim(NameSnapshot)//"_1"//trim(NameProc)
 
@@ -471,10 +479,12 @@ contains
        end do
     end do
 
+    call timing_start('msg_pass')
     if(DoPassPlotVar)then
        ! Pass plotting variables to fill ghost cell values
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
+    call timing_stop('msg_pass')
 
     if(UseMpiIO) then
        ! Figure out the offset for each MPI. The first step is counting
@@ -533,7 +543,7 @@ contains
        call write_tecplot_init(nPlotVar+nDim)
 
        nPatch = ceiling(real(nBlock)/nBlockPerPatch)
-       
+
        !$acc update device(PlotVar_VGB)
 
        do iPatch = 1, nPatch
@@ -547,7 +557,7 @@ contains
           do iBlock = iBlockMin, iBlockMax
              if(Unused_B(iBlock))CYCLE
              call write_tecplot_get_data(iBlock, iBlockMin, nPlotVar, &
-             PlotVar_VGB)
+                  PlotVar_VGB)
           end do
           call timing_stop('tecplot2')
 

@@ -56,6 +56,7 @@ module ModWriteTecplot
 
   ! Dimensionality of plot
   integer, public:: nPlotDim = nDim
+  !$acc declare create(nPlotDim)
 
   ! Local variables
   character(len=23):: StringDateTime0
@@ -87,7 +88,7 @@ module ModWriteTecplot
 
   character(len=80):: StringFormat
 
-  ! One byte integer array that stores the ascii codes of the 
+  ! One byte integer array that stores the ascii codes of the
   ! data to be written
   integer(Int1_), allocatable:: iAscii_I(:)
   !$acc declare create(iAscii_I)
@@ -95,15 +96,16 @@ module ModWriteTecplot
   ! The starting position of each cell's data in iAscii_I
   integer, allocatable:: iMark_GI(:,:,:,:)
   !$acc declare create(iMark_GI)
-  
+
   ! Corresponding to the format (ES14.6)
   integer, parameter:: nCharPerReal = 14, nFrac = 6
 
+  ! Corresponding to the format (i11)
   integer, parameter:: nCharPerInt = 11
 
   integer:: nCharPerLine, nCharMax, nChar
   !$acc declare create(nCharPerLine)
-  
+
   integer, public, parameter:: nBlockPerPatch = 128
 
 contains
@@ -134,12 +136,12 @@ contains
     nCharPerLineNew = nReal*nCharPerReal + nInteger*nCharPerInt + 1
 
     if(nCharPerLineNew /= nCharPerLine)then
-       if(nCharPerLineNew > nCharPerLine) then  
-       nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
+       if(nCharPerLineNew > nCharPerLine) then
+          nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
                nCharPerLineNew*nBlockPerPatch
 
-       if(allocated(iAscii_I)) deallocate(iAscii_I)
-       allocate(iAscii_I(nCharMax))
+          if(allocated(iAscii_I)) deallocate(iAscii_I)
+          allocate(iAscii_I(nCharMax))
        end if
        nCharPerLine = nCharPerLineNew
        !$acc update device(nCharPerLine)
@@ -375,7 +377,8 @@ contains
     use ModIO, ONLY: DoSaveOneTecFile, DoSaveTecBinary, &
          TypePlot, PlotRange_EI
     use ModIoUnit, ONLY: UnitTmp_
-    use ModUtilities, ONLY: open_file, close_file
+    use ModUtilities, ONLY: open_file, close_file, int_to_ascii_code, &
+         iCharSpace
     use ModMain, ONLY: nBlockMax
     use ModMpi, ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
          MPI_allgather, MPI_INTEGER
@@ -394,12 +397,15 @@ contains
 
     integer:: nBlockBefore, iCell, iBlock, iError
 
+    integer:: iBlockMin, iBlockMax, iPatch, nPatch
+
     integer:: i0, i1, j0, j1, k0, k1, i, j, k
 
     integer:: IjkMin_D(3), IjkMax_D(3)
 
     ! Cell index to be written into the connectivity file
-    integer, allocatable:: iCell_G(:,:,:)
+    integer :: iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_)
+    !$acc declare create(iCell_G)
 
     ! Number of bricks for this and all processors
     integer:: nBrick
@@ -408,11 +414,15 @@ contains
     ! Multiple stages may be needed
     integer:: iStage, nStage
 
+    integer:: iPass, nPass
+
     ! Cut related variables
     integer:: iPlotDim, jPlotDim, kPlotDim
     logical:: IsPlotDim1, IsPlotDim2, IsPlotDim3
 
     integer, allocatable:: nCell_P(:)
+
+    integer:: iLoc, nCharTotal, nIntPerLine
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_connect'
@@ -430,12 +440,13 @@ contains
     ! Set the normal direction of a 2D cut plane to 0 as default (no cut)
     iCutDim = 0
 
+    !$acc update device(iCutDim, nPlotDim)
+
     if(DoTest)write(*,*) NameSub,' starting with NameFile, DoCut=', &
          NameFile, DoCut
 
     allocate( &
-         CellIndex_GB(0:nI+1,0:nJ+1,k0_:nKp1_,MaxBlock), &
-         iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_))
+         CellIndex_GB(0:nI+1,0:nJ+1,k0_:nKp1_,MaxBlock))         
 
     if(DoCut)then
        CutMin_D = PlotRange_EI(1:5:2,iFile)
@@ -452,7 +463,7 @@ contains
              if(iPlot_D(iCutDim) == 0) EXIT
           end do
        end if
-       !$acc update device(iCutDim)
+       !$acc update device(iCutDim, nPlotDim)
 
        if(DoTest .or. nPlotDim == 1)then
           write(*,*) NameSub,' CutMin_D=',  CutMin_D
@@ -470,7 +481,7 @@ contains
        nStage = min(2, nProc)
 
        iCell = 0
-       do iStage = 1, nStage
+       do iStage = 1, nStage          
           do iBlock = 1, nBlock
              if(iStage == nStage) CellIndex_GB(:,:,:,iBlock) = 0
 
@@ -494,6 +505,7 @@ contains
                 end do
              end do
           end do
+
           if(iStage < nStage)then
              ! Collect the number of cells written by other processors
              allocate(nCell_P(0:nProc-1))
@@ -512,7 +524,7 @@ contains
        end do
        ! Store total number of points saved when running on 1 processor
        if(nStage == 1) nPointAll = iCell
-    else
+    else       
        ! Full 2D or 3D plot
        ! count number of cells written by processors before this one
        nBlockBefore = 0
@@ -554,6 +566,8 @@ contains
     if(DoSaveOneTecFile)then
        ! Two stages are needed to figure out the global brick indexes
        nStage = 2
+
+       nPass = 1
        allocate(nBrick_P(0:nProc-1))
 
        ! Open connectivity file as direct access
@@ -563,121 +577,55 @@ contains
             iComm=iComm, NameCaller=NameSub//'_direct_connect')
     else
        nStage = 1
+
+       nPass = 2
        ! Open connectivity file
        if(DoSaveTecBinary) then
           call open_file(FILE=NameFile, NameCaller=NameSub//&
                '_connect',access='stream', form='unformatted')
        else
-          call open_file(File=NameFile, NameCaller=NameSub//'_connect')
+          call open_file(File=NameFile, NameCaller=NameSub//'_connect', &
+               access='stream', form='unformatted')
        end if
     end if
 
+
     nBrick = 0
     do iStage = 1, nStage
-       do iBlock = 1, nBlock
-          ! Check if block is used and inside cut
-          if(do_skip_block(iBlock)) CYCLE
+       nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))       
+       do iPatch = 1, nPatch
 
-          ! Get the index limits for the lower left corner
-          ! of the connectivity bricks.
+          do iPass = 1, nPass
+             iBlockMin = (iPatch-1)*nBlockPerPatch + 1
+             iBlockMax = min(iPatch*nBlockPerPatch, nBlock)
 
-          ! Start connectivity brick from index 1 unless coarser left neighbor
-          i0 = 1
-          if(IsPlotDim1 .and. DiLevelNei_IIIB(-1,0,0,iBlock) == 1) i0 = 0
-          j0 = 1
-          if(IsPlotDim2 .and. DiLevelNei_IIIB(0,-1,0,iBlock) == 1) j0 = 0
-          k0 = 1
-          if(IsPlotDim3 .and. DiLevelNei_IIIB(0,0,-1,iBlock) == 1) k0 = 0
-
-          ! Finish at nI unless there is no block on the right or it is finer
-          i1 = nI
-          if(IsPlotDim1 .and. DiLevelNei_IIIB(1,0,0,iBlock) < 0) i1 = nI-1
-          j1 = nJ
-          if(IsPlotDim2 .and. DiLevelNei_IIIB(0,1,0,iBlock) < 0) j1 = nJ-1
-          k1 = nK
-          if(IsPlotDim3 .and. DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
-
-          ! For cuts in the Phi direction we want connectivity across poles
-          ! Both sides are at either minimum or maximum so we use the
-          ! Y coordinate to select which side takes care of the connection
-          ! We assume no resolution change across the poles for simplicity
-          if(iCutDim == Phi_ .and. IsAnyAxis &
-               .and. Xyz_DGB(2,1,1,1,iBlock) > 0)then
-             if(IsLatitudeAxis)then
-                if(CoordMin_DB(Lat_,iBlock) <= -cHalfPi) k0 = 0
-                if(CoordMax_DB(Lat_,iBlock) >= +cHalfPi) k1 = nK - 1
-             elseif(IsSphericalAxis)then
-                if(CoordMin_DB(Theta_,iBlock) <= 0)   j0 = 0
-                if(CoordMax_DB(Theta_,iBlock) >= cPi) j1 = nJ - 1
-             elseif(IsCylindricalAxis)then
-                if(CoordMin_DB(r_,iBlock) <= 0) i0 = 0
+             if(iPass == 2) then
+                !$acc update device(iMark_GI)
              end if
-          end if
 
-          iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
+             iLoc = 1
+             !$acc parallel loop gang if(iPass==2) private(iCell_G)
+             do iBlock = iBlockMin, iBlockMax
+                ! Check if block is used and inside cut
+                if(do_skip_block(iBlock)) CYCLE
 
-          ! Coarse ghost cells should not be used.
-          ! The face ghost cells are surely not used due to above settings
-          ! The "left" edge and corner ghost cells are only used if the
-          ! left face neighbor is coarser, so these cannot be prolonged cells.
-          ! So only "right" edge and corner ghost cells have to be zeroed out.
+                call set_connect(i0, i1, j0, j1, k0, k1, iBlock, &
+                     iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)               
 
-          if(IsPlotDim1 .and. IsPlotDim2 .and. &
-               DiLevelNei_IIIB(1,1,0,iBlock) < 0) iCell_G(nI+1,nJ+1,:) = 0
-          if(IsPlotDim1 .and. IsPlotDim3 .and. &
-               DiLevelNei_IIIB(1,0,1,iBlock) < 0) iCell_G(nI+1,:,nK+1) = 0
-          if(IsPlotDim2 .and. IsPlotDim3 .and. &
-               DiLevelNei_IIIB(0,1,1,iBlock) < 0) iCell_G(:,nJ+1,nK+1) = 0
-          if(nPlotDim == 3 .and. &
-               DiLevelNei_IIIB(1,1,1,iBlock) < 0) iCell_G(nI+1,nJ+1,nK+1) = 0
+                if(DoSaveTecBinary) then
+#ifndef _OPENACC
+                   ! Right now binary format only works for 3D.
+                   ! Loop over the "lower-left" corner of the bricks
+                   do k = k0, k1; do j = j0, j1; do i = i0, i1
+                      ! Skip bricks that are not fully inside/usable
+                      if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
+                           CYCLE
+                      if(iPass==1) nBrick = nBrick + 1
 
-          if(DoSaveTecBinary) then
-             ! Right now binary format only works for 3D.
-             ! Loop over the "lower-left" corner of the bricks
-             do k = k0, k1; do j = j0, j1; do i = i0, i1
-                ! Skip bricks that are not fully inside/usable
-                if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
-                     CYCLE
-                nBrick = nBrick + 1
+                      ! In stage 1 only count bricks
+                      if(iStage < nStage) CYCLE
 
-                ! In stage 1 only count bricks
-                if(iStage < nStage) CYCLE
-
-                write(UnitTmp_) &
-                     iCell_G(i  ,j  ,k  ), &
-                     iCell_G(i+1,j  ,k  ), &
-                     iCell_G(i+1,j+1,k  ), &
-                     iCell_G(i  ,j+1,k  ), &
-                     iCell_G(i  ,j  ,k+1), &
-                     iCell_G(i+1,j  ,k+1), &
-                     iCell_G(i+1,j+1,k+1), &
-                     iCell_G(i  ,j+1,k+1)
-             end do; end do; end do
-          else ! ASCII format
-             ! Loop over the "lower-left" corner of the bricks
-             do k = k0, k1; do j = j0, j1; do i = i0, i1
-                ! Skip bricks that are not fully inside/usable
-                if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
-                     CYCLE
-                nBrick = nBrick + 1
-
-                ! In stage 1 only count bricks
-                if(iStage < nStage) CYCLE
-
-                if(nPlotDim == 3)then
-                   if(DoSaveOneTecFile)then
-                      write(UnitTmp_,'(8i11,a)', REC=nBrick) &
-                           iCell_G(i  ,j  ,k  ), &
-                           iCell_G(i+1,j  ,k  ), &
-                           iCell_G(i+1,j+1,k  ), &
-                           iCell_G(i  ,j+1,k  ), &
-                           iCell_G(i  ,j  ,k+1), &
-                           iCell_G(i+1,j  ,k+1), &
-                           iCell_G(i+1,j+1,k+1), &
-                           iCell_G(i  ,j+1,k+1), &
-                           CharNewLine
-                   else
-                      write(UnitTmp_,'(8i11)') &
+                      write(UnitTmp_) &
                            iCell_G(i  ,j  ,k  ), &
                            iCell_G(i+1,j  ,k  ), &
                            iCell_G(i+1,j+1,k  ), &
@@ -686,56 +634,151 @@ contains
                            iCell_G(i+1,j  ,k+1), &
                            iCell_G(i+1,j+1,k+1), &
                            iCell_G(i  ,j+1,k+1)
-                   end if
-                elseif(.not.IsPlotDim3)then
-                   if(DoSaveOneTecFile)then
-                      write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                           iCell_G(i  ,j  ,k), &
-                           iCell_G(i+1,j  ,k), &
-                           iCell_G(i+1,j+1,k), &
-                           iCell_G(i  ,j+1,k), &
-                           CharNewLine
-                   else
-                      write(UnitTmp_,'(4i11)') &
-                           iCell_G(i  ,j  ,k), &
-                           iCell_G(i+1,j  ,k), &
-                           iCell_G(i+1,j+1,k), &
-                           iCell_G(i  ,j+1,k)
-                   end if
-                elseif(.not.IsPlotDim2)then
-                   if(DoSaveOneTecFile)then
-                      write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                           iCell_G(i  ,j,k  ), &
-                           iCell_G(i+1,j,k  ), &
-                           iCell_G(i+1,j,k+1), &
-                           iCell_G(i  ,j,k+1), &
-                           CharNewLine
-                   else
-                      write(UnitTmp_,'(4i11)') &
-                           iCell_G(i  ,j,k  ), &
-                           iCell_G(i+1,j,k  ), &
-                           iCell_G(i+1,j,k+1), &
-                           iCell_G(i  ,j,k+1)
-                   end if
-                elseif(.not.IsPlotDim1)then
-                   if(DoSaveOneTecFile)then
-                      write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                           iCell_G(i,j  ,k  ), &
-                           iCell_G(i,j+1,k  ), &
-                           iCell_G(i,j+1,k+1), &
-                           iCell_G(i,j  ,k+1), &
-                           CharNewLine
-                   else
-                      write(UnitTmp_,'(4i11)') &
-                           iCell_G(i,j  ,k  ), &
-                           iCell_G(i,j+1,k  ), &
-                           iCell_G(i,j+1,k+1), &
-                           iCell_G(i,j  ,k+1)
-                   end if
+                   end do; end do; end do
+#endif
+                else ! ASCII format
+                   ! Loop over the "lower-left" corner of the bricks
+                   !$acc loop vector collapse(3)
+                   do k = k0, k1; do j = j0, j1; do i = i0, i1
+                      ! Skip bricks that are not fully inside/usable
+                      if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
+                           CYCLE
+                      if(iPass==1) nBrick = nBrick + 1
+
+                      nIntPerLine = 4
+                      if(nPlotDim==3) nIntPerLine = 8
+
+                      if(iPass < nPass) then
+                         iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
+                         iLoc = iLoc + nIntPerLine*nCharPerInt + 1
+                         CYCLE
+                      else
+                         iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+                      end if
+
+                      ! In stage 1 only count bricks
+                      if(iStage < nStage) CYCLE
+
+                      if(nPlotDim == 3)then
+                         if(DoSaveOneTecFile)then
+#ifndef _OPENACC
+                            write(UnitTmp_,'(8i11,a)', REC=nBrick) &
+                                 iCell_G(i  ,j  ,k  ), &
+                                 iCell_G(i+1,j  ,k  ), &
+                                 iCell_G(i+1,j+1,k  ), &
+                                 iCell_G(i  ,j+1,k  ), &
+                                 iCell_G(i  ,j  ,k+1), &
+                                 iCell_G(i+1,j  ,k+1), &
+                                 iCell_G(i+1,j+1,k+1), &
+                                 iCell_G(i  ,j+1,k+1), &
+                                 CharNewLine
+#endif
+                         else
+
+                            call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+
+                            call int_to_ascii_code(iCell_G(i+1,j+1,k  ),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i  ,j+1,k  ),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i+1,j+1,k+1),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i  ,j+1,k+1),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            iAscii_I(iLoc) = ichar(CharNewLine)
+                            iLoc = iLoc + 1
+                         end if
+                      elseif(.not.IsPlotDim3)then
+#ifndef _OPENACC
+                         if(DoSaveOneTecFile)then
+                            write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                                 iCell_G(i  ,j  ,k), &
+                                 iCell_G(i+1,j  ,k), &
+                                 iCell_G(i+1,j+1,k), &
+                                 iCell_G(i  ,j+1,k), &
+                                 CharNewLine
+                         else
+                            write(UnitTmp_,'(4i11)') &
+                                 iCell_G(i  ,j  ,k), &
+                                 iCell_G(i+1,j  ,k), &
+                                 iCell_G(i+1,j+1,k), &
+                                 iCell_G(i  ,j+1,k)
+                         end if
+#endif
+                      elseif(.not.IsPlotDim2)then
+                         if(DoSaveOneTecFile)then
+#ifndef _OPENACC
+                            write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                                 iCell_G(i  ,j,k  ), &
+                                 iCell_G(i+1,j,k  ), &
+                                 iCell_G(i+1,j,k+1), &
+                                 iCell_G(i  ,j,k+1), &
+                                 CharNewLine
+#endif
+                         else
+                            call int_to_ascii_code(iCell_G(i  ,j  ,k  ),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i+1,j  ,k  ),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i+1,j  ,k+1),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            call int_to_ascii_code(iCell_G(i  ,j  ,k+1),11, &
+                                 iAscii_I(iLoc:iLoc+10), .true.)
+                            iLoc = iLoc + 11
+                            iAscii_I(iLoc) = ichar(CharNewLine)
+                            iLoc = iLoc + 1
+                         end if
+                      elseif(.not.IsPlotDim1)then
+#ifndef _OPENACC
+                         if(DoSaveOneTecFile)then
+                            write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                                 iCell_G(i,j  ,k  ), &
+                                 iCell_G(i,j+1,k  ), &
+                                 iCell_G(i,j+1,k+1), &
+                                 iCell_G(i,j  ,k+1), &
+                                 CharNewLine
+                         else
+                            write(UnitTmp_,'(4i11)') &
+                                 iCell_G(i,j  ,k  ), &
+                                 iCell_G(i,j+1,k  ), &
+                                 iCell_G(i,j+1,k+1), &
+                                 iCell_G(i,j  ,k+1)
+                         end if
+#endif
+                      end if
+                   end do; end do; end do
+
                 end if
-             end do; end do; end do
-          end if
-       end do ! iBlock
+
+             end do ! iBlock
+
+             if(iPass == 1) nCharTotal = iLoc - 1
+
+             if(iPass == nPass) then
+                !$acc update host(iAscii_I(1:nCharTotal))
+                write(UnitTmp_) iAscii_I(1:nCharTotal)
+             end if
+          end do ! iPass
+       end do ! iPatch
+
        if(iStage < nStage)then
           ! Collect number of bricks from all processors
           call MPI_allgather(nBrick, 1, MPI_INTEGER, &
@@ -745,6 +788,7 @@ contains
           if(iProc > 0) nBrick = sum(nBrick_P(0:iProc-1))
        end if
     end do ! iStage
+
     call close_file
 
     ! Reset periodicity as it was
@@ -763,14 +807,85 @@ contains
     ! Calculate and store total number of cells for header file
     if(.not. DoCut .and. iProc == 0) nPointAll = nNodeUsed*nIJK
 
-    deallocate(iCell_G)
-
     if(DoTest)write(*,*) NameSub,' done with nPointAll, nBrickAll=', &
          nPointAll, nBrickAll
 
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_connect
   !============================================================================
+  subroutine set_connect(i0, i1, j0, j1, k0, k1, iBlock, iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)
+    !$acc routine seq
+    use ModNumConst, ONLY: cPi, cHalfPi
+    use BATL_lib, ONLY: nI, nJ, k0_, nKp1_, &
+         DiLevelNei_IIIB, &
+         Xyz_DGB, Lat_, Theta_, r_, Phi_, &
+         CoordMin_DB, CoordMax_DB, &
+         IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
+
+
+
+    integer, intent(out):: i0, i1, j0, j1, k0, k1, iBlock
+    integer, intent(inout):: iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_)
+    logical, intent(in):: IsPlotDim1, IsPlotDim2, IsPlotDim3
+
+
+    ! Get the index limits for the lower left corner
+    ! of the connectivity bricks.
+
+    ! Start connectivity brick from index 1 unless coarser left neighbor
+    i0 = 1
+    if(IsPlotDim1 .and. DiLevelNei_IIIB(-1,0,0,iBlock) == 1) i0 = 0
+    j0 = 1
+    if(IsPlotDim2 .and. DiLevelNei_IIIB(0,-1,0,iBlock) == 1) j0 = 0
+    k0 = 1
+    if(IsPlotDim3 .and. DiLevelNei_IIIB(0,0,-1,iBlock) == 1) k0 = 0
+
+    ! Finish at nI unless there is no block on the right or it is finer
+    i1 = nI
+    if(IsPlotDim1 .and. DiLevelNei_IIIB(1,0,0,iBlock) < 0) i1 = nI-1
+    j1 = nJ
+    if(IsPlotDim2 .and. DiLevelNei_IIIB(0,1,0,iBlock) < 0) j1 = nJ-1
+    k1 = nK
+    if(IsPlotDim3 .and. DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
+
+    ! For cuts in the Phi direction we want connectivity across poles
+    ! Both sides are at either minimum or maximum so we use the
+    ! Y coordinate to select which side takes care of the connection
+    ! We assume no resolution change across the poles for simplicity
+    if(iCutDim == Phi_ .and. IsAnyAxis &
+         .and. Xyz_DGB(2,1,1,1,iBlock) > 0)then
+       if(IsLatitudeAxis)then
+          if(CoordMin_DB(Lat_,iBlock) <= -cHalfPi) k0 = 0
+          if(CoordMax_DB(Lat_,iBlock) >= +cHalfPi) k1 = nK - 1
+       elseif(IsSphericalAxis)then
+          if(CoordMin_DB(Theta_,iBlock) <= 0)   j0 = 0
+          if(CoordMax_DB(Theta_,iBlock) >= cPi) j1 = nJ - 1
+       elseif(IsCylindricalAxis)then
+          if(CoordMin_DB(r_,iBlock) <= 0) i0 = 0
+       end if
+    end if
+
+    iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
+
+    ! Coarse ghost cells should not be used.
+    ! The face ghost cells are surely not used due to above settings
+    ! The "left" edge and corner ghost cells are only used if the
+    ! left face neighbor is coarser, so these cannot be prolonged cells.
+    ! So only "right" edge and corner ghost cells have to be zeroed out.
+
+    if(IsPlotDim1 .and. IsPlotDim2 .and. &
+         DiLevelNei_IIIB(1,1,0,iBlock) < 0) iCell_G(nI+1,nJ+1,:) = 0
+    if(IsPlotDim1 .and. IsPlotDim3 .and. &
+         DiLevelNei_IIIB(1,0,1,iBlock) < 0) iCell_G(nI+1,:,nK+1) = 0
+    if(IsPlotDim2 .and. IsPlotDim3 .and. &
+         DiLevelNei_IIIB(0,1,1,iBlock) < 0) iCell_G(:,nJ+1,nK+1) = 0
+    if(nPlotDim == 3 .and. &
+         DiLevelNei_IIIB(1,1,1,iBlock) < 0) iCell_G(nI+1,nJ+1,nK+1) = 0
+
+
+  end subroutine set_connect
+  !============================================================================
+
   subroutine write_tecplot_head(NameFile, StringUnit)
 
     use ModIoUnit, ONLY: UnitTmp_
