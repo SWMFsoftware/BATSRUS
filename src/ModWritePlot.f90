@@ -165,6 +165,12 @@ contains
          (TypePlot(1:3) == '3d_' .or. TypePlot(1:3) == '3D_') .and. &
          (TypePlotFormat_I(iFile) == 'tec' .or. TypePlotFormat_I(iFile)=='tcp')
 
+#ifdef _OPENACC
+    ! This feature has not been ported to GPU yet 
+    DoSaveOneTecFile = .false.
+#endif   
+
+
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar,    &
          UseArraySyntaxIn=.true.)
     !$acc update device(nPlotVar, DoSaveOneTecFile)
