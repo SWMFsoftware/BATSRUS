@@ -99,6 +99,8 @@ module ModWriteTecplot
   ! Corresponding to the format (ES14.6)
   integer, parameter:: nCharPerReal = 14, nFrac = 6
 
+  integer, parameter:: nCharPerInt = 11
+
   integer:: nCharPerLine, nCharMax, nChar
   !$acc declare create(nCharPerLine)
   
@@ -106,9 +108,10 @@ module ModWriteTecplot
 
 contains
   !============================================================================
-  subroutine write_tecplot_init(nPlotVar)
-    integer, intent(in):: nPlotVar
+  subroutine write_tecplot_init(nRealIn, nIntegerIn)
+    integer, optional, intent(in):: nRealIn, nIntegerIn
 
+    integer:: nReal, nInteger
     integer:: nCharPerLineNew
 
     !--------------------------------------------------------------------------
@@ -121,16 +124,25 @@ contains
        nCharMax = 0
     end if
 
-    nCharPerLineNew = (nDim + nPlotVar)*nCharPerReal + 1
+    nReal = 0
+    if(present(nRealIn)) nReal = nRealIn
 
-    if(nCharPerLineNew > nCharPerLine)then
-       nCharPerLine = nCharPerLineNew
-       !$acc update device(nCharPerLine)
+    nInteger = 0
+    if(present(nIntegerIn)) nInteger = nIntegerIn
+
+    ! We add 1 for the new line character
+    nCharPerLineNew = nReal*nCharPerReal + nInteger*nCharPerInt + 1
+
+    if(nCharPerLineNew /= nCharPerLine)then
+       if(nCharPerLineNew > nCharPerLine) then  
        nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
-            nCharPerLine*nBlockPerPatch
+               nCharPerLineNew*nBlockPerPatch
 
        if(allocated(iAscii_I)) deallocate(iAscii_I)
        allocate(iAscii_I(nCharMax))
+       end if
+       nCharPerLine = nCharPerLineNew
+       !$acc update device(nCharPerLine)
     end if
   end subroutine write_tecplot_init
   !============================================================================

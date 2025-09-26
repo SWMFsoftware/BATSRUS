@@ -297,6 +297,8 @@ contains
     lRecData = (nDim + nPlotVar)*14 + 1
 
     if(TypePlotFormat_I(iFile)=='tcp')then
+       ! At most 8 cells (integers) per line for connectivity
+       call write_tecplot_init(0, 8)
        ! Calculate and write connectivity file
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))
@@ -528,7 +530,7 @@ contains
        call set_plot_shock(nPlotVar, PlotVar_VGB)
     elseif(TypePlotFormat_I(iFile)=='tcp') then
 
-       call write_tecplot_init(nPlotVar)
+       call write_tecplot_init(nPlotVar+nDim)
 
        nPatch = ceiling(real(nBlock)/nBlockPerPatch)
        
