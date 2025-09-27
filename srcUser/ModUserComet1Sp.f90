@@ -6,7 +6,7 @@ module ModUser
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_set_ics,                    &
        IMPLEMENTED2 => user_read_inputs,                &
-       IMPLEMENTED3 => user_calc_sources,               &
+       IMPLEMENTED3 => user_calc_sources_impl,               &
        IMPLEMENTED4 => user_update_states,              &
        IMPLEMENTED5 => user_init_point_implicit,        &
        IMPLEMENTED6 => user_action
@@ -146,6 +146,8 @@ contains
           call read_var('mbar',mbar)
           call read_var('ionization_rate',ionization_rate)
           call read_var('kin_in',kin_in)
+          call read_var('jpattern' ,jpattern)
+          call read_var('Tion', Tion)
 
           ! Convert comet input parameters to SI
           kin=kin_in*1E-6
@@ -261,194 +263,6 @@ contains
        DoInitialize = .False.
     endif
 
-    if(ReadNeutral) then
-       jTh_axr = NTheta_neutral-jTh_axis
-
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-
-          if( r_GB(i,j,k,iBlock) < 7.0E8/NO2SI_V(UnitX_) .and.  &
-               r_GB(i,j,k,iBlock) > 2000.0/NO2SI_V(UnitX_) )then     ! interpolate
-
-             iR = int( (NR_neutral-1)/6.*log10(r_GB(i,j,k,iBlock)*NO2SI_V(UnitX_)/1E3) ) + 1
-             iR = max(iR,1)
-             iR = min(iR, NR_neutral-1)
-             iRp1 = iR+1
-             Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/r_GB(i,j,k,iBlock) )/cPi
-             jTheta = int( Theta*(NTheta_neutral-1) ) + 1
-             jThetap1 = jTheta+1
-             Phi = acos( Xyz_DGB(y_,i,j,k,iBlock)/sqrt( &
-                  Xyz_DGB(y_,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock)+ &
-                  Xyz_DGB(z_,i,j,k,iBlock)*Xyz_DGB(z_,i,j,k,iBlock) ) + 1e-13 )
-             Phi = Phi*sign( 1.0,Xyz_DGB(z_,i,j,k,iBlock) ) + &
-                  cPi*( 1.0-sign(1.0,Xyz_DGB(z_,i,j,k,iBlock)) )
-             Phi = Phi / cTwoPi
-             kPhi = int( Phi*(NPhi_neutral-1) ) + 1
-
-             kPhi = max(kPhi,1)
-             kPhip1 = mod( kPhi, NPhi_neutral ) + 1
-             kPhi_conj   = mod( kPhi  +(NPhi_neutral-1)/2,NPhi_neutral )+1
-             kPhip1_conj = mod( kPhip1+(NPhi_neutral-1)/2,NPhi_neutral )+1
-
-             xR = ( r_GB(i,j,k,iBlock)*NO2SI_V(UnitX_)-NeutralN(iR,jTheta,kPhi,NR_) )/ &
-                  ( NeutralN(iRp1,jTheta,kPhi,NR_)-NeutralN(iR,jTheta,kPhi,NR_) )
-             xPhi = ( Phi*360.-NeutralN(iR,jTheta,kPhi,NPhi_) )/ &
-                  ( NeutralN(iR,jTheta,kPhip1,NPhi_)-NeutralN(iR,jTheta,kPhi,NPhi_) )
-
-             if(jTheta>=jTh_axis .and. jtheta<=jTh_axr) then
-                !	if( .true. ) then
-                xTheta = ( Theta*180.-NeutralN(iR,jTheta,kPhi,NTh_) )/ &
-                     ( NeutralN(iR,jThetap1,kPhi,NTh_)-NeutralN(iR,jTheta,kPhi,NTh_) )
-                Neutral_BLK(i,j,k,iBlock,:)= &
-                     ( (NeutralN(iR  ,jTheta  ,kPhi  ,7:10)*(1.0-xPhi)+ 	        &
-                     NeutralN(iR  ,jTheta  ,kPhip1,7:10)*      xPhi)*(1.0-xTheta)+  &
-                     (NeutralN(iR  ,jThetap1,kPhi  ,7:10)*(1.0-xPhi)+ 		&
-                     NeutralN(iR  ,jThetap1,kPhip1,7:10)* xPhi)*xTheta )*(1.0-xR) + &
-                     ( (NeutralN(iRp1,jTheta  ,kPhi  ,7:10)*(1.0-xPhi)+ 		&
-                     NeutralN(iRp1,jTheta  ,kPhip1,7:10)*      xPhi)*(1.0-xTheta)+  &
-                     (NeutralN(iRp1,jThetap1,kPhi  ,7:10)*(1.0-xPhi)+ 		&
-                     NeutralN(iRp1,jThetap1,kPhip1,7:10)*      xPhi)*xTheta )*xR
-             elseif( jtheta<jTh_axis ) then
-                unr_i = sqrt( &
-                     NeutralN(iR  ,jTh_axis,1,7)*NeutralN(iR  ,jTh_axis,1,7) + &
-                     NeutralN(iR  ,jTh_axis,1,8)*NeutralN(iR  ,jTh_axis,1,8) + &
-                     NeutralN(iR  ,jTh_axis,1,9)*NeutralN(iR  ,jTh_axis,1,9) )
-                unr_o = sqrt( &
-                     NeutralN(iRp1,jTh_axis,1,7)*NeutralN(iRp1,jTh_axis,1,7) + &
-                     NeutralN(iRp1,jTh_axis,1,8)*NeutralN(iRp1,jTh_axis,1,8) + &
-                     NeutralN(iRp1,jTh_axis,1,9)*NeutralN(iRP1,jTh_axis,1,9) )
-                unr0 = unr_i*(1.0-xR)+unr_o*xR
-                Neutral_BLK(i,j,k,iBlock,1) = unr0*cos(Theta*cPi)
-                Neutral_BLK(i,j,k,iBlock,2) = unr0*sin(Theta*cPi)*cos(Phi*cTwoPi)
-                Neutral_BLK(i,j,k,iBlock,3) = unr0*sin(Theta*cPi)*sin(Phi*cTwoPi)
-                xTheta =  (NeutralN(iR,jTh_axis,kPhi,NTh_)-Theta*180.)* &
-                     0.5/NeutralN(iR,jTh_axis,kPhi,NTh_)
-                Neutral_BLK(i,j,k,iBlock,4) =   &
-                     ( (NeutralN(iR  ,jTh_axis,kPhi       ,10)*(1.0-xPhi)+ 		   &
-                     NeutralN(iR  ,jTh_axis,kPhip1     ,10)*   xPhi)*(1.0-xTheta)+     &
-                     (NeutralN(iR  ,jTh_axis,kPhi_conj  ,10)*(1.0-xPhi)+ 		   &
-                     NeutralN(iR  ,jTh_axis,kPhip1_conj,10)* xPhi)*xTheta )*(1.0-xR) + &
-                     ( (NeutralN(iRp1,jTh_axis,kPhi       ,10)*(1.0-xPhi)+ 		   &
-                     NeutralN(iRp1,jTh_axis,kPhip1     ,10)*      xPhi)*(1.0-xTheta)+  &
-                     (NeutralN(iRp1,jTh_axis,kPhi_conj  ,10)*(1.0-xPhi)+ 		   &
-                     NeutralN(iRp1,jTh_axis,kPhip1_conj,10)*      xPhi)*xTheta )*xR
-                Neutral_BLK(i,j,k,iBlock,4) = Neutral_BLK(i,j,k,iBlock,4) * &
-                     ( 1.0+1.5*(NeutralN(iR,jTh_axis,kPhi,NTh_)/180.-Theta) )
-             else
-                unr_i = sqrt( &
-                     NeutralN(iR  ,jTh_axr,1,7)*NeutralN(iR  ,jTh_axr,1,7) + &
-                     NeutralN(iR  ,jTh_axr,1,8)*NeutralN(iR  ,jTh_axr,1,8) + &
-                     NeutralN(iR  ,jTh_axr,1,9)*NeutralN(iR  ,jTh_axr,1,9) )
-                unr_o = sqrt( &
-                     NeutralN(iRp1,jTh_axr,1,7)*NeutralN(iRp1,jTh_axr,1,7) + &
-                     NeutralN(iRp1,jTh_axr,1,8)*NeutralN(iRp1,jTh_axr,1,8) + &
-                     NeutralN(iRp1,jTh_axr,1,9)*NeutralN(iRp1,jTh_axr,1,9) )
-                unr0 = unr_i*(1.0-xR)+unr_o*xR
-                Neutral_BLK(i,j,k,iBlock,1) = unr0*cos(Theta*cPi)
-                Neutral_BLK(i,j,k,iBlock,2) = unr0*sin(Theta*cPi)*cos(Phi*cTwoPi)
-                Neutral_BLK(i,j,k,iBlock,3) = unr0*sin(Theta*cPi)*sin(Phi*cTwoPi)
-                xTheta = (Theta*180.-NeutralN(iR,jTh_axr,kPhi,NTh_))*0.5/ &
-                     NeutralN(iR,jTh_axis+1,kPhi,NTh_)
-                Neutral_BLK(i,j,k,iBlock,4) =  &
-                     ( (NeutralN(iR  ,jTh_axr,kPhi       ,10)*(1.0-xPhi)+ 		  &
-                     NeutralN(iR  ,jTh_axr,kPhip1     ,10)*      xPhi)*(1.0-xTheta)+  &
-                     (NeutralN(iR  ,jTh_axr,kPhi_conj  ,10)*(1.0-xPhi)+ 		  &
-                     NeutralN(iR  ,jTh_axr,kPhip1_conj,10)* xPhi)*xTheta )*(1.0-xR) + &
-                     ( (NeutralN(iRp1,jTh_axr,kPhi	 ,10)*(1.0-xPhi)+		  &
-                     NeutralN(iRp1,jTh_axr,kPhip1     ,10)*      xPhi)*(1.0-xTheta)+  &
-                     (NeutralN(iRp1,jTh_axr,kPhi_conj  ,10)*(1.0-xPhi)+ 		  &
-                     NeutralN(iRp1,jTh_axr,kPhip1_conj,10)*      xPhi)*      xTheta )*xR
-                Neutral_BLK(i,j,k,iBlock,4) = Neutral_BLK(i,j,k,iBlock,4) * &
-                     ( 1.0+1.2*(NeutralN(iR,jTh_axr,kPhi,NTh_)/180.-Theta) )
-             endif
-
-          else if( r_GB(i,j,k,iBlock) > 7.0E8/NO2SI_V(UnitX_)) then	! Extrapolate beyond 10^6km
-
-             Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/r_GB(i,j,k,iBlock) )/cPi
-             jTheta = int( Theta*(NTheta_neutral-1) ) + 1
-             jTheta = max(jTheta,jTh_axis)          ! temperary boundary solution
-             jTheta = min(jTheta, NTheta_neutral-jTh_axis)
-             Phi = acos( Xyz_DGB(y_,i,j,k,iBlock)/sqrt( &
-                  Xyz_DGB(y_,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock)+ &
-                  Xyz_DGB(z_,i,j,k,iBlock)*Xyz_DGB(z_,i,j,k,iBlock)) + 1e-13 )
-             Phi = Phi*sign( 1.0,Xyz_DGB(z_,i,j,k,iBlock) )
-             Phi = ( Phi + cPi*(1.0-sign(1.0,Xyz_DGB(z_,i,j,k,iBlock))) ) / cTwoPi
-             kPhi = int( Phi*(NPhi_neutral-1) ) + 1
-             kPhi = max(kPhi,1)
-
-             Neutral_BLK(i,j,k,iBlock,1:3)= NeutralN(NR_Neutral-2,jTheta,kPhi,7:9)
-             Neutral_BLK(i,j,k,iBlock,4)= .8*NeutralN(NR_Neutral-2,jTheta,kPhi,10)/ &
-                  r_GB(i,j,k,iBlock)/r_GB(i,j,k,iBlock)* &
-                  exp( -r_GB(i,j,k,iBlock)*NO2SI_V(UnitX_)*ionization_rate/ &
-                  sqrt(Neutral_BLK(i,j,k,iBlock,1)*Neutral_BLK(i,j,k,iBlock,1) + &
-                  Neutral_BLK(i,j,k,iBlock,2)*Neutral_BLK(i,j,k,iBlock,2) + &
-                  Neutral_BLK(i,j,k,iBlock,3)*Neutral_BLK(i,j,k,iBlock,3)) )
-
-          else	! Extrapolate within 3km
-             if(.false.) then
-                Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/r_GB(i,j,k,iBlock) )/cPi
-                jTheta = int( Theta*(NTheta_neutral-1) ) + 1
-                jThetap1 = jTheta+1
-                Phi = acos( Xyz_DGB(y_,i,j,k,iBlock)/sqrt( &
-                     Xyz_DGB(y_,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock)+ &
-                     Xyz_DGB(z_,i,j,k,iBlock)*Xyz_DGB(z_,i,j,k,iBlock)) + 1e-13 )
-                Phi = Phi*sign( 1.0,Xyz_DGB(z_,i,j,k,iBlock) ) + &
-                     cPi*( 1.0-sign(1.0,Xyz_DGB(z_,i,j,k,iBlock)) )
-                Phi = Phi / cTwoPi
-                kPhi = int( Phi*(NPhi_neutral-1) ) + 1
-                kPhi = max(kPhi,1)
-                kPhi = min(kPhi, NPhi_neutral-1)
-                kPhip1 = mod( kPhi, NPhi_neutral ) + 1
-
-                xPhi = ( Phi*360.-NeutralN(2,jTheta,kPhi,NPhi_) )/ &
-                     ( NeutralN(2,jTheta,kPhip1,NPhi_)-NeutralN(2,jTheta,kPhi,NPhi_) )
-
-                if(jTheta>=jTh_axis .and. jtheta<=(NTheta_neutral-jTh_axis)) then
-                   xTheta = ( Theta*180.-NeutralN(2,jTheta,kPhi,NTh_) )/ &
-                        ( NeutralN(2,jThetap1,kPhi,NTh_)-NeutralN(2,jTheta,kPhi,NTh_) )
-                   Neutral_BLK(i,j,k,iBlock,:) = &
-                        ( (NeutralN(2,jTheta  ,kPhi  ,7:10)*(1.0-xPhi)+ 		&
-                        NeutralN(2,jTheta  ,kPhip1,7:10)*  xPhi)*(1.0-xTheta)+ &
-                        (NeutralN(2,jThetap1,kPhi  ,7:10)*(1.0-xPhi)+ 		&
-                        NeutralN(2,jThetap1,kPhip1,7:10)*      xPhi)*  xTheta )
-                elseif( jtheta<jTh_axis ) then
-                   xTheta = (NeutralN(2,jTh_axis,kPhi,NTh_)-Theta*180.)*0.5/ &
-                        NeutralN(2,jTh_axis,kPhi,NTh_)
-                   Neutral_BLK(i,j,k,iBlock,:) = &
-                        ( (NeutralN(2,jTh_axis,kPhi       ,7:10)*(1.0-xPhi)+ 	    &
-                        NeutralN(2,jTh_axis,kPhip1     ,7:10)* xPhi)*(1.0-xTheta)+ &
-                        (NeutralN(2,jTh_axis,kPhi_conj  ,7:10)*(1.0-xPhi)+ 	    &
-                        NeutralN(2,jTh_axis,kPhip1_conj,7:10)*      xPhi)* xTheta )
-                else
-                   xTheta = (Theta*180.-NeutralN(2,jTh_axr,kPhi,NTh_))* &
-                        0.5/NeutralN(2,jTh_axis+1,kPhi,NTh_)
-                   Neutral_BLK(i,j,k,iBlock,:) = &
-                        ( (NeutralN(2,jTh_axr,kPhi       ,7:10)*(1.0-xPhi)+ 	    &
-                        NeutralN(2,jTh_axr,kPhip1     ,7:10)*  xPhi)*(1.0-xTheta)+ &
-                        (NeutralN(2,jTh_axr,kPhi_conj  ,7:10)*(1.0-xPhi)+ 	    &
-                        NeutralN(2,jTh_axr,kPhip1_conj,7:10)*      xPhi)*  xTheta )
-                endif
-
-             endif
-
-             ! write(*,*) '3rd choice', r_GB(i,j,k,iBlock)
-             Neutral_BLK(i,j,k,iBlock,1:3)= 1.0
-             Neutral_BLK(i,j,k,iBlock,4) = 40.*1E9*mbar
-          end if
-
-          Neutral_BLK(i,j,k,iBlock,4) = max( Neutral_BLK(i,j,k,iBlock,4), 50000.0 )
-
-       end do;  end do;  end do
-
-       Neutral_BLK(:,:,:,iBlock,4) = Neutral_BLK(:,:,:,iBlock,4)*17
-       !  Neutral_BLK(:,:,:,iBlock,4) = Neutral_BLK(:,:,:,iBlock,4)/22.
-
-!!! now Neutral_BLK(v) is dimensionless, while n is still dimensional!!!
-       Neutral_BLK(:,:,:,iBlock,1:3) = &
-            Neutral_BLK(:,:,:,iBlock,1:3)/NO2SI_V(UnitU_)
-
-       ! write(*,*) 'set_ICs ', Neutral_BLK(2,2,2,iBlock, :)
-
-    endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ICs
   !============================================================================
@@ -480,35 +294,34 @@ contains
   end subroutine user_init_point_implicit
   !============================================================================
 
-  subroutine user_calc_sources(iBlock)
+  ! subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
     ! If there is no explicit source term, the subroutine user_expl_source
     ! and the corresponding calls can be removed.
 
-    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
+    ! use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
 
-    integer, intent(in) :: iBlock
+    ! integer, intent(in) :: iBlock
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    ! logical:: DoTest
+    ! character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    if(.not.UsePointImplicit)then
+    ! call test_start(NameSub, DoTest, iBlock)
+    ! if(.not.UsePointImplicit)then
        ! Add all source terms if we do not use the point implicit scheme
-       call user_expl_source(iBlock)
-       call user_impl_source(iBlock)
-    elseif(IsPointImplSource)then
+     !  call user_expl_source(iBlock)
+     !  call user_impl_source(iBlock)
+    ! elseif(IsPointImplSource)then
        ! Add implicit sources only
-       call user_impl_source(iBlock)
-    else
+     !  call user_impl_source(iBlock)
+    ! else
        ! Add explicit sources only
-       call user_expl_source(iBlock)
-    end if
+     !  call user_expl_source(iBlock)
+    ! end if
 
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_calc_sources
-  !============================================================================
+    ! call test_stop(NameSub, DoTest, iBlock)
+  ! end subroutine user_calc_sources
   subroutine user_expl_source(iBlock)
 
     integer, intent(in) :: iBlock
@@ -518,20 +331,19 @@ contains
     !--------------------------------------------------------------------------
   end subroutine user_expl_source
   !============================================================================
-  subroutine user_impl_source(iBlock)
+  subroutine user_calc_sources_impl(iBlock)
 
     ! This is a test and example for using point implicit source terms
     ! Apply friction relative to some medium at rest
     ! The friction force is proportional to the velocity and the density.
 
-    use ModPointImplicit, ONLY: &
-         UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+    use ModPointImplicit, ONLY:
 
     use ModMain, ONLY: nI,nJ,nK,nStep
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry, ONLY: Xyz_DGB,r_GB
-
+    use ModNumConst
     use ModPhysics
 
     integer, intent(in) :: iBlock
@@ -554,7 +366,7 @@ contains
          sMasseta, Losse, chargexchg, Unx, Uny, Unz, ux, uy, uz
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_impl_source'
+    character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -610,16 +422,17 @@ contains
     else
        lambda = Unr/ionization_rate
        !! fi multiplicator value for the ionization frequency (including enhanced electron impact in ion pile up reagion)
-       !       fi = 1.0	!       set f_i=1 for all r
-       do k=1,nK ;   do j=1,nJ ;   do i=1,nI
-          if (rkm(i,j,k) >= 5000. .and. rkm(i,j,k) < 10000.) then
-             fi(i,j,k) = 1.0+0.77*log(rkm(i,j,k)/5000.)
-          elseif (rkm(i,j,k) >= 10000. .and. rkm(i,j,k) < 50000.) then
-             fi(i,j,k) = 1.5-0.31067*log(rkm(i,j,k)/10000.)
-          else
-             fi(i,j,k) = 1.0
-          endif
-       end do;  end do ; end do
+       fi = 1.0	!       set f_i=1 for all r
+
+       ! do k=1,nK ;   do j=1,nJ ;   do i=1,nI
+       !   if (rkm(i,j,k) >= 5000. .and. rkm(i,j,k) < 10000.) then
+       !      fi(i,j,k) = 1.0+0.77*log(rkm(i,j,k)/5000.)
+       !   elseif (rkm(i,j,k) >= 10000. .and. rkm(i,j,k) < 50000.) then
+       !      fi(i,j,k) = 1.5-0.31067*log(rkm(i,j,k)/10000.)
+       !   else
+       !      fi(i,j,k) = 1.0
+       !   endif
+       ! end do;  end do ; end do
 
        sMass = Qprod * mbar * fi * &
             exp(-r_GB(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/lambda) / &
@@ -650,25 +463,25 @@ contains
     ! Calculate electron temperature from pressure
     ! assuming Te=Ti
     ! for comet borrelly
-    !    Te=State_VGB(p_,1:nI,1:nJ,1:nK,iBlock) * NO2SI_V(UnitP_) * mbar * cProtonMass / &
-    !          ( 2.0 * unitSI_rho * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) )
+     Te=State_VGB(p_,1:nI,1:nJ,1:nK,iBlock) * NO2SI_V(UnitP_) * mbar * cProtonMass / &
+              ( 2.0 * NO2SI_V(UnitRho_) * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) )
 
     ! Standard Profile
-    where  (rkm <= 1584.893)
-       Te = 1.E+2
-    end where
-    where (rkm > 1584.893 .and. rkm <= 6918.310)
-       Te = 10.**( 1.143  * logR -  1.667 )
-    end where
-    where (rkm > 6918.310 .and. rkm <= 1.E+4)
-       Te = 10.**(10.965  * logR - 39.3735)
-    end where
-    where (rkm > 1.E+4 .and. rkm <= 1.E+5)
-       Te = 10.**( 0.5135 * logR +  2.43)
-    end where
-    where (rkm > 1.E+5)
-       Te = 1.E+5
-    end where
+    ! where  (rkm <= 1584.893)
+    !   Te = 1.E+2
+    ! end where
+    ! where (rkm > 1584.893 .and. rkm <= 6918.310)
+    !   Te = 10.**( 1.143  * logR -  1.667 )
+    ! end where
+    ! where (rkm > 6918.310 .and. rkm <= 1.E+4)
+    !   Te = 10.**(10.965  * logR - 39.3735)
+    ! end where
+    ! where (rkm > 1.E+4 .and. rkm <= 1.E+5)
+    !   Te = 10.**( 0.5135 * logR +  2.43)
+    ! end where
+    ! where (rkm > 1.E+5)
+    !   Te = 1.E+5
+    ! end where
 
     !********   modification Apr 03 yingdong for Borelley //start  *********
     if ( jet_width < 1e-6 ) then
@@ -831,48 +644,48 @@ contains
     !     endif
     !    close(321)
 
-    if(IsPointImplMatrixSet)then
+    ! if(IsPointImplMatrixSet)then
        ! Set the non-zero dS/dU matrix elements here
        !      term3    = (5.-3.*Gamma)*(sMasseta+Losse)
        !      term4    = 1.5*(sMasseta+Losse)	! for energy source
        !      term4    = term2		! for pressure source
 
-       DsDu_VVC = 0.0
+       ! DsDu_VVC = 0.0
 
-       DsDu_VVC(1,1,:,:,:) = - Losse
-       DsDu_VVC(2,1,:,:,:) = sMasseta*Unx
-       DsDu_VVC(2,2,:,:,:) = - term2
-       DsDu_VVC(3,1,:,:,:) = sMasseta*Uny
-       DsDu_VVC(3,3,:,:,:) = - term2
-       DsDu_VVC(4,1,:,:,:) = sMasseta*Unz
-       DsDu_VVC(4,4,:,:,:) = - term2
-       DsDu_VVC(5,2,:,:,:) = -term1*(Unx-ux)*2.0*1.0/3.0
-       DsDu_VVC(5,3,:,:,:) = -term1*(Uny-uy)*2.0*1.0/3.0
-       DsDu_VVC(5,4,:,:,:) = -term1*(Unz-uz)*2.0*1.0/3.0
-       DsDu_VVC(5,5,:,:,:) = - term2
+       ! DsDu_VVC(1,1,:,:,:) = - Losse
+       ! DsDu_VVC(2,1,:,:,:) = sMasseta*Unx
+       ! DsDu_VVC(2,2,:,:,:) = - term2
+       ! DsDu_VVC(3,1,:,:,:) = sMasseta*Uny
+       ! DsDu_VVC(3,3,:,:,:) = - term2
+       ! DsDu_VVC(4,1,:,:,:) = sMasseta*Unz
+       ! DsDu_VVC(4,4,:,:,:) = - term2
+       ! DsDu_VVC(5,2,:,:,:) = -term1*(Unx-ux)*2.0*1.0/3.0
+    !    DsDu_VVC(5,3,:,:,:) = -term1*(Uny-uy)*2.0*1.0/3.0
+    !    DsDu_VVC(5,4,:,:,:) = -term1*(Unz-uz)*2.0*1.0/3.0
+    !    DsDu_VVC(5,5,:,:,:) = - term2
 
-       if(ReadNeutral) then       ! yingdong 060605 neutral profile
-          do k=1,nK ;   do j=1,nJ ;    do i=1,nI
-             unr = Unx(i,j,k)*Unx(i,j,k) + Uny(i,j,k)*Uny(i,j,k) +  &
-                  Unz(i,j,k)*Unz(i,j,k)
-             ! note: this unr is unr*unr*dimensionless
-             DsDu_VVC(5,1,i,j,k) = sMasseta(i,j,k)*1.0/3.0*(unr-usqr(i,j,k)) + &
-                  sMass(i,j,k)*2.0*1.0/3.0/State_VGB(rho_,i,j,k,iBlock)* &
-                  ( Unx(i,j,k)*ux(i,j,k) + Uny(i,j,k)*uy(i,j,k) + &
-                  Unz(i,j,k)*uz(i,j,k) - usqr(i,j,k) )
-          enddo; enddo; enddo
+    !    if(ReadNeutral) then       ! yingdong 060605 neutral profile
+    !       do k=1,nK ;   do j=1,nJ ;    do i=1,nI
+    !          unr = Unx(i,j,k)*Unx(i,j,k) + Uny(i,j,k)*Uny(i,j,k) +  &
+    !               Unz(i,j,k)*Unz(i,j,k)
+    !          ! note: this unr is unr*unr*dimensionless
+    !          DsDu_VVC(5,1,i,j,k) = sMasseta(i,j,k)*1.0/3.0*(unr-usqr(i,j,k)) + &
+    !               sMass(i,j,k)*2.0*1.0/3.0/State_VGB(rho_,i,j,k,iBlock)* &
+    !               ( Unx(i,j,k)*ux(i,j,k) + Uny(i,j,k)*uy(i,j,k) + &
+    !               Unz(i,j,k)*uz(i,j,k) - usqr(i,j,k) )
+    !       enddo; enddo; enddo
 
-       else
-          DsDu_VVC(5,1,:,:,:) = sMasseta*1.0/3.0*(unr*unr/NO2SI_V(UnitU_)/NO2SI_V(UnitU_)-usqr) + &
-               sMass*2.0*1.0/3.0/State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*( &
-               Unx*ux+Uny*uy+Unz*uz-usqr)
+    !    else
+    !       DsDu_VVC(5,1,:,:,:) = sMasseta*1.0/3.0*(unr*unr/NO2SI_V(UnitU_)/NO2SI_V(UnitU_)-usqr) + &
+    !            sMass*2.0*1.0/3.0/State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*( &
+    !            Unx*ux+Uny*uy+Unz*uz-usqr)
 
-       endif
+    !    endif
 
-    end if
+    ! end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_impl_source
+  end subroutine user_calc_sources_impl
   !============================================================================
 
   subroutine user_update_states(iBlock)
@@ -890,7 +703,7 @@ contains
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    call update_states_normal(iBlock)
+    call update_state_normal(iBlock)
 
     ! Begin update check of temperature::
     ! now check to see if the temperature is less than some
