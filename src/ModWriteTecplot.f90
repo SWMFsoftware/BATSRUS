@@ -11,6 +11,7 @@ module ModWriteTecplot
   use ModBatsrusUtility, ONLY: get_date_time, get_time_string, stop_mpi
 
   use ModKind, ONLY: Int1_
+  use ModMpi
 
   ! Save cell centered data into Tecplot files
   !
@@ -106,6 +107,8 @@ module ModWriteTecplot
   integer:: nCharPerLine, nCharMax, nChar
   !$acc declare create(nCharPerLine)
 
+  integer(MPI_OFFSET_KIND) :: nOffset
+
   integer, public, parameter:: nBlockPerPatch = 128
 
 contains
@@ -146,6 +149,8 @@ contains
        nCharPerLine = nCharPerLineNew
        !$acc update device(nCharPerLine)
     end if
+
+    nOffset = 0
   end subroutine write_tecplot_init
   !============================================================================
   subroutine write_tecplot_count(iBlockMin, iBlockMax)
@@ -285,20 +290,16 @@ contains
   !============================================================================
   subroutine write_tecplot_write_data(iUnit)
     use ModIoUnit, ONLY: UnitTmp_
-    use ModMpi
-    !use ModMPiInterfaces, ONLY: MPI_file_write_at
 
     integer, intent(in):: iUnit
 
     integer :: iStatus_I(MPI_STATUS_SIZE), iError
-    integer(MPI_OFFSET_KIND):: nCharOffset
     !--------------------------------------------------------------------------
 
     !$acc update host(iAscii_I)
-
-    nCharOffset = 0 
-    call MPI_file_write_at(iUnit, nCharOffset, iAscii_I, nChar, &
+    call MPI_file_write_at(iUnit, nOffset, iAscii_I, nChar, &
       MPI_INT8_T, iStatus_I, iError)
+    nOffset = nOffset + nChar
   end subroutine write_tecplot_write_data
   !============================================================================
   subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
@@ -389,7 +390,6 @@ contains
     use ModUtilities, ONLY: open_file, close_file, int_to_ascii_code, &
          iCharSpace
     use ModMain, ONLY: nBlockMax
-    use ModMpi
     use ModNumConst, ONLY: cHalfPi, cPi
     use BATL_lib, ONLY: nI, nJ, nK, nIJK, k0_, nKp1_, &
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
@@ -434,7 +434,6 @@ contains
 
     integer:: iUnit
 
-    integer(MPI_OFFSET_KIND) :: nOffset
     integer :: iStatus_I(MPI_STATUS_SIZE)
 
     logical:: DoTest
@@ -605,6 +604,7 @@ contains
 
     nBrick = 0
     do iStage = 1, nStage
+       nOffset = 0
        nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))
        do iPatch = 1, nPatch; do iPass = 1, nPass
           iBlockMin = (iPatch-1)*nBlockPerPatch + 1
@@ -804,10 +804,10 @@ contains
           if(iPass == 1) nCharTotal = iLoc - 1
 
           if(iPass == nPass) then
-            nOffset = 0
              !$acc update host(iAscii_I(1:nCharTotal))
             call MPI_file_write_at(iUnit, nOffset, iAscii_I, nCharTotal, &
                  MPI_INT8_T, MPI_STATUS_IGNORE, iError)
+            nOffset = nOffset + nCharTotal
           end if
        end do; end do ! iPatch, iPass
 
@@ -1386,7 +1386,6 @@ contains
          iTree_IA, Block_, Proc_,                                      &
          Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,                  &
          find_grid_block, iMortonNode_A, iNode_B
-    use ModMpi
     use ModKind, ONLY: Real4_
 
     ! Arguments
@@ -2233,7 +2232,6 @@ contains
     use ModIO, ONLY: write_prefix, iUnitOut
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
     use ModNodes
-    use ModMpi
     use ModMain, ONLY: nBlockMax
     use BATL_lib, ONLY: nBlock, nNodeUsed, message_pass_node
 
