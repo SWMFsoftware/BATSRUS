@@ -841,7 +841,8 @@ contains
 
 
 
-    integer, intent(out):: i0, i1, j0, j1, k0, k1, iBlock
+    integer, intent(out):: i0, i1, j0, j1, k0, k1
+    integer, intent(in)::  iBlock
     integer, intent(inout):: iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_)
     logical, intent(in):: IsPlotDim1, IsPlotDim2, IsPlotDim3
 
