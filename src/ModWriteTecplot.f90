@@ -389,8 +389,7 @@ contains
     use ModUtilities, ONLY: open_file, close_file, int_to_ascii_code, &
          iCharSpace
     use ModMain, ONLY: nBlockMax
-    use ModMpi, ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
-         MPI_allgather, MPI_INTEGER
+    use ModMpi
     use ModNumConst, ONLY: cHalfPi, cPi
     use BATL_lib, ONLY: nI, nJ, nK, nIJK, k0_, nKp1_, &
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
@@ -432,6 +431,11 @@ contains
     integer, allocatable:: nCell_P(:)
 
     integer:: iLoc, nCharTotal, nIntPerLine
+
+    integer:: iUnit
+
+    integer(MPI_OFFSET_KIND) :: nOffset
+    integer :: iStatus_I(MPI_STATUS_SIZE)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_connect'
@@ -593,8 +597,8 @@ contains
           call open_file(FILE=NameFile, NameCaller=NameSub//&
                '_connect',access='stream', form='unformatted')
        else
-          call open_file(File=NameFile, NameCaller=NameSub//'_connect', &
-               access='stream', form='unformatted')
+          call open_file(File=NameFile, iComm=MPI_COMM_SELF, &
+           NameCaller=NameSub//'_connect', iUnitMpi=iUnit)
        end if
     end if
 
@@ -800,8 +804,10 @@ contains
           if(iPass == 1) nCharTotal = iLoc - 1
 
           if(iPass == nPass) then
+            nOffset = 0
              !$acc update host(iAscii_I(1:nCharTotal))
-             write(UnitTmp_) iAscii_I(1:nCharTotal)
+            call MPI_file_write_at(iUnit, nOffset, iAscii_I, nCharTotal, &
+                 MPI_INT8_T, MPI_STATUS_IGNORE, iError)
           end if
        end do; end do ! iPatch, iPass
 
