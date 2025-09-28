@@ -329,8 +329,8 @@ contains
                   NameCaller=NameSub//'_tcp_data', &
                   access='stream', form='unformatted')
           else
-             call open_file(FILE=NameFileNorth, ACCESS='STREAM', &
-                  NameCaller=NameSub//'_tcp_data', form='unformatted')
+             call open_file(FILE=NameFileNorth, iComm=MPI_COMM_SELF, &
+                  NameCaller=NameSub//'_tcp_data', iUnitMpi = iUnit)
           end if
        end if
     elseif(DoSaveOneTecFile) then
@@ -567,7 +567,7 @@ contains
           end do
           call timing_stop('tecplot2')
 
-          call write_tecplot_write_data
+          call write_tecplot_write_data(iUnit)
        end do ! Patch loop
     else
        do iBlock = 1, nBlock

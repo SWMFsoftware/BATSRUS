@@ -283,13 +283,22 @@ contains
     end if
   end subroutine write_tecplot_get_data
   !============================================================================
-  subroutine write_tecplot_write_data
+  subroutine write_tecplot_write_data(iUnit)
     use ModIoUnit, ONLY: UnitTmp_
+    use ModMpi
+    !use ModMPiInterfaces, ONLY: MPI_file_write_at
+
+    integer, intent(in):: iUnit
+
+    integer :: iStatus_I(MPI_STATUS_SIZE), iError
+    integer(MPI_OFFSET_KIND):: nCharOffset
     !--------------------------------------------------------------------------
 
     !$acc update host(iAscii_I)
-    write(UnitTmp_) iAscii_I(1:nChar)
 
+    nCharOffset = 0 
+    call MPI_file_write_at(iUnit, nCharOffset, iAscii_I, nChar, &
+      MPI_INT8_T, iStatus_I, iError)
   end subroutine write_tecplot_write_data
   !============================================================================
   subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
