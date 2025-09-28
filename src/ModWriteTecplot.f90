@@ -235,9 +235,9 @@ contains
           ! Skip points outside the cut
           if(iRecData == 0) CYCLE
           call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-               Xyz_D, PlotVar_V, PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
+               Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
           write(UnitTmp_, StringFormat, REC=iRecData) &
-               Xyz_D(1:nDim), PlotVar_V, CharNewLine
+               Xyz_D(1:nDim), PlotVar_V(1:nPlotVar), CharNewLine
        end do; end do; end do
 #endif
     else
@@ -248,8 +248,8 @@ contains
              ! Skip points outside the cut
              if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
              call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-                  Xyz_D, PlotVar_V, PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
-             write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V
+                  Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
+             write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V(1:nPlotVar)
           end do; end do; end do
 #endif
        else
@@ -646,6 +646,8 @@ contains
                    nIntPerLine = 4
                    if(nPlotDim==3) nIntPerLine = 8
 
+                  if(nPass == 2) then 
+
                    if(iPass < nPass) then
                       iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
                       iLoc = iLoc + nIntPerLine*nWidthInt + 1
@@ -653,6 +655,7 @@ contains
                    else
                       iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
                    end if
+                  end if
 
                    ! In stage 1 only count bricks
                    if(iStage < nStage) CYCLE
