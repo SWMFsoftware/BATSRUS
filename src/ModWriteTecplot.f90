@@ -237,9 +237,9 @@ contains
     real:: CoefL, CoefR
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'write_tecplot_get_data'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IjkMin_D = 1
     IjkMax_D = nIjk_D
 
@@ -292,6 +292,7 @@ contains
        end do; end do; end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_tecplot_get_data
   !============================================================================
   subroutine write_tecplot_write_data(iUnit)
