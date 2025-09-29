@@ -49,7 +49,7 @@ contains
     use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, nBlockPerPatch, &
          write_tecplot_head, write_tecplot_get_data, write_tecplot_connect,&
          write_tecplot_init, write_tecplot_node_data, set_tecplot_var_string,&
-         write_tecplot_count, write_tecplot_write_data
+         write_tecplot_count, write_tecplot_write_data, write_tecplot_set_mark
 
     use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
          message_pass_node, message_pass_cell, average_grid_node, &
@@ -121,7 +121,9 @@ contains
     integer:: nCellProc, nCellBlock, nCellAll
     integer, allocatable:: nCell_P(:)
     integer(MPI_OFFSET_KIND), allocatable:: nOffset_P(:)
-    integer(MPI_OFFSET_KIND):: nOffset
+    integer(MPI_OFFSET_KIND):: nOffset 
+
+    integer:: nCellOffset
 
     integer:: iTime_I(7), iDim, iParam
     integer:: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
@@ -279,12 +281,6 @@ contains
        end if
     end if
 
-    if(DoSaveOneTecFile) then
-       iUnit = io_unit_new()
-    else
-       iUnit = UnitTmp_
-    end if
-
     ! Should we use MPI-IO?
     UseMpiIO = .false.
     if(TypePlotFormat_I(iFile) == 'idl') then
@@ -322,8 +318,8 @@ contains
 
        if(DoSaveOneTecFile)then
           call open_file(&
-               FILE=NameFileNorth, ACCESS='DIRECT', RECL=lRecData, &
-               iComm=iComm, NameCaller=NameSub//'_tcp_direct_data')
+               FILE=NameFileNorth, iComm=iComm, &
+               NameCaller=NameSub//'_tcp_direct_data', iUnitMpi=iUnit)
        else
           if(DoSaveTecBinary) then
              call open_file(FILE=NameFileNorth, &
@@ -547,7 +543,16 @@ contains
        call set_plot_shock(nPlotVar, PlotVar_VGB)
     elseif(TypePlotFormat_I(iFile)=='tcp') then
 
-       call write_tecplot_init(nPlotVar+nDim)
+       nCellOffset = 0
+       if(DoSaveOneTecFile) then
+      call write_tecplot_count(nCellProc)
+      call MPI_ALLGATHER(nCellProc, 1, MPI_INTEGER, nCell_P, 1, &
+           MPI_INTEGER, iComm, iError) 
+      nCellOffset =  sum(nCell_P(0:iProc-1))
+       end if
+
+
+       call write_tecplot_init(nPlotVar+nDim, 0, nCellOffset)
 
        nPatch = ceiling(real(nBlock)/nBlockPerPatch)
 
@@ -557,7 +562,7 @@ contains
           iBlockMin = (iPatch-1)*nBlockPerPatch + 1
           iBlockMax = min(iPatch*nBlockPerPatch, nBlock)
 
-          call write_tecplot_count(iBlockMin,iBlockMax)
+          call write_tecplot_set_mark(iBlockMin,iBlockMax)
 
           call timing_start('tecplot2')
           !$acc parallel loop gang

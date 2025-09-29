@@ -39,7 +39,8 @@ module ModWriteTecplot
   private ! except
 
   public:: write_tecplot_init      ! initialize variables
-  public:: write_tecplot_count     ! count number of bytes written
+  public:: write_tecplot_count     ! count number of cells written
+  public:: write_tecplot_set_mark  ! set the starting position for each cell
   public:: write_tecplot_get_data  ! get data for one block
   public:: write_tecplot_write_data ! write data
   public:: write_tecplot_head      ! write header information
@@ -109,12 +110,14 @@ module ModWriteTecplot
 
   integer(MPI_OFFSET_KIND) :: nOffset
 
+  integer:: nBrickStart
+
   integer, public, parameter:: nBlockPerPatch = 128
 
 contains
   !============================================================================
-  subroutine write_tecplot_init(nRealIn, nIntegerIn)
-    integer, optional, intent(in):: nRealIn, nIntegerIn
+  subroutine write_tecplot_init(nRealIn, nIntegerIn, nCellOffset)
+    integer, optional, intent(in):: nRealIn, nIntegerIn, nCellOffset
 
     integer:: nReal, nInteger
     integer:: nCharPerLineNew
@@ -143,6 +146,8 @@ contains
           nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
                nCharPerLineNew*nBlockPerPatch
 
+         write(*,*)'nCharPerLine, nCharMax=', nCharPerLineNew, nCharMax, nReal, nInteger
+
           if(allocated(iAscii_I)) deallocate(iAscii_I)
           allocate(iAscii_I(nCharMax))
        end if
@@ -151,14 +156,30 @@ contains
     end if
 
     nOffset = 0
+    if(present(nCellOffset)) nOffset = nCellOffset*nCharPerLine
   end subroutine write_tecplot_init
   !============================================================================
-  subroutine write_tecplot_count(iBlockMin, iBlockMax)
+  subroutine write_tecplot_count(nCell)
+   use BATL_lib, ONLY: nBlock
+
+    integer, optional, intent(out):: nCell
+
+    integer:: i, j, k, iBlock
+    !--------------------------------------------------------------------------
+
+    nCell = 0
+    do iBlock = 1, nBlock 
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
+          nCell = nCell + 1
+       end do; end do; end do
+    end do
+  end subroutine write_tecplot_count
+  !============================================================================
+  subroutine write_tecplot_set_mark(iBlockMin, iBlockMax)
     integer, intent(in):: iBlockMin, iBlockMax
 
-    integer:: i, j, k, iCount
-
-    integer:: iBlock
+    integer:: i, j, k, iCount, iBlock
 
     !--------------------------------------------------------------------------
     iMark_GI = 0
@@ -167,14 +188,13 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
           iMark_GI(i,j,k,iBlock-iBlockMin+1) = iCount
-          iCount = iCount + nCharPerLine
+          iCount = iCount + nCharPerLine          
        end do; end do; end do
     end do
     nChar = iCount - 1
-
     !$acc update device(iMark_GI)
 
-  end subroutine write_tecplot_count
+  end subroutine write_tecplot_set_mark
   !============================================================================
 
   subroutine write_tecplot_get_data(iBlock, iBlockMin, nPlotVar, PlotVar_VGB)
@@ -231,22 +251,6 @@ contains
     jMin = IjkMin_D(2); jMax = IjkMax_D(2)
     kMin = IjkMin_D(3); kMax = IjkMax_D(3)
 
-    if(DoSaveOneTecFile)then
-#ifndef _OPENACC
-       write(StringFormat, '(a,i2,a)') "(", nDim+nPlotVar, "(ES14.6), a)"
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          ! Record index is the global cell index
-          iRecData = nint(CellIndex_GB(i,j,k,iBlock))
-          ! Skip points outside the cut
-          if(iRecData == 0) CYCLE
-          call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-               Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
-          write(UnitTmp_, StringFormat, REC=iRecData) &
-               Xyz_D(1:nDim), PlotVar_V(1:nPlotVar), CharNewLine
-       end do; end do; end do
-#endif
-    else
-
        if(DoSaveTecBinary)then
 #ifndef _OPENACC
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -285,7 +289,7 @@ contains
              iAscii_I(iLoc) = iCharNewLine
           end do; end do; end do
        end if
-    end if
+
   end subroutine write_tecplot_get_data
   !============================================================================
   subroutine write_tecplot_write_data(iUnit)
@@ -299,7 +303,7 @@ contains
     !$acc update host(iAscii_I)
     call MPI_file_write_at(iUnit, nOffset, iAscii_I, nChar, &
       MPI_INT8_T, iStatus_I, iError)
-    nOffset = nOffset + nChar
+      nOffset = nOffset + nChar
   end subroutine write_tecplot_write_data
   !============================================================================
   subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
@@ -599,7 +603,7 @@ contains
     do iStage = 1, nStage
       nOffset = 0
       if(nStage==2 .and. iStage==2) then
-         nOffset = nBrick*lRecConnect
+         nOffset = nBrickStart*lRecConnect
       end if
        nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))
        do iPatch = 1, nPatch; do iPass = 1, nPass
@@ -763,8 +767,7 @@ contains
           call MPI_allgather(nBrick, 1, MPI_INTEGER, &
                nBrick_P, 1, MPI_INTEGER, iComm, iError)
           ! Add up number of bricks on previous prorecssors
-          nBrick = 0
-          if(iProc > 0) nBrick = sum(nBrick_P(0:iProc-1))
+          if(iProc > 0) nBrickStart = sum(nBrick_P(0:iProc-1))
        end if
     end do ! iStage
 
