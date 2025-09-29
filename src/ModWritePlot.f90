@@ -165,12 +165,6 @@ contains
          (TypePlot(1:3) == '3d_' .or. TypePlot(1:3) == '3D_') .and. &
          (TypePlotFormat_I(iFile) == 'tec' .or. TypePlotFormat_I(iFile)=='tcp')
 
-#ifdef _OPENACC
-    ! This feature has not been ported to GPU yet 
-    DoSaveOneTecFile = .false.
-#endif   
-
-
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar,    &
          UseArraySyntaxIn=.true.)
     !$acc update device(nPlotVar, DoSaveOneTecFile)
@@ -292,8 +286,14 @@ contains
     end if
 
     ! Should we use MPI-IO?
-    UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. .not.DoPlotBox &
-         .and. .not.DoPlotShock .and. (TypePlotFormat_I(iFile) == 'idl')
+    UseMpiIO = .false.
+    if(TypePlotFormat_I(iFile) == 'idl') then
+       UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. &
+       .not.DoPlotBox .and. .not.DoPlotShock
+    elseif(TypePlotFormat_I(iFile) == 'tcp') then
+       UseMpiIO = DoSaveOneTecFile 
+    end if
+
     if(UseMpiIO) then
        allocate(nCell_P(0:nProc-1))
        allocate(nOffset_P(0:nProc-1))
@@ -311,6 +311,7 @@ contains
 
        ! At most 8 cells (integers) per line for connectivity
        call write_tecplot_init(0, 8)
+
        ! Calculate and write connectivity file
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))

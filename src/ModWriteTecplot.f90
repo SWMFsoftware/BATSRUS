@@ -575,22 +575,16 @@ contains
     iPlotDim = iPlot_D(1); jPlotDim = iPlot_D(2); kPlotDim = iPlot_D(3)
     IsPlotDim1 = iPlotDim>0; IsPlotDim2 = jPlotDim>0; IsPlotDim3 = kPlotDim>0
 
+    nPass = 2
     if(DoSaveOneTecFile)then
        ! Two stages are needed to figure out the global brick indexes
        nStage = 2
-
-       nPass = 1
        allocate(nBrick_P(0:nProc-1))
 
-       ! Open connectivity file as direct access
-       ! Record length for connectivity file
-       lRecConnect = 2**nPlotDim*11+1
-       call open_file(File=NameFile, ACCESS='direct', RECL=lRecConnect, &
-            iComm=iComm, NameCaller=NameSub//'_direct_connect')
+       call open_file(File=NameFile, iComm=iComm, &
+         NameCaller=NameSub//'_direct_connect', iUnitMpi=iUnit)
     else
        nStage = 1
-
-       nPass = 2
        ! Open connectivity file
        if(DoSaveTecBinary) then
           call open_file(FILE=NameFile, NameCaller=NameSub//&
@@ -601,10 +595,12 @@ contains
        end if
     end if
 
-
     nBrick = 0
     do iStage = 1, nStage
-       nOffset = 0
+      nOffset = 0
+      if(nStage==2 .and. iStage==2) then
+         nOffset = nBrick*lRecConnect
+      end if
        nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))
        do iPatch = 1, nPatch; do iPass = 1, nPass
           iBlockMin = (iPatch-1)*nBlockPerPatch + 1
@@ -674,20 +670,6 @@ contains
                    if(iStage < nStage) CYCLE
 
                    if(nPlotDim == 3)then
-                      if(DoSaveOneTecFile)then
-#ifndef _OPENACC
-                         write(UnitTmp_,'(8i11,a)', REC=nBrick) &
-                              iCell_G(i  ,j  ,k  ), &
-                              iCell_G(i+1,j  ,k  ), &
-                              iCell_G(i+1,j+1,k  ), &
-                              iCell_G(i  ,j+1,k  ), &
-                              iCell_G(i  ,j  ,k+1), &
-                              iCell_G(i+1,j  ,k+1), &
-                              iCell_G(i+1,j+1,k+1), &
-                              iCell_G(i  ,j+1,k+1), &
-                              CharNewLine
-#endif
-                      else
                          call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
                               nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
                          iLoc = iLoc + nWidthInt
@@ -714,18 +696,7 @@ contains
                          iLoc = iLoc + nWidthInt
                          iAscii_I(iLoc) = ichar(CharNewLine)
                          iLoc = iLoc + 1
-                      end if
                    elseif(.not.IsPlotDim3)then
-                      if(DoSaveOneTecFile)then
-#ifndef _OPENACC
-                         write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                              iCell_G(i  ,j  ,k), &
-                              iCell_G(i+1,j  ,k), &
-                              iCell_G(i+1,j+1,k), &
-                              iCell_G(i  ,j+1,k), &
-                              CharNewLine
-#endif
-                      else
                          call int_to_ascii_code(iCell_G(i  ,j  ,k), &
                               nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
                          iLoc = iLoc + nWidthInt
@@ -740,18 +711,7 @@ contains
                          iLoc = iLoc + nWidthInt
                          iAscii_I(iLoc) = ichar(CharNewLine)
                          iLoc = iLoc + 1
-                      end if
                    elseif(.not.IsPlotDim2)then
-                      if(DoSaveOneTecFile)then
-#ifndef _OPENACC
-                         write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                              iCell_G(i  ,j,k  ), &
-                              iCell_G(i+1,j,k  ), &
-                              iCell_G(i+1,j,k+1), &
-                              iCell_G(i  ,j,k+1), &
-                              CharNewLine
-#endif
-                      else
                          call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
                               nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
                          iLoc = iLoc + nWidthInt
@@ -766,18 +726,7 @@ contains
                          iLoc = iLoc + nWidthInt
                          iAscii_I(iLoc) = ichar(CharNewLine)
                          iLoc = iLoc + 1
-                      end if
                    elseif(.not.IsPlotDim1)then
-                      if(DoSaveOneTecFile)then
-#ifndef _OPENACC                        
-                         write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                              iCell_G(i,j  ,k  ), &
-                              iCell_G(i,j+1,k  ), &
-                              iCell_G(i,j+1,k+1), &
-                              iCell_G(i,j  ,k+1), &
-                              CharNewLine
-#endif                              
-                      else
                          call int_to_ascii_code(iCell_G(i,j  ,k  ), &
                               nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
                          iLoc = iLoc + nWidthInt
@@ -793,8 +742,6 @@ contains
                          iAscii_I(iLoc) = ichar(CharNewLine)
                          iLoc = iLoc + 1
                       end if
-
-                   end if
                 end do; end do; end do
 
              end if
