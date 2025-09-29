@@ -285,7 +285,7 @@ contains
     UseMpiIO = .false.
     if(TypePlotFormat_I(iFile) == 'idl') then
        UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. &
-       .not.DoPlotBox .and. .not.DoPlotShock
+            .not.DoPlotBox .and. .not.DoPlotShock
     elseif(TypePlotFormat_I(iFile) == 'tcp') then
        UseMpiIO = DoSaveOneTecFile 
     end if
@@ -545,10 +545,10 @@ contains
 
        nCellOffset = 0
        if(DoSaveOneTecFile) then
-      call write_tecplot_count(nCellProc)
-      call MPI_ALLGATHER(nCellProc, 1, MPI_INTEGER, nCell_P, 1, &
-           MPI_INTEGER, iComm, iError) 
-      nCellOffset =  sum(nCell_P(0:iProc-1))
+          call write_tecplot_count(nCellProc)
+          call MPI_ALLGATHER(nCellProc, 1, MPI_INTEGER, nCell_P, 1, &
+               MPI_INTEGER, iComm, iError) 
+          nCellOffset =  sum(nCell_P(0:iProc-1))
        end if
 
 

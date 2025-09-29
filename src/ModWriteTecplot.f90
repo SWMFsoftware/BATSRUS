@@ -146,7 +146,7 @@ contains
           nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
                nCharPerLineNew*nBlockPerPatch
 
-         write(*,*)'nCharPerLine, nCharMax=', nCharPerLineNew, nCharMax, nReal, nInteger
+          write(*,*)'nCharPerLine, nCharMax=', nCharPerLineNew, nCharMax, nReal, nInteger
 
           if(allocated(iAscii_I)) deallocate(iAscii_I)
           allocate(iAscii_I(nCharMax))
@@ -160,7 +160,7 @@ contains
   end subroutine write_tecplot_init
   !============================================================================
   subroutine write_tecplot_count(nCell)
-   use BATL_lib, ONLY: nBlock
+    use BATL_lib, ONLY: nBlock
 
     integer, optional, intent(out):: nCell
 
@@ -251,44 +251,44 @@ contains
     jMin = IjkMin_D(2); jMax = IjkMax_D(2)
     kMin = IjkMin_D(3); kMax = IjkMax_D(3)
 
-       if(DoSaveTecBinary)then
+    if(DoSaveTecBinary)then
 #ifndef _OPENACC
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             ! Skip points outside the cut
-             if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
-             call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-                  Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
-             write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V(1:nPlotVar)
-          end do; end do; end do
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          ! Skip points outside the cut
+          if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
+          call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
+               Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
+          write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V(1:nPlotVar)
+       end do; end do; end do
 #endif
-       else
-          ! Add a new line character to the end of each line.
-          nCharPerLine = (nDim + nPlotVar)*nWidthReal + 1
+    else
+       ! Add a new line character to the end of each line.
+       nCharPerLine = (nDim + nPlotVar)*nWidthReal + 1
 
-          !$acc loop vector collapse(3) private(Xyz_D, PlotVar_V)
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             ! Skip points outside the cut
-             if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
-             call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-                  Xyz_D, PlotVar_V(1:nPlotVar), &
-                  PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
+       !$acc loop vector collapse(3) private(Xyz_D, PlotVar_V)
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          ! Skip points outside the cut
+          if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
+          call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
+               Xyz_D, PlotVar_V(1:nPlotVar), &
+               PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
 
-             iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
-             do iVar = 1, nDim
-                call real_to_ascii_code(real(Xyz_D(iVar)), nFrac, &
-                     nWidthReal, iAscii_I(iLoc:iLoc+nWidthReal-1))
-                iLoc = iLoc + nWidthReal
-             end do
+          iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+          do iVar = 1, nDim
+             call real_to_ascii_code(real(Xyz_D(iVar)), nFrac, &
+                  nWidthReal, iAscii_I(iLoc:iLoc+nWidthReal-1))
+             iLoc = iLoc + nWidthReal
+          end do
 
-             do iVar = 1, nPlotVar
-                call real_to_ascii_code(real(PlotVar_V(iVar)), nFrac, &
-                     nWidthReal, iAscii_I(iLoc:iLoc+nWidthReal-1))
-                iLoc = iLoc + nWidthReal
-             end do
+          do iVar = 1, nPlotVar
+             call real_to_ascii_code(real(PlotVar_V(iVar)), nFrac, &
+                  nWidthReal, iAscii_I(iLoc:iLoc+nWidthReal-1))
+             iLoc = iLoc + nWidthReal
+          end do
 
-             iAscii_I(iLoc) = iCharNewLine
-          end do; end do; end do
-       end if
+          iAscii_I(iLoc) = iCharNewLine
+       end do; end do; end do
+    end if
 
   end subroutine write_tecplot_get_data
   !============================================================================
@@ -302,8 +302,8 @@ contains
 
     !$acc update host(iAscii_I)
     call MPI_file_write_at(iUnit, nOffset, iAscii_I, nChar, &
-      MPI_INT8_T, iStatus_I, iError)
-      nOffset = nOffset + nChar
+         MPI_INT8_T, iStatus_I, iError)
+    nOffset = nOffset + nChar
   end subroutine write_tecplot_write_data
   !============================================================================
   subroutine set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
@@ -586,7 +586,7 @@ contains
        allocate(nBrick_P(0:nProc-1))
 
        call open_file(File=NameFile, iComm=iComm, &
-         NameCaller=NameSub//'_direct_connect', iUnitMpi=iUnit)
+            NameCaller=NameSub//'_direct_connect', iUnitMpi=iUnit)
     else
        nStage = 1
        ! Open connectivity file
@@ -595,16 +595,16 @@ contains
                '_connect',access='stream', form='unformatted')
        else
           call open_file(File=NameFile, iComm=MPI_COMM_SELF, &
-           NameCaller=NameSub//'_connect', iUnitMpi=iUnit)
+               NameCaller=NameSub//'_connect', iUnitMpi=iUnit)
        end if
     end if
 
     nBrick = 0
     do iStage = 1, nStage
-      nOffset = 0
-      if(nStage==2 .and. iStage==2) then
-         nOffset = nBrickStart*lRecConnect
-      end if
+       nOffset = 0
+       if(nStage==2 .and. iStage==2) then
+          nOffset = nBrickStart*lRecConnect
+       end if
        nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))
        do iPatch = 1, nPatch; do iPass = 1, nPass
           iBlockMin = (iPatch-1)*nBlockPerPatch + 1
@@ -659,93 +659,93 @@ contains
                    nIntPerLine = 4
                    if(nPlotDim==3) nIntPerLine = 8
 
-                  if(nPass == 2) then 
+                   if(nPass == 2) then 
 
-                   if(iPass < nPass) then
-                      iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
-                      iLoc = iLoc + nIntPerLine*nWidthInt + 1
-                      CYCLE
-                   else
-                      iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+                      if(iPass < nPass) then
+                         iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
+                         iLoc = iLoc + nIntPerLine*nWidthInt + 1
+                         CYCLE
+                      else
+                         iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
+                      end if
                    end if
-                  end if
 
                    ! In stage 1 only count bricks
                    if(iStage < nStage) CYCLE
 
                    if(nPlotDim == 3)then
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)                             
-                         iLoc = iLoc + nWidthInt                         
-                         call int_to_ascii_code(iCell_G(i+1,j+1,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i  ,j+1,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j+1,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i  ,j+1,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         iAscii_I(iLoc) = ichar(CharNewLine)
-                         iLoc = iLoc + 1
+                      call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)                             
+                      iLoc = iLoc + nWidthInt                         
+                      call int_to_ascii_code(iCell_G(i+1,j+1,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i  ,j+1,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i  ,j  ,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j  ,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j+1,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i  ,j+1,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      iAscii_I(iLoc) = ichar(CharNewLine)
+                      iLoc = iLoc + 1
                    elseif(.not.IsPlotDim3)then
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j+1,k), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i  ,j+1,k), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         iAscii_I(iLoc) = ichar(CharNewLine)
-                         iLoc = iLoc + 1
+                      call int_to_ascii_code(iCell_G(i  ,j  ,k), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j  ,k), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j+1,k), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i  ,j+1,k), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      iAscii_I(iLoc) = ichar(CharNewLine)
+                      iLoc = iLoc + 1
                    elseif(.not.IsPlotDim2)then
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i+1,j  ,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i  ,j  ,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         iAscii_I(iLoc) = ichar(CharNewLine)
-                         iLoc = iLoc + 1
+                      call int_to_ascii_code(iCell_G(i  ,j  ,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i+1,j  ,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i  ,j  ,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      iAscii_I(iLoc) = ichar(CharNewLine)
+                      iLoc = iLoc + 1
                    elseif(.not.IsPlotDim1)then
-                         call int_to_ascii_code(iCell_G(i,j  ,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i,j+1,k  ), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i,j+1,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         call int_to_ascii_code(iCell_G(i,j  ,k+1), &
-                              nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
-                         iLoc = iLoc + nWidthInt
-                         iAscii_I(iLoc) = ichar(CharNewLine)
-                         iLoc = iLoc + 1
-                      end if
+                      call int_to_ascii_code(iCell_G(i,j  ,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i,j+1,k  ), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i,j+1,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      call int_to_ascii_code(iCell_G(i,j  ,k+1), &
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
+                      iAscii_I(iLoc) = ichar(CharNewLine)
+                      iLoc = iLoc + 1
+                   end if
                 end do; end do; end do
 
              end if
@@ -756,9 +756,9 @@ contains
 
           if(iPass == nPass) then
              !$acc update host(iAscii_I(1:nCharTotal))
-            call MPI_file_write_at(iUnit, nOffset, iAscii_I, nCharTotal, &
-                 MPI_INT8_T, MPI_STATUS_IGNORE, iError)
-            nOffset = nOffset + nCharTotal
+             call MPI_file_write_at(iUnit, nOffset, iAscii_I, nCharTotal, &
+                  MPI_INT8_T, MPI_STATUS_IGNORE, iError)
+             nOffset = nOffset + nCharTotal
           end if
        end do; end do ! iPatch, iPass
 
