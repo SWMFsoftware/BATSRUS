@@ -147,8 +147,6 @@ contains
 
     ! Initialize stuff
 
-    call timing_start('write_plot1')
-
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
@@ -299,8 +297,6 @@ contains
     ! The output format for data is ES14.6, so each cell has
     ! (nDim + nPlotVar)*14 data, plus a new line character
     lRecData = (nDim + nPlotVar)*14 + 1
-
-    call timing_stop('write_plot1')
 
     if(TypePlotFormat_I(iFile)=='tcp')then
 

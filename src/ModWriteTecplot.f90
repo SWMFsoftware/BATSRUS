@@ -95,6 +95,14 @@ module ModWriteTecplot
   integer(Int1_), allocatable:: iAscii_I(:)
   !$acc declare create(iAscii_I)
 
+  ! Maximum size allocated for iAscii_I
+  integer:: nCharMax
+  ! Size of used portion of iAscii_I
+  integer:: nChar
+
+  integer:: nCharPerLine
+  !$acc declare create(nCharPerLine)
+
   ! The starting position of each cell's data in iAscii_I
   integer, allocatable:: iMark_GI(:,:,:,:)
   !$acc declare create(iMark_GI)
@@ -104,9 +112,6 @@ module ModWriteTecplot
 
   ! Corresponding to the format (i11)
   integer, parameter:: nWidthInt = 11
-
-  integer:: nCharPerLine, nCharMax, nChar
-  !$acc declare create(nCharPerLine)
 
   integer(MPI_OFFSET_KIND) :: nOffset
 
@@ -262,9 +267,6 @@ contains
        end do; end do; end do
 #endif
     else
-       ! Add a new line character to the end of each line.
-       nCharPerLine = (nDim + nPlotVar)*nWidthReal + 1
-
        !$acc loop vector collapse(3) private(Xyz_D, PlotVar_V)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           ! Skip points outside the cut
@@ -434,7 +436,7 @@ contains
 
     integer, allocatable:: nCell_P(:)
 
-    integer:: iLoc, nCharTotal, nIntPerLine
+    integer:: iLoc
 
     integer:: iUnit
 
@@ -579,7 +581,6 @@ contains
     iPlotDim = iPlot_D(1); jPlotDim = iPlot_D(2); kPlotDim = iPlot_D(3)
     IsPlotDim1 = iPlotDim>0; IsPlotDim2 = jPlotDim>0; IsPlotDim3 = kPlotDim>0
 
-    nPass = 2
     if(DoSaveOneTecFile)then
        ! Two stages are needed to figure out the global brick indexes
        nStage = 2
@@ -601,10 +602,27 @@ contains
 
     nBrick = 0
     do iStage = 1, nStage
+       ! For single file, two passes are needed:
+       ! In pass 1, we only count the number of bricks and set nOffset for
+       ! each processor
+       ! In pass 2, write data.
+
        nOffset = 0
        if(nStage==2 .and. iStage==2) then
+          ! Offset in the file for this processor
           nOffset = nBrickStart*lRecConnect
        end if
+
+       nPass = 2
+       if(iStage < nStage) nPass = 1
+
+       ! For each patch, all the data are formatted and stored in iAscii_I
+       ! first. To reduce memory usage, we only do nBlockPerPatch blocks
+       ! at a time.
+
+       ! For each patch, we do two passes (unless it is the counting stage):
+       ! In pass 1, we only count the number of bricks and set iMark_GI
+       ! In pass 2, we write the data into iAscii_I using iMark_GI
        nPatch = ceiling(real(nBlock)/real(nBlockPerPatch))
        do iPatch = 1, nPatch; do iPass = 1, nPass
           iBlockMin = (iPatch-1)*nBlockPerPatch + 1
@@ -656,12 +674,10 @@ contains
                         CYCLE
                    if(iPass==1) nBrick = nBrick + 1
 
-                   nIntPerLine = 2**nPlotDim
-
                    if(nPass == 2) then
                       if(iPass < nPass) then
                          iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
-                         iLoc = iLoc + nIntPerLine*nWidthInt + 1
+                         iLoc = iLoc + (2**nPlotDim)*nWidthInt + 1
                          CYCLE
                       else
                          iLoc = iMark_GI(i,j,k,iBlock-iBlockMin+1)
@@ -750,13 +766,13 @@ contains
 
           end do ! iBlock
 
-          if(iPass == 1) nCharTotal = iLoc - 1
+          if(iPass == 1) nChar = iLoc - 1
 
           if(iPass == nPass) then
-             !$acc update host(iAscii_I(1:nCharTotal))
-             call MPI_file_write_at(iUnit, nOffset, iAscii_I, nCharTotal, &
+             !$acc update host(iAscii_I(1:nChar))
+             call MPI_file_write_at(iUnit, nOffset, iAscii_I, nChar, &
                   MPI_INT8_T, MPI_STATUS_IGNORE, iError)
-             nOffset = nOffset + nCharTotal
+             nOffset = nOffset + nChar
           end if
        end do; end do ! iPatch, iPass
 
