@@ -121,7 +121,7 @@ contains
     integer:: nCellProc, nCellBlock, nCellAll
     integer, allocatable:: nCell_P(:)
     integer(MPI_OFFSET_KIND), allocatable:: nOffset_P(:)
-    integer(MPI_OFFSET_KIND):: nOffset 
+    integer(MPI_OFFSET_KIND):: nOffset
 
     integer:: nCellOffset
 
@@ -287,7 +287,7 @@ contains
        UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. &
             .not.DoPlotBox .and. .not.DoPlotShock
     elseif(TypePlotFormat_I(iFile) == 'tcp') then
-       UseMpiIO = DoSaveOneTecFile 
+       UseMpiIO = DoSaveOneTecFile
     end if
 
     if(UseMpiIO) then
@@ -303,7 +303,6 @@ contains
     call timing_stop('write_plot1')
 
     if(TypePlotFormat_I(iFile)=='tcp')then
-       call timing_start('tecplot1')
 
        ! At most 8 cells (integers) per line for connectivity
        call write_tecplot_init(0, 8)
@@ -312,7 +311,6 @@ contains
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))
 
-       call timing_stop('tecplot1')  
        ! Open one file for data
        NameFileNorth = trim(NameSnapshot)//"_1"//trim(NameProc)
 
@@ -482,14 +480,12 @@ contains
        end do
     end do
 
-    call timing_start('msg_pass')
     if(DoPassPlotVar)then
        ! Pass plotting variables to fill ghost cell values
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
-    call timing_stop('msg_pass')
 
-    if(UseMpiIO) then
+    if(UseMpiIO .and. TypePlotFormat_I(iFile)=='idl') then
        ! Figure out the offset for each MPI. The first step is counting
        ! the output data size on each processor.
 
@@ -542,15 +538,14 @@ contains
     elseif(DoPlotShock) then
        call set_plot_shock(nPlotVar, PlotVar_VGB)
     elseif(TypePlotFormat_I(iFile)=='tcp') then
-
        nCellOffset = 0
+
        if(DoSaveOneTecFile) then
           call write_tecplot_count(nCellProc)
           call MPI_ALLGATHER(nCellProc, 1, MPI_INTEGER, nCell_P, 1, &
-               MPI_INTEGER, iComm, iError) 
+               MPI_INTEGER, iComm, iError)
           nCellOffset =  sum(nCell_P(0:iProc-1))
        end if
-
 
        call write_tecplot_init(nPlotVar+nDim, 0, nCellOffset)
 
@@ -564,14 +559,12 @@ contains
 
           call write_tecplot_set_mark(iBlockMin,iBlockMax)
 
-          call timing_start('tecplot2')
           !$acc parallel loop gang
           do iBlock = iBlockMin, iBlockMax
              if(Unused_B(iBlock))CYCLE
              call write_tecplot_get_data(iBlock, iBlockMin, nPlotVar, &
                   PlotVar_VGB)
           end do
-          call timing_stop('tecplot2')
 
           call write_tecplot_write_data(iUnit)
        end do ! Patch loop
@@ -717,18 +710,14 @@ contains
        deallocate(PlotVarNodes_VNB)
     end if
 
-    if(TypePlotFormat_I(iFile) == 'idl') then
-       if(UseMpiIO) then
-          call MPI_file_close(iUnit, iError)
+    if(UseMpiIO .or. TypePlotFormat_I(iFile) == 'tcp') then
+       call MPI_file_close(iUnit, iError)
+    else  if(TypePlotFormat_I(iFile) == 'idl') then
+       if( nCellProc == 0) then
+          call close_file(status = 'DELETE')
        else
-          if( nCellProc == 0) then
-             call close_file(status = 'DELETE')
-          else
-             call close_file
-          end if
-
+          call close_file
        end if
-
     end if
 
     ! Write out header file for tcp format

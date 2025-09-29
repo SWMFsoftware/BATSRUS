@@ -143,10 +143,9 @@ contains
 
     if(nCharPerLineNew /= nCharPerLine)then
        if(nCharPerLineNew > nCharPerLine) then
+          ! Reallocate iAscii_I if needed
           nCharMax = (MaxI - MinI + 1)*(MaxJ - MinJ + 1)*(MaxK - MinK + 1)*&
                nCharPerLineNew*nBlockPerPatch
-
-          write(*,*)'nCharPerLine, nCharMax=', nCharPerLineNew, nCharMax, nReal, nInteger
 
           if(allocated(iAscii_I)) deallocate(iAscii_I)
           allocate(iAscii_I(nCharMax))
@@ -168,7 +167,7 @@ contains
     !--------------------------------------------------------------------------
 
     nCell = 0
-    do iBlock = 1, nBlock 
+    do iBlock = 1, nBlock
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
           nCell = nCell + 1
@@ -188,7 +187,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
           iMark_GI(i,j,k,iBlock-iBlockMin+1) = iCount
-          iCount = iCount + nCharPerLine          
+          iCount = iCount + nCharPerLine
        end do; end do; end do
     end do
     nChar = iCount - 1
@@ -257,7 +256,8 @@ contains
           ! Skip points outside the cut
           if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
           call set_xyz_state(iBlock, i, j, k, Di, Dj, Dk, nPlotVar, &
-               Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), CoefL, CoefR)
+               Xyz_D, PlotVar_V(1:nPlotVar), PlotVar_VGB(:,:,:,:,iBlock), &
+               CoefL, CoefR)
           write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V(1:nPlotVar)
        end do; end do; end do
 #endif
@@ -656,11 +656,9 @@ contains
                         CYCLE
                    if(iPass==1) nBrick = nBrick + 1
 
-                   nIntPerLine = 4
-                   if(nPlotDim==3) nIntPerLine = 8
+                   nIntPerLine = 2**nPlotDim
 
-                   if(nPass == 2) then 
-
+                   if(nPass == 2) then
                       if(iPass < nPass) then
                          iMark_GI(i,j,k,iBlock-iBlockMin+1) = iLoc
                          iLoc = iLoc + nIntPerLine*nWidthInt + 1
@@ -678,8 +676,8 @@ contains
                            nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
                       iLoc = iLoc + nWidthInt
                       call int_to_ascii_code(iCell_G(i+1,j  ,k  ), &
-                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)                             
-                      iLoc = iLoc + nWidthInt                         
+                           nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
+                      iLoc = iLoc + nWidthInt
                       call int_to_ascii_code(iCell_G(i+1,j+1,k  ), &
                            nWidthInt, iAscii_I(iLoc:iLoc+nWidthInt-1), .true.)
                       iLoc = iLoc + nWidthInt
@@ -771,7 +769,11 @@ contains
        end if
     end do ! iStage
 
-    call close_file
+    if(DoSaveTecBinary) then
+       call close_file
+    else
+       call MPI_file_close(iUnit, iError)
+    end if
 
     ! Reset periodicity as it was
     call set_tree_periodic(.true.)
@@ -795,7 +797,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_connect
   !============================================================================
-  subroutine set_connect(i0, i1, j0, j1, k0, k1, iBlock, iCell_G, IsPlotDim1, IsPlotDim2, IsPlotDim3)
+  subroutine set_connect(i0, i1, j0, j1, k0, k1, iBlock, iCell_G, &
+       IsPlotDim1, IsPlotDim2, IsPlotDim3)
     !$acc routine seq
     use ModNumConst, ONLY: cPi, cHalfPi
     use BATL_lib, ONLY: nI, nJ, k0_, nKp1_, &
@@ -804,18 +807,16 @@ contains
          CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
 
-
-
     integer, intent(out):: i0, i1, j0, j1, k0, k1
     integer, intent(in)::  iBlock
     integer, intent(inout):: iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_)
     logical, intent(in):: IsPlotDim1, IsPlotDim2, IsPlotDim3
 
-
     ! Get the index limits for the lower left corner
     ! of the connectivity bricks.
 
     ! Start connectivity brick from index 1 unless coarser left neighbor
+    !--------------------------------------------------------------------------
     i0 = 1
     if(IsPlotDim1 .and. DiLevelNei_IIIB(-1,0,0,iBlock) == 1) i0 = 0
     j0 = 1
@@ -864,8 +865,6 @@ contains
          DiLevelNei_IIIB(0,1,1,iBlock) < 0) iCell_G(:,nJ+1,nK+1) = 0
     if(nPlotDim == 3 .and. &
          DiLevelNei_IIIB(1,1,1,iBlock) < 0) iCell_G(nI+1,nJ+1,nK+1) = 0
-
-
   end subroutine set_connect
   !============================================================================
 
