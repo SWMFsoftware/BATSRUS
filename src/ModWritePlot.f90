@@ -279,6 +279,8 @@ contains
        end if
     end if
 
+    iUnit = UnitTmp_
+
     ! Should we use MPI-IO?
     UseMpiIO = .false.
     if(TypePlotFormat_I(iFile) == 'idl') then
