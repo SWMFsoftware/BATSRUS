@@ -11,7 +11,7 @@ module ModThreadedLC
   use ModChromosphere, ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
        HeatCondParSi, LengthPavrSi_, UHeat_, HeatFluxLength_,&
-       DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_, init_tr
+       DHeatFluxXOverDcons_, LambdaSi_, DLogLambdaOverDLogT_, init_tr
   use ModFieldLineThread, ONLY: BoundaryThreads, BoundaryThreads_B,     &
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
        DoInit_, Done_, Enthalpy_, Heat_, Restart_
@@ -886,7 +886,7 @@ contains
       ! Linearize left heat flux to the TR
 
       Main_VVI(Cons_,Cons_,1) &
-           = -Upper_VVI(Cons_,Cons_,1) + Value_V(DHeatFluxXOverU_)  &
+           = -Upper_VVI(Cons_,Cons_,1) + Value_V(DHeatFluxXOverDcons_)  &
            *BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(-nPoint,j,k)
       ! Add other left heat fluxes
       ResHeatCond_I(2:nPoint-1) = ResHeatCond_I(2:nPoint-1) + &
