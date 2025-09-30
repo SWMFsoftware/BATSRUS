@@ -877,11 +877,11 @@ contains
     if(IsPlotDim1 .and. IsPlotDim2 .and. &
          DiLevelNei_IIIB(1,1,0,iBlock) < 0) iCell_G(nI+1,nJ+1,:) = 0
     if(IsPlotDim1 .and. IsPlotDim3 .and. &
-         DiLevelNei_IIIB(1,0,1,iBlock) < 0) iCell_G(nI+1,:,nK+1) = 0
+         DiLevelNei_IIIB(1,0,1,iBlock) < 0) iCell_G(nI+1,:,nKp1_) = 0
     if(IsPlotDim2 .and. IsPlotDim3 .and. &
-         DiLevelNei_IIIB(0,1,1,iBlock) < 0) iCell_G(:,nJ+1,nK+1) = 0
+         DiLevelNei_IIIB(0,1,1,iBlock) < 0) iCell_G(:,nJ+1,nKp1_) = 0
     if(nPlotDim == 3 .and. &
-         DiLevelNei_IIIB(1,1,1,iBlock) < 0) iCell_G(nI+1,nJ+1,nK+1) = 0
+         DiLevelNei_IIIB(1,1,1,iBlock) < 0) iCell_G(nI+1,nJ+1,nKp1_) = 0
   end subroutine set_connect
   !============================================================================
 
