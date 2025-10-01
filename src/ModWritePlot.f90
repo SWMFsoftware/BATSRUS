@@ -46,9 +46,10 @@ contains
     use ModPlotShock, ONLY: init_plot_shock, set_plot_shock, write_plot_shock
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
     use ModWritePlotIdl, ONLY: write_plot_idl, nCharPerLine
-    use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, &
-         write_tecplot_head, write_tecplot_data, write_tecplot_connect, &
-         write_tecplot_node_data, set_tecplot_var_string
+    use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, nBlockPerPatch, &
+         write_tecplot_head, write_tecplot_get_data, write_tecplot_connect,&
+         write_tecplot_init, write_tecplot_node_data, set_tecplot_var_string,&
+         write_tecplot_count, write_tecplot_write_data, write_tecplot_set_mark
 
     use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
          message_pass_node, message_pass_cell, average_grid_node, &
@@ -69,6 +70,7 @@ contains
 
     ! Plot variables
     real:: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    !$acc declare create(PlotVar_GV)
     real:: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
     real:: PlotVarBody_V(MaxPlotvar)
     logical:: UsePlotVarBody_V(MaxPlotvar)
@@ -110,7 +112,8 @@ contains
     real  :: CoordUnit
 
     ! Indices and coordinates
-    integer:: iBlock, i, j, k, iVar, iH5Index, iProcFound, iBlockFound, iGang
+    integer:: iBlock, iGang, iPatch, nPatch, iBlockMin, iBlockMax
+    integer:: i, j, k, iVar, iH5Index, iProcFound, iBlockFound
     real:: Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max
     real:: CellSize1, CellSize2, CellSize3
 
@@ -119,6 +122,8 @@ contains
     integer, allocatable:: nCell_P(:)
     integer(MPI_OFFSET_KIND), allocatable:: nOffset_P(:)
     integer(MPI_OFFSET_KIND):: nOffset
+
+    integer:: nCellOffset
 
     integer:: iTime_I(7), iDim, iParam
     integer:: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
@@ -162,7 +167,7 @@ contains
 
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar,    &
          UseArraySyntaxIn=.true.)
-    !$acc update device(nPlotVar)
+    !$acc update device(nPlotVar, DoSaveOneTecFile)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
@@ -274,15 +279,17 @@ contains
        end if
     end if
 
-    if(DoSaveOneTecFile) then
-       iUnit = io_unit_new()
-    else
-       iUnit = UnitTmp_
-    end if
+    iUnit = UnitTmp_
 
     ! Should we use MPI-IO?
-    UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. .not.DoPlotBox &
-         .and. .not.DoPlotShock .and. (TypePlotFormat_I(iFile) == 'idl')
+    UseMpiIO = .false.
+    if(TypePlotFormat_I(iFile) == 'idl') then
+       UseMpiIO = DoSaveOneIdlFile .and. .not.DoPlotShell .and. &
+            .not.DoPlotBox .and. .not.DoPlotShock
+    elseif(TypePlotFormat_I(iFile) == 'tcp') then
+       UseMpiIO = DoSaveOneTecFile
+    end if
+
     if(UseMpiIO) then
        allocate(nCell_P(0:nProc-1))
        allocate(nOffset_P(0:nProc-1))
@@ -294,24 +301,29 @@ contains
     lRecData = (nDim + nPlotVar)*14 + 1
 
     if(TypePlotFormat_I(iFile)=='tcp')then
+
+       ! At most 8 cells (integers) per line for connectivity
+       call write_tecplot_init(0, 8)
+
        ! Calculate and write connectivity file
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))
+
        ! Open one file for data
        NameFileNorth = trim(NameSnapshot)//"_1"//trim(NameProc)
 
        if(DoSaveOneTecFile)then
           call open_file(&
-               FILE=NameFileNorth, ACCESS='DIRECT', RECL=lRecData, &
-               iComm=iComm, NameCaller=NameSub//'_tcp_direct_data')
+               FILE=NameFileNorth, iComm=iComm, &
+               NameCaller=NameSub//'_tcp_direct_data', iUnitMpi=iUnit)
        else
           if(DoSaveTecBinary) then
              call open_file(FILE=NameFileNorth, &
                   NameCaller=NameSub//'_tcp_data', &
                   access='stream', form='unformatted')
           else
-             call open_file(FILE=NameFileNorth, &
-                  NameCaller=NameSub//'_tcp_data')
+             call open_file(FILE=NameFileNorth, iComm=MPI_COMM_SELF, &
+                  NameCaller=NameSub//'_tcp_data', iUnitMpi = iUnit)
           end if
        end if
     elseif(DoSaveOneTecFile) then
@@ -436,41 +448,42 @@ contains
     DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. DoPlotShock .or. &
          TypePlotFormat_I(iFile)=='tcp' .and. nPlotDim < nDim
 
-    if(DoPassPlotVar)then
-       ! Calculate plot variables for all blocks and store them into
-       ! PlotVar_VGB which will be message passed to fill in ghost cells.
-       allocate(PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    ! Calculate plot variables for all blocks and store them into
+    ! PlotVar_VGB which will be message passed to fill in ghost cells
+    ! if needed.
+    allocate(PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
-       ! Block loop stage I:
-       ! copy PlotVar_GV to Plotvar_VGB and do message pass to
-       ! fill in the ghost cell values
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock))CYCLE
+    ! Block loop stage I:
+    ! copy PlotVar_GV to Plotvar_VGB and do message pass to
+    ! fill in the ghost cell values
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
 
-          ! Use true signed magnetic field in plots
-          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+       ! Use true signed magnetic field in plots
+       if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
-          call set_plotvar(iBlock, iFile - plot_, nPlotVar, NamePlotVar_V, &
-               PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
+       call set_plotvar(iBlock, iFile - plot_, nPlotVar, NamePlotVar_V, &
+            PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
 
-          ! Restore State_VGB
-          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+       ! Restore State_VGB
+       if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
-          if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
-               iFile-plot_,nPlotVar,NamePlotVar_V,PlotVar_GV,PlotVarBody_V)
+       if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
+            iFile-plot_,nPlotVar,NamePlotVar_V,PlotVar_GV,PlotVarBody_V)
 
-          ! Copy PlotVar_GV for each block into a single array
-          ! for message passing
-          do iVar = 1 , nPlotVar
-             PlotVar_VGB(iVar,:,:,:,iBlock) = PlotVar_GV(:,:,:,iVar)
-          end do
+       ! Copy PlotVar_GV for each block into a single array
+       ! for message passing
+       do iVar = 1 , nPlotVar
+          PlotVar_VGB(iVar,:,:,:,iBlock) = PlotVar_GV(:,:,:,iVar)
        end do
+    end do
 
+    if(DoPassPlotVar)then
        ! Pass plotting variables to fill ghost cell values
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
 
-    if(UseMpiIO) then
+    if(UseMpiIO .and. TypePlotFormat_I(iFile)=='idl') then
        ! Figure out the offset for each MPI. The first step is counting
        ! the output data size on each processor.
 
@@ -522,31 +535,45 @@ contains
        !$acc update host(PlotVar_VIII)
     elseif(DoPlotShock) then
        call set_plot_shock(nPlotVar, PlotVar_VGB)
+    elseif(TypePlotFormat_I(iFile)=='tcp') then
+       nCellOffset = 0
+
+       if(DoSaveOneTecFile) then
+          call write_tecplot_count(nCellProc)
+          call MPI_ALLGATHER(nCellProc, 1, MPI_INTEGER, nCell_P, 1, &
+               MPI_INTEGER, iComm, iError)
+          nCellOffset =  sum(nCell_P(0:iProc-1))
+       end if
+
+       call write_tecplot_init(nPlotVar+nDim, 0, nCellOffset)
+
+       nPatch = ceiling(real(nBlock)/nBlockPerPatch)
+
+       !$acc update device(PlotVar_VGB)
+
+       do iPatch = 1, nPatch
+          iBlockMin = (iPatch-1)*nBlockPerPatch + 1
+          iBlockMax = min(iPatch*nBlockPerPatch, nBlock)
+
+          call write_tecplot_set_mark(iBlockMin,iBlockMax)
+
+          !$acc parallel loop gang
+          do iBlock = iBlockMin, iBlockMax
+             if(Unused_B(iBlock))CYCLE
+             call write_tecplot_get_data(iBlock, iBlockMin, nPlotVar, &
+                  PlotVar_VGB)
+          end do
+
+          call write_tecplot_write_data(iUnit)
+       end do ! Patch loop
     else
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
-          if(DoPassPlotVar) then
-             ! Copy precalculated plot variables including ghost cells
-             do iVar = 1, nPlotVar
-                PlotVar_GV(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
-             end do
-          else
-             ! Use signed magnetic field in plots
-             if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
-
-             ! Set plot variable for this block
-             call set_plotvar(iBlock, iFile-plot_, nPlotVar, NamePlotVar_V, &
-                  PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
-
-             ! Restore State_VGB
-             if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
-
-             ! Dimensionalize plot variables
-             if(IsDimensionalPlot_I(iFile)) &
-                  call dimensionalize_plotvar(iBlock, iFile-plot_, nPlotVar, &
-                  NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
-          end if
+          ! Copy precalculated plot variables including ghost cells
+          do iVar = 1, nPlotVar
+             PlotVar_GV(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
+          end do
 
           if (DoPlotBox) then
              call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
@@ -557,8 +584,8 @@ contains
                 if(TypePlot(1:3)=='blk' &
                      .and. iProc == iProcFound .and. iBlock==iBlockFound) &
                      PlotVarTec_GV = PlotVar_GV
-             case('tcp')
-                call write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
+                ! case('tcp')
+                !   call write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
              case('idl')
                 call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, &
                      PlotVar_GV, DoSaveGenCoord, CoordUnit, Coord1Min, &
@@ -681,18 +708,14 @@ contains
        deallocate(PlotVarNodes_VNB)
     end if
 
-    if(TypePlotFormat_I(iFile) == 'idl') then
-       if(UseMpiIO) then
-          call MPI_file_close(iUnit, iError)
+    if(UseMpiIO .or. TypePlotFormat_I(iFile) == 'tcp') then
+       call MPI_file_close(iUnit, iError)
+    else  if(TypePlotFormat_I(iFile) == 'idl') then
+       if( nCellProc == 0) then
+          call close_file(status = 'DELETE')
        else
-          if( nCellProc == 0) then
-             call close_file(status = 'DELETE')
-          else
-             call close_file
-          end if
-
+          call close_file
        end if
-
     end if
 
     ! Write out header file for tcp format
