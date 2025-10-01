@@ -5702,7 +5702,7 @@ how the refraction affects the images obtained with 'rfr' plots
 </command>
 
 <command name="SAVETECPLOT">
-  <parameter name="DoSaveOneTecFile" type="logical" default="F" />
+  <parameter name="DoSaveOneTecFile" type="logical" default="T" />
 #SAVETECPLOT
 T			DoSaveOneTecFile
 
@@ -5715,7 +5715,7 @@ If DoSaveOneTecFile is false, save separate tecplot data/connectivity for each
 processor. On some systems, saving the data/connectivity into a single file
 might not work.
 
-The default value is false.
+The default value is true.
 </command>
 
 <command name="INSTRUMENT">
