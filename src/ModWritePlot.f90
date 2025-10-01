@@ -279,7 +279,11 @@ contains
        end if
     end if
 
-    iUnit = UnitTmp_
+    if(DoSaveOneTecFile) then
+       iUnit = io_unit_new()
+    else
+       iUnit = UnitTmp_
+    end if
 
     ! Should we use MPI-IO?
     UseMpiIO = .false.
