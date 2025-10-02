@@ -481,7 +481,7 @@ contains
        ! there are 2 bodies in the simulation. So we need to save and
       ! reuse them later.
        PlotVarBody_VB(:,iBlock) = PlotVarBody_V
-      
+
        ! Copy PlotVar_GV for each block into a single array
        ! for message passing
        do iVar = 1 , nPlotVar
