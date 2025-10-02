@@ -181,7 +181,7 @@ module ModIO
   logical :: IsLogNameN = .true.
   logical :: IsLogNameE = .false.
 
-  logical :: DoSaveOneTecFileOrig = .false., DoSaveOneTecFile
+  logical :: DoSaveOneTecFileOrig = .true., DoSaveOneTecFile
   !$acc declare create(DoSaveOneTecFile)
 
 #ifdef NOMPIIO
