@@ -73,6 +73,7 @@ contains
     !$acc declare create(PlotVar_GV)
     real:: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
     real:: PlotVarBody_V(MaxPlotvar)
+    real:: PlotVarBody_VB(MaxPlotvar, nBlockMax)
     logical:: UsePlotVarBody_V(MaxPlotvar)
     real, allocatable:: PlotVarNodes_VNB(:,:,:,:,:)
     real, allocatable:: PlotXYZNodes_DNB(:,:,:,:,:)
@@ -150,6 +151,7 @@ contains
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
+    PlotVarBody_VB = 0.0
     PlotVarBody_V = 0.0
     UsePlotVarBody_V = .false.
 
@@ -475,6 +477,11 @@ contains
        if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
             iFile-plot_,nPlotVar,NamePlotVar_V,PlotVar_GV,PlotVarBody_V)
 
+       ! PlotVarBody_V can be different for each block, for example, when
+       ! there are 2 bodies in the simulation. So we need to save and
+      ! reuse them later.
+       PlotVarBody_VB(:,iBlock) = PlotVarBody_V
+
        ! Copy PlotVar_GV for each block into a single array
        ! for message passing
        do iVar = 1 , nPlotVar
@@ -578,6 +585,8 @@ contains
           do iVar = 1, nPlotVar
              PlotVar_GV(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
           end do
+
+          PlotVarBody_V = PlotVarBody_VB(:,iBlock)
 
           if (DoPlotBox) then
              call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
