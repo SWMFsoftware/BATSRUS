@@ -1,0 +1,115 @@
+Begin session: 1
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.kelvin_helmholtz: Kelvin-Helmholtz test		StringDescription
+
+#EQUATION
+HD			NameEquation
+5			nVar
+
+#USERMODULE
+KELVIN-HELMHOLTZ INSTABILITY		NameUserModule
+
+#CHECKGRIDSIZE
+       8                nI
+       8                nJ
+       1                nK
+     100                MinBlockAll
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#PROGRESS
+40			DnProgressShort
+200			DnProgressLong
+
+#SHOCKTUBE
+4.0			LeftState Rho
+0.0			LeftState Ux
+0.0			LeftState Uy
+0.0			LeftState Uz
+1.0			LeftState P
+1.0			RightState Rho
+0.0			RightState Ux
+0.0			RightState Uy
+0.0			RightState Uz
+1.0			RightState P
+
+#GRID
+4                    	nRootBlockX
+4                     	nRootBlockY
+1                     	nRootBlockZ
+-10.                 	xMin
+ 10.                 	xMax
+-20.                   	yMin
+ 20.                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+#OUTERBOUNDARY
+none                    TypeBc1
+none                    TypeBc2
+periodic                TypeBc3
+periodic                TypeBc4
+float                   TypeBc5
+float                   TypeBc6
+
+#USERSWITCH
++perturb		StringSwitch
+
+#USERINPUTBEGIN ----------------
+
+#PERTURBATION
+1.0				xWidthUx
+1.0				xWidthUy
+0.01			AmplUx
+1.0				AmplUy
+1.0				yWaveUx
+0.0				zWaveUx
+
+#USERINPUTEND   ----------------
+
+#SCHEME
+2			nOrder
+godunov			TypeFlux
+mc3			TypeLimiter
+2.0			BetaLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+GRAVITY
+T			UseGravity
+1			iDirGravity
+0.1			Gravity
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+var			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+rho ekinx ekiny mx my p pmin pmax
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+z=0 hd idl             StringPlot
+-1			DnOutput
+200.0		DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+200.0		tSimulationMax

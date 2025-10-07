@@ -7,21 +7,56 @@ module ModUser
        test_start, test_stop, iProcTest, iProc
 
   use ModUserEmpty,               &
-       IMPLEMENTED1 => user_initial_perturbation
+       IMPLEMENTED1 => user_read_inputs,     &
+       IMPLEMENTED2 => user_initial_perturbation
 
   include 'user_module.h' ! list of public methods
 
   character (len=*), parameter :: NameUserFile = "ModUserKelvinHelmholtz.f90"
   character (len=*), parameter :: NameUserModule = &
-       'KELVIN-HELMHOLTZ INSTABILITY, Gamma. Toth'
+       'KELVIN-HELMHOLTZ INSTABILITY'
 
-  real, parameter :: &
+  real, save :: &
        xWidthUy=0.05, AmplUy=0.645, &
        xWidthUx=0.2, AmplUx=0.01, &
        yWaveUx=1.0, zWaveUx=0.0
 
 contains
   !============================================================================
+  subroutine user_read_inputs
+    use ModReadParam
+
+    character (len=100) :: NameCommand
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    do
+       if(.not.read_line() ) EXIT
+       if(.not.read_command(NameCommand)) CYCLE
+       select case(NameCommand)
+
+       case('#PERTURBATION')
+          call read_var('xWidthUx', xWidthUx)
+          call read_var('xWidthUy', xWidthUy)
+          call read_var('AmplUx', AmplUx)
+          call read_var('AmplUy', AmplUy)
+          call read_var('yWaveUx', yWaveUx)
+          call read_var('zWaveUx', zWaveUx)
+
+       case('#USERINPUTEND')
+          if(iProc==0) write(*,*)'USERINPUTEND'
+          EXIT
+       case default
+          if(iProc==0) call stop_mpi( &
+               'read_inputs: unrecognized command: '//NameCommand)
+       end select
+    end do
+    call test_stop(NameSub, DoTest)
+  end subroutine user_read_inputs
+  !============================================================================
+
   subroutine user_initial_perturbation
 
     use ModMain, ONLY: nBlock, Unused_B
