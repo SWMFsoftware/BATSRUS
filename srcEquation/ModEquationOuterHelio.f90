@@ -88,7 +88,9 @@ module ModVarIndexes
         iRhoUz_I(nFluid) &
         = [RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
         iP_I(nFluid)     &
-        = [p_, NeuP_, Ne2P_, Ne3P_, Ne4P_]
+        = [p_, NeuP_, Ne2P_, Ne3P_, Ne4P_], &
+       iEnergy_I(nFluid) &
+        = [ Energy_,NeuEnergy_, Ne2Energy_,Ne3Energy_,Ne4Energy_]
 
    ! The default values for the state variables:
    ! Variables which are physically positive should be set to 1,

@@ -208,6 +208,11 @@ module ModUser
 
   logical :: UseSingleIonVelocityRegion3 = .false.
 
+  ! Number of subsample points of neutral distribution for PUI source terms
+  integer :: nSubSample = 5
+
+  logical :: UsePuiCxHeliosheath = .true.
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -986,8 +991,12 @@ contains
     end if
 
     if(nPui > 1)then
-       ! Correct PUI pressure for full velocity distribution
        do k=1,nk; do j=1,nJ; do i=1,nI
+          ! Correct PUI density for full velocity distribution
+          State_VGB(Pu3Rho_,i,j,k,iBlock) = &
+               4*cPi*sum(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
+               *Vpui_I**2*DeltaVpui_I)
+          ! Correct PUI pressure for full velocity distribution
           State_VGB(Pu3P_,i,j,k,iBlock) = &
                4*cPi/3*sum(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
                *Vpui_I**4*DeltaVpui_I)
@@ -1778,8 +1787,13 @@ contains
             i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UTh2Si_I)
 
        ! Charge Exchange
-       call calc_charge_exchange_source( &
+       if (nPui>1 .and. UsePuiCxHeliosheath) then
+          call calc_charge_exchange_source_pui( &
+            i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,Uth2Si_I,SourceCx_V)
+       else
+          call calc_charge_exchange_source( &
             i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
+       endif
 
        ! Photoionization
        if(UsePhotoion)then
@@ -1824,8 +1838,8 @@ contains
           HeatElectron = 0.0
        end if
 
-       if(PuiFirst_ > 1) call add_pui_source(i, j, k, iBlock, &
-            NumDensSi_I, U_DI, U2_I, UTh2Si_I)
+       if(PuiFirst_ > 1 .and. .not.UsePuiCxHeliosheath) call add_pui_source( &
+         i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, UTh2Si_I)
 
        ! Calculate the source terms for this cell
        call calc_source_cell
@@ -1999,6 +2013,556 @@ contains
     UTh2Si_I = (2*cBoltzmann/cProtonMass)*TempSi_I
 
   end subroutine calc_source_inputs
+  !============================================================================
+  subroutine calc_charge_exchange_source_pui( &
+       i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
+
+    use ModPui, ONLY: Vpui_I, DeltaVpui_I, DeltaLogVpui
+
+    ! Calculate the charge exchange source terms for one cell with PUI bins
+    ! Source terms described in Bair et al. (2026)
+
+    integer, intent(in):: i,j,k,iBlock
+    real, dimension(nFluid), intent(in) :: NumDensSi_I, U2_I, UTh2Si_I
+    real, intent(in) :: U_DI(3,nFluid)
+    real, intent(out):: SourceCx_V(nVar + nFluid)
+
+    integer :: iNeu, iPui, iSubSample, iFluidProduced
+    real :: State_V(nVar)
+
+    ! Fluid parameters
+    real:: NumDensSwh, NumDensPui, NumDensNeu, USwh, UPui, UNeu, &
+         PPui, PNeu, UThNeu, DeltaUPuiNeu, DeltaUSwhNeu, &
+         UThSwh, UThPui, Xswh, XpPui, XmPui
+    real, dimension(3):: USwh_D, UPui_D, UNeu_D, &
+         DeltaUPuiNeu_D, DeltaUSwhNeu_D
+    real, dimension(3,Neu_:Ne4_):: URel_DI, URelPu3_DI, &
+         UMean_DI, UMeanPu3_DI
+    real, dimension(Neu_:Ne4_):: URel2_I, URel_I, &
+         UTh2Sum_I, InvUTh2Sum_I, URel2Pu3_I, URelPu3_I, &
+         UTh2SumPu3_I, InvUTh2SumPu3_I, UMean2_I, UMean2Pu3_I
+
+    ! Distribution function parameters
+    real, dimension(nPui):: FStarPui_I, FStarNeu_I, Xp_I, Xm_I
+    real:: FStarPui, FStarNeu, Vpui, DeltaVpui, &
+         VsubBot, VsubTop, DeltaVsub, Vsub, &
+         XpSwhSub, XmSwhSub, XpPuiSub, XmPuiSub
+    real:: CumSumFpuiV1, CumSumFpuiV2, CumSumFpuiV3, CumSumFpuiV4
+
+    ! Helper functions: h(x)
+    real, dimension(nPui):: H1Xp_I, H1Xm_I, H2Xp_I, H2Xm_I, H3Xp_I, H3Xm_I, &
+         H4Xp_I, H4Xm_I, H5Xp_I, H5Xm_I, H6Xp_I, H6Xm_I, H7Xp_I, H7Xm_I
+    real:: H8Sub, H8XSwh, H9XSwh, H10XSwh, H11XSwh
+
+    ! For SWH
+    real, dimension(Neu_:Ne4_) :: &
+         I0xp_I, I0px_I, I2xp_I, I2px_I, Kxp_I, Kpx_I
+    real:: IntegralpxRho, IntegralpxRho1, IntegralpxRho2, &
+         IntegralpxU, IntegralpxU1, IntegralpxU2, &
+         IntegralpxP, IntegralpxP1, IntegralpxP2, &
+         g0pxRhoSi, g0pxUSi, g0pxPSi, g0xpFSi
+    real, dimension(3,neu_:Ne4_):: Jxp_DI, Jpx_DI
+    real, dimension(nSubSample):: SourceFxpSub_I, FStarNeuSub_I
+    real, dimension(nPui, Neu_:Ne4_):: SourceFxp_II
+
+    ! For PU3
+    real, dimension(Neu_:Ne4_):: &
+         I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, Kxpu3_I, Kpu3x_I
+    real:: Integralpu3xU1, Integralpu3xU2, Integralxpu3U1, Integralxpu3U2, &
+         g0xpu3FSi, g0pu3xFSi, g0pu3xUSi, g0xpu3USi, g0pu3xPSi, g0xpu3PSi, &
+         SourceRhopu3x, SourceRhoxpu3, SourcePpu3x, SourcePxpu3
+    real, dimension(3):: SourceUpu3x_D, SourceUxpu3_D
+    real, dimension(3,Neu_:Ne4_) :: Jxpu3_DI, Jpu3x_DI
+    real, dimension(nPui):: g0pu3xFSi_I
+    real, dimension(nPui, Neu_:Ne4_):: SourceFpu3x_II, SourceFxpu3_II
+
+    !--------------------------------------------------------------------------
+    State_V = State_VGB(:,i,j,k,iBlock)
+
+    PPui = State_V(Pu3P_)
+
+    NumDensSwh = NumDensSi_I(Swh_)*Si2No_V(UnitN_)
+    NumDensPui = NumDensSi_I(Pu3_)*Si2No_V(UnitN_)
+
+    UPui_D = U_DI(:,Pu3_)
+    UPui = sqrt(U2_I(Pu3_))
+    USwh_D = U_DI(:,Swh_)
+    USwh = sqrt(U2_I(Swh_))
+
+    UThSwh = sqrt(UTh2Si_I(Swh_))*Si2No_V(UnitU_)
+    UThPui = sqrt(UTh2Si_I(Pu3_))*Si2No_V(UnitU_)
+
+    ! Sum of thermal speeds squared for SW fluid and neutral fluid
+    UTh2Sum_I = (UTh2Si_I(SWH_) + UTh2Si_I(Neu_:Ne4_)) &
+         *Si2No_V(UnitU_)**2
+    InvUTh2Sum_I = 1./UTh2Sum_I
+
+    ! Sum of thermal speeds for PUI fluid and neutral fluid
+    UTh2SumPu3_I = (UTh2Si_I(Pu3_) + UTh2Si_I(Neu_:Ne4_)) &
+         *Si2No_V(UnitU_)**2
+    InvUTh2SumPu3_I = 1./UTh2SumPu3_I
+
+    ! Relative velocity between neutrals and ion fluids squared
+    do iNeu = Neu_,Ne4_
+       URel_DI(:,iNeu) = (U_DI(:,Swh_) - U_DI(:,iNeu))
+       URelPu3_DI(:,iNeu) = (U_DI(:,Pu3_) - U_DI(:,iNeu))
+    end do
+    URel2_I = sum(URel_DI**2, 1)
+    URel_I = sqrt(URel2_I)
+    URel2Pu3_I = sum(URelPu3_DI**2, 1)
+    URelPu3_I = sqrt(URel2Pu3_I)
+
+    ! Thermal speed weighted average velocity
+    do iNeu = Neu_,Ne4_
+       Umean_DI(:,iNeu) = (U_DI(:,Swh_)*UTh2Si_I(iNeu) &
+          + U_DI(:,iNeu)*UTh2Si_I(Swh_))*InvUTh2Sum_I(iNeu) &
+          *Si2No_V(UnitU_)**2
+
+       UmeanPu3_DI(:,iNeu) = (U_DI(:,Pu3_)*UTh2Si_I(iNeu) &
+          + U_DI(:,iNeu)*UTh2Si_I(Pu3_))*InvUTh2SumPu3_I(iNeu) &
+          *Si2No_V(UnitU_)**2
+    end do
+    Umean2_I = sum(UMean_DI**2, 1)
+    Umean2Pu3_I = sum(UmeanPu3_DI**2, 1)
+
+    ! PUI distribution function (Star for pitch-angle averaged)
+    FStarPui_I = State_V(PuiFirst_:PuiLast_)
+
+    do iNeu = Neu_, Ne4_
+       UThNeu = sqrt(UTh2Si_I(iNeu)) * Si2No_V(UnitU_)
+       DeltaUPuiNeu_D = URelPu3_DI(:,iNeu)
+       DeltaUSwhNeu_D = URel_DI(:,iNeu)
+       DeltaUPuiNeu = URelPu3_I(iNeu)
+       DeltaUSwhNeu = URel_I(iNeu)
+       NumDensNeu = NumDensSi_I(iNeu) * Si2No_V(UnitN_)
+       UNeu_D = U_DI(:,iNeu)
+       UNeu = norm2(UNeu_D)
+       PNeu = State_V(iP_I(iNeu))
+
+       XSwh = DeltaUSwhNeu/sqrt(UTh2Sum_I(iNeu))
+
+       call h8(XSwh,H8XSwh)
+       IntegralpxRho1 = 0.5*sqrt(cPi*UTh2Sum_I(iNeu))*URel_I(iNeu)
+       IntegralpxRho2 = 0.5*sqrt(cPi)*UTh2Sum_I(iNeu)*URel_I(iNeu)*H8XSwh
+       g0pxRhoSi = IntegralpxRho2/IntegralpxRho1 * No2Si_V(UnitU_)
+
+       IntegralpxRho = IntegralpxRho1*sigma_cx(g0pxRhoSi)*g0pxRhoSi &
+            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+       call h9(XSwh,H9XSwh)
+       IntegralpxU1 = sqrt(cPi*InvUTh2Sum_I(iNeu))*URel_I(iNeu)**3
+       IntegralpxU2 = sqrt(cPi)*URel_I(iNeu)**3*H9XSwh
+       g0pxUSi = IntegralpxU2/IntegralpxU1 * No2Si_V(UnitU_)
+
+       IntegralpxU = IntegralpxU1*sigma_cx(g0pxUSi)*g0pxUSi &
+            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+       call h10(XSwh,H10XSwh)
+       call h11(XSwh,H11XSwh)
+       IntegralpxP1 = &
+            0.25*sqrt(cPi*UTh2Sum_I(iNeu)**3)*URel_I(iNeu)*H10XSwh
+       IntegralpxP2 = &
+            0.25*sqrt(cPi)*UTh2Sum_I(iNeu)**2*URel_I(iNeu)*H11XSwh
+       g0pxPSi = IntegralpxP2/IntegralpxP1 * No2Si_V(UnitU_)
+
+       IntegralpxP = IntegralpxP1*sigma_cx(g0pxPSi)*g0pxPSi &
+            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+       I0px_I(iNeu) = 2.*NumDensSwh*NumDensNeu &
+            *sqrt(InvUTh2Sum_I(iNeu)/cPi)/URel_I(iNeu)*IntegralpxRho
+       I0xp_I(iNeu) = I0px_I(iNeu)
+
+       Jpx_DI(:,iNeu) = NumDensSwh*NumDensNeu &
+            *sqrt(InvUTh2Sum_I(iNeu)/cPi)/URel_I(iNeu) &
+            *( 2*UMean_DI(:,iNeu)*IntegralpxRho &
+            +UThSwh**2*URel_DI(:,iNeu)/URel2_I(iNeu)*IntegralpxU)
+
+       Jxp_DI(:,iNeu) = NumDensSwh*NumDensNeu &
+            *sqrt(InvUTh2Sum_I(iNeu)/cPi)/URel_I(iNeu) &
+            *( 2*UMean_DI(:,iNeu)*IntegralpxRho &
+            -UThNeu**2*URel_DI(:,iNeu)/URel2_I(iNeu)*IntegralpxU)
+
+       Kpx_I(iNeu) = NumDensSwh*NumDensNeu &
+            *sqrt(InvUTh2Sum_I(iNeu)/cPi)/URel_I(iNeu)*( &
+            (InvGammaMinus1*InvUTh2Sum_I(iNeu) &
+            *UThSwh**2*UThNeu**2 + Umean2_I(iNeu))*IntegralpxRho &
+            + UThSwh**2/URel2_I(iNeu) &
+            *sum(Umean_DI(:,iNeu)*URel_DI(:,iNeu))*IntegralpxU &
+            + InvUTh2Sum_I(iNeu)**2*UThSwh**4*IntegralpxP)
+
+       Kxp_I(iNeu) = NumDensSwh*NumDensNeu &
+            *sqrt(InvUTh2Sum_I(iNeu)/cPi)/URel_I(iNeu)*( &
+            (InvGammaMinus1*InvUTh2Sum_I(iNeu) &
+            *UThSwh**2*UThNeu**2 + Umean2_I(iNeu))*IntegralpxRho &
+            - UThNeu**2/URel2_I(iNeu) &
+            *sum(Umean_DI(:,iNeu)*URel_DI(:,iNeu))*IntegralpxU &
+            + InvUTh2Sum_I(iNeu)**2*UThNeu**4*IntegralpxP)
+
+       Xp_I = abs((Vpui_I+DeltaUPuiNeu)/UThNeu)
+       Xm_I = abs((Vpui_I-DeltaUPuiNeu)/UThNeu)
+
+       call h1(Xp_I,H1Xp_I)
+       call h1(Xm_I,H1Xm_I)
+       call h2(Xp_I,H2Xp_I)
+       call h2(Xm_I,H2Xm_I)
+       call h3(Xp_I,H3Xp_I)
+       call h3(Xm_I,H3Xm_I)
+       call h4(Xp_I,H4Xp_I)
+       call h4(Xm_I,H4Xm_I)
+       call h5(Xp_I,H5Xp_I)
+       call h5(Xm_I,H5Xm_I)
+       call h6(Xp_I,H6Xp_I)
+       call h6(Xm_I,H6Xm_I)
+       call h7(Xp_I,H7Xp_I)
+       call h7(Xm_I,H7Xm_I)
+
+       CumSumFpuiV1 = 0
+       CumSumFpuiV2 = 0
+       CumSumFpuiV3 = 0
+       CumSumFpuiV4 = 0
+
+       ! Iterate over pui bins
+       ! We go in reverse order for the CumSumFpui terms
+       do iPui = nPui, 1, -1
+          Vpui = Vpui_I(iPui)
+          DeltaVpui = DeltaVpui_I(iPui)
+          FStarPui = FStarPui_I(iPui)
+
+          g0pu3xFSi_I(iPui) = UthNeu**3/12/Vpui/DeltaUPuiNeu &
+               *(H1Xp_I(iPui)-H1Xm_I(iPui)) &
+               *No2Si_V(UnitU_)
+
+          SourceFpu3x_II(iPui,iNeu) = FStarPui*NumDensNeu &
+               *sigma_cx(g0pu3xFSi_I(iPui))*g0pu3xFSi_I(iPui) &
+               /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+          CumSumFpuiV1 = CumSumFpuiV1 + FStarPui*DeltaVpui*Vpui
+          CumSumFpuiV2 = CumSumFpuiV2 + FStarPui*DeltaVpui*Vpui**2
+          CumSumFpuiV3 = CumSumFpuiV3 + FStarPui*DeltaVpui*Vpui**3
+          CumSumFpuiV4 = CumSumFpuiV4 + FStarPui*DeltaVpui*Vpui**4
+
+          g0xpu3FSi = Vpui/NumDensPui*(PPui/MassFluid_I(Pu3_)/Vpui**2 &
+               + NumDensPui + 4*cPi*( CumSumFpuiV3/Vpui - CumSumFpuiV2 &
+               + (Vpui*CumSumFpuiV1 - CumSumFpuiV4/Vpui**2)/3 )) &
+               *No2Si_V(UnitU_)
+
+          ! Subsample neutrals over the width of each bin
+          ! Note: bin is centered on Vpui in log space, not linear space
+          VsubBot = Vpui*exp(-0.5*DeltaLogVpui)
+          VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
+          DeltaVsub = (VsubTop-VsubBot)/nSubSample
+          do iSubSample = 1, nSubSample
+             Vsub = VsubBot+DeltaVsub*(iSubSample-0.5)
+             XpPuiSub = abs((Vsub+DeltaUPuiNeu)/UthNeu)
+             XmPuiSub = abs((Vsub-DeltaUPuiNeu)/UthNeu)
+             XpSwhSub = abs((Vsub+DeltaUSwhNeu)/UthNeu)
+             XmSwhSub = abs((Vsub-DeltaUSwhNeu)/UthNeu)
+
+             call h8(Vsub/UThSwh, H8Sub)
+             g0xpFSi = UthSwh*H8Sub * No2Si_V(UnitU_)
+             SourceFxpSub_I(iSubSample) = 0.25*NumDensSwh*NumDensNeu &
+                  /cPi**1.5/Vsub/DeltaUSwhNeu/UThNeu*sigma_cx(g0xpFSi) &
+                  *g0xpFSi*(exp(-XmSwhSub**2)-exp(-XpSwhSub**2)) &
+                  /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+             ! Neutral distribution, pitch angle averaged in PUI frame
+             FStarNeuSub_I(iSubSample) = 0.25*NumDensNeu/cPi**1.5/Vsub &
+                  /DeltaUPuiNeu/UThNeu &
+                  *(exp(-XmPuiSub**2) - exp(-XpPuiSub**2))
+          end do
+
+          FStarNeu = sum(FStarNeuSub_I)/nSubSample
+          SourceFxpu3_II(iPui,iNeu) = NumDensPui*FStarNeu &
+               *sigma_cx(g0xpu3FSi)*g0xpu3FSi &
+               /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+          SourceFxp_II(iPui,iNeu) = sum(SourceFxpSub_I)/nSubSample
+       end do
+
+       SourceRhopu3x = &
+            4*cPi*sum(SourceFpu3x_II(:,iNeu)*Vpui_I**2*DeltaVpui_I)
+       SourceRhoxpu3 = &
+            4*cPi*sum(SourceFxpu3_II(:,iNeu)*Vpui_I**2*DeltaVpui_I)
+
+       Integralpu3xU1 = cPi*UThNeu**3/6/NumDensPui/DeltaUPuiNeu**3 &
+            *sum(FStarPui_I*Vpui_I*DeltaVpui_I &
+            *(0.2*UThNeu**2*(H2Xp_I-H2Xm_I) &
+            - (DeltaUPuiNeu**2+Vpui_I**2)*(H1Xp_I-H1Xm_I)))
+
+       Integralpu3xU2 = 0.5*cPi*UThNeu**4/NumDensPui/DeltaUPuiNeu**3 &
+            *sum(FStarPui_I*Vpui_I*DeltaVpui_I &
+            *( UThNeu**2*(H4Xp_I-H4Xm_I) &
+            - (DeltaUPuiNeu**2+Vpui_I**2)*(H3Xp_I-H3Xm_I)))
+
+       g0pu3xUSi = Integralpu3xU2/Integralpu3xU1 * No2Si_V(UnitU_)
+
+       Integralxpu3U1 = 0.25*cPi*UThNeu**3/NumDensPui/DeltaUPuiNeu**3 &
+            *sum(FStarPui_I*Vpui_I*DeltaVpui_I*( &
+            UThNeu**2/3*(H6Xp_I-H6Xm_I) &
+            +(Vpui_I**2-DeltaUPuiNeu**2)*(H5Xp_I-H5Xm_I)))
+
+       Integralxpu3U2 = -UThNeu**2
+
+       g0xpu3USi = Integralxpu3U2/Integralxpu3U1 * No2Si_V(UnitU_)
+
+       g0pu3xPSi = 4*cPi/3*MassFluid_I(Pu3_)/PPui &
+            *sum(g0pu3xFSi_I*Vpui_I**4*DeltaVpui_I*FStarPui_I)
+
+       g0xpu3PSi = cPi*UThNeu**3/3/NumDensPui/DeltaUPuiNeu &
+            *sum(FStarPui_I*Vpui_I*DeltaVpui_I*(H7Xp_I-H7Xm_I)) &
+            *No2Si_V(UnitU_)
+
+       SourceUpu3x_D = 0.785*NumDensPui*NumDensNeu &
+            *sigma_cx(g0pu3xUSi)*Integralpu3xU1*DeltaUPuiNeu_D &
+            *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+       SourceUxpu3_D = NumDensPui*NumDensNeu &
+            *sigma_cx(g0xpu3USi)*Integralxpu3U1*DeltaUPuiNeu_D &
+            *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+       SourcePpu3x = NumDensNeu*PPui*sigma_cx(g0pu3xPSi)*g0pu3xPSi &
+            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+       SourcePxPu3 = NumDensPui*PNeu*sigma_cx(g0xpu3PSi)*g0xpu3PSi &
+            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+       I0pu3x_I(iNeu) = SourceRhopu3x
+       I0xpu3_I(iNeu) = SourceRhoxpu3
+
+       Jpu3x_DI(:,iNeu) = SourceRhopu3x*UPui_D + SourceUpu3x_D
+       Jxpu3_DI(:,iNeu) = SourceRhoxpu3*UNeu_D + SourceUxpu3_D
+
+       Kpu3x_I(iNeu) = InvGammaMinus1*SourcePpu3x &
+            +sum(UPui_D*SourceUpu3x_D) &
+            + 0.5*UPui**2*SourceRhopu3x
+       Kxpu3_I(iNeu) = InvGammaMinus1*SourcePxpu3 &
+            +sum(UNeu_D*SourceUxpu3_D) &
+            + 0.5*UNeu**2*SourceRhoxpu3
+      end do
+
+      ! Only use the source terms requested by the user
+      if (UseSource_I(Swh_)) then
+         do iNeu = Neu_,Ne4_
+            if (.not.UseSource_I(iNeu))then
+              I0px_I(iNeu) = 0
+              I0xp_I(iNeu) = 0
+              Jpx_DI(:,iNeu) = 0
+              Jxp_DI(:,iNeu) = 0
+              Kpx_I(iNeu) = 0
+              Kxp_I(iNeu) = 0
+            end if
+         end do
+      else
+         I0px_I = 0
+         I0xp_I = 0
+         Jpx_DI = 0
+         Jxp_DI = 0
+         Kpx_I = 0
+         Kxp_I = 0
+      end if
+
+      if (UseSource_I(Pu3_)) then
+         do iNeu = Neu_,Ne4_
+            if (.not.UseSource_I(iNeu))then
+               I0pu3x_I(iNeu) = 0
+               I0xpu3_I(iNeu) = 0
+               Jpu3x_DI(:,iNeu) = 0
+               Jxpu3_DI(:,iNeu) = 0
+               Kpu3x_I(iNeu) = 0
+               Kxpu3_I(iNeu) = 0
+            end if
+         end do
+      else
+         I0pu3x_I = 0
+         I0xpu3_I = 0
+         Jpu3x_DI = 0
+         Jxpu3_DI = 0
+         Kpu3x_I = 0
+         Kxpu3_I = 0
+      end if
+
+      ! PUIs are created in the solar wind (regions 2,3)
+      ! and destroyed in the ISM (regions 1,4)
+      ! in region i, cx with neutral fluid i never produces PUIs
+      SourceCx_V = 0
+
+      ! Ion source terms
+      iFluidProduced = iFluidProduced_C(i,j,k)
+      if (iFluidProduced == Ne2_ .or. iFluidProduced == Ne3_)then
+         ! Solar wind: PUIs are created
+         SourceCx_V(SwhRho_) = -sum(I0px_I) + I0xp_I(iFluidProduced) &
+              + I0xpu3_I(iFluidProduced)
+         SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_DI,2) &
+              + Jxp_DI(:,iFluidProduced) &
+              + Jxpu3_DI(:,iFluidProduced)
+         SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + Kxpu3_I(iFLuidProduced) &
+              + Kxp_I(iFluidProduced)
+         SourceCx_V(SwhP_) = GammaMinus1*(SourceCx_V(SwhEnergy_) &
+              -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_))) &
+              +0.5*USwh**2*SourceCx_V(SwhRho_)
+
+         SourceCx_V(Pu3Rho_) = sum(I0xp_I) - I0xp_I(iFluidProduced) &
+              +sum(I0xpu3_I) - I0xpu3_I(iFluidProduced) &
+              -sum(I0pu3x_I)
+         SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = &
+              +sum(Jxp_DI,2) - Jxp_DI(:,iFluidProduced) &
+              +sum(Jxpu3_DI,2) - Jxpu3_DI(:,iFluidProduced) &
+              -sum(Jpu3x_DI,2)
+         SourceCx_V(Pu3Energy_) = sum(Kxp_I) - Kxp_I(iFluidProduced) &
+              +sum(Kxpu3_I) - Kxpu3_I(iFluidProduced) &
+              -sum(Kpu3x_I)
+         SourceCx_V(Pu3P_) = GammaMinus1*(SourceCx_V(Pu3Energy_) &
+              -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_))) &
+              +0.5*UPui**2*SourceCx_V(Pu3Rho_)
+         SourceCx_V(PuiFirst_:PuiLast_) = sum(SourceFxp_II,2) &
+              -SourceFxp_II(:,iFluidProduced) &
+              +sum(SourceFxpu3_II,2) - SourceFxpu3_II(:,iFluidProduced) &
+              -sum(SourceFpu3x_II,2)
+      else
+         ! ISM: PUIs destroyed here
+         SourceCx_V(SwhRho_) = -sum(I0px_I) + sum(I0xp_I) + sum(I0xpu3_I)
+         SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_DI,2) &
+              + sum(Jxp_DI) + sum(Jxpu3_DI)
+         SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + sum(Kxpu3_I) + sum(Kxp_I)
+         SourceCx_V(SwhP_) = GammaMinus1*(SourceCx_V(SwhEnergy_) &
+              -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_))) &
+              +0.5*USwh**2*SourceCx_V(SwhRho_)
+
+         SourceCx_V(Pu3Rho_) =  -sum(I0pu3x_I)
+         SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = -sum(Jpu3x_DI,2)
+         SourceCx_V(Pu3Energy_) = -sum(Kpu3x_I)
+         SourceCx_V(Pu3P_) = GammaMinus1*(SourceCx_V(Pu3Energy_) &
+              -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_))) &
+              +0.5*UPui**2*SourceCx_V(Pu3Rho_)
+         SourceCx_V(PuiFirst_:PuiLast_) = -sum(SourceFpu3x_II,2)
+
+      end if
+
+      ! Neutral source terms
+      ! Neutrals are lossed from each populations
+      do iNeu = Neu_,Ne4_
+         call select_fluid(iNeu)
+         SourceCx_V(iRho)    = -I0xp_I(iNeu) - I0xpu3_I(iNeu)
+         SourceCx_V(iRhoUx)  = -Jxp_DI(x_,iNeu) - Jxpu3_DI(x_,iNeu)
+         SourceCx_V(iRhoUy)  = -Jxp_DI(y_,iNeu) - Jxpu3_DI(y_,iNeu)
+         SourceCx_V(iRhoUz)  = -Jxp_DI(z_,iNeu) - Jxpu3_DI(z_,iNeu)
+         SourceCx_V(iEnergy) = -Kxp_I(iNeu) - Kxpu3_I(iNeu)
+      end do
+
+      ! Created neutrals all go to same population
+      SourceCx_V(iRho_I(iFluidProduced))    = &
+           SourceCx_V(iRho_I(iFluidProduced)) &
+           +sum(I0px_I) + sum(I0pu3x_I)
+      SourceCx_V(iRhoUx_I(iFluidProduced))  = &
+           SourceCx_V(iRhoUx_I(iFluidProduced)) &
+           +sum(Jpx_DI(x_,:)) + sum(Jpu3x_DI(x_,:))
+      SourceCx_V(iRhoUy_I(iFluidProduced))  = &
+           SourceCx_V(iRhoUy_I(iFluidProduced)) &
+           +sum(Jpx_DI(y_,:)) + sum(Jpu3x_DI(y_,:))
+      SourceCx_V(iRhoUz_I(iFluidProduced))  = &
+           SourceCx_V(iRhoUz_I(iFluidProduced)) &
+           +sum(Jpx_DI(z_,:)) + sum(Jpu3x_DI(z_,:))
+      SourceCx_V(iEnergy_I(iFluidProduced)) = &
+           SourceCx_V(iEnergy_I(iFluidProduced)) &
+           +sum(Kpx_I) + sum(Kpu3x_I)
+
+      do iNeu = Neu_,Ne4_
+         SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy_I(iNeu)) &
+              -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx_I(iNeu):iRhoUz_I(iNeu)))) &
+              +0.5*UPui**2*SourceCx_V(iRho_I(iNeu))
+      end do
+  contains
+    !==========================================================================
+    real function sigma_cx(URelSi)
+      ! Calculate the charge exchange cross section
+      real, intent(in):: URelSi
+      !------------------------------------------------------------------------
+      ! URelSi is in SI units (m/s), but needs to have units cm/s
+      sigma_cx = &
+           ((CrossA1 - CrossA2*log(URelSi*100.))**2)/1.E4
+    end function sigma_cx
+    !==========================================================================
+    subroutine h1(X_I, H1_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H1_I(nPui)
+      !------------------------------------------------------------------------
+      H1_I = 2./sqrt(cPi)*(1.+X_I**2)*exp(-X_I**2) &
+           + (3.*X_I+2.*X_I**3)*erf(X_I)
+    end subroutine
+    !==========================================================================
+    subroutine h2(X_I, H2_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H2_I(nPui)
+      !------------------------------------------------------------------------
+      H2_I = 2/sqrt(cPi)*(1.+X_I**2+3*X_I**4)*exp(-X_I**2) &
+           + (5.*X_I**3+6.*X_I**5)*erf(X_I)
+    end subroutine
+    !==========================================================================
+    subroutine h3(X_I, H3_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H3_I(nPui)
+      !------------------------------------------------------------------------
+      H3_I = 1.5*X_I**2 + 0.5*X_I**4
+    end subroutine
+    !==========================================================================
+    subroutine h4(X_I, H4_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H4_I(nPui)
+      !------------------------------------------------------------------------
+      H4_I = 0.75*X_I**4 + X_I**6/3.
+    end subroutine
+    !==========================================================================
+    subroutine h5(X_I, H5_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H5_I(nPui)
+      !------------------------------------------------------------------------
+      H5_I = 2./sqrt(cPi)*exp(-X_I**2) + (1./X_I + 2.*X_I)*erf(X_I)
+    end subroutine
+    !==========================================================================
+    subroutine h6(X_I, H6_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H6_I(nPui)
+      !------------------------------------------------------------------------
+      H6_I = 2./sqrt(cPi)*(2.-X_I**2)*exp(-X_I**2) &
+           + (3*X_I-2.*X_I**3)*erf(X_I)
+    end subroutine
+    !==========================================================================
+    subroutine h7(X_I, H7_I)
+      real, intent(in):: X_I(nPui)
+      real, intent(out):: H7_I(nPui)
+      !------------------------------------------------------------------------
+      H7_I = 2./sqrt(cPi)*(2.+X_I**2)*exp(-X_I**2) &
+           + (5.*X_I+2.*X_I**3)*erf(X_I)
+    end subroutine
+    !==========================================================================
+    subroutine h8(X, H8X)
+      real, intent(in):: X
+      real, intent(out):: H8X
+      !------------------------------------------------------------------------
+      H8X = exp(-X**2)/sqrt(cPi) + (0.5/X+X)*erf(X)
+    end subroutine
+    !==========================================================================
+    subroutine h9(X, H9X)
+      real, intent(in):: X
+      real, intent(out):: H9X
+      !------------------------------------------------------------------------
+      H9X = (0.5/X**2+1)/sqrt(cPi)*exp(-X**2) &
+           + (-0.25/X**3+1./X+X)*erf(X)
+    end subroutine
+    !==========================================================================
+    subroutine h10(X, H10X)
+      real, intent(in):: X
+      real, intent(out):: H10X
+      !------------------------------------------------------------------------
+      H10X = 3. + 2.*X**2
+    end subroutine
+    !==========================================================================
+    subroutine h11(X, H11X)
+      real, intent(in):: X
+      real, intent(out):: H11X
+      !------------------------------------------------------------------------
+      H11X = (5.+2.*X**2)/sqrt(cPi)*exp(-X**2) + (1.5/X+6.*X+2.*X**3)*erf(X)
+    end subroutine
+    !==========================================================================
+  end subroutine calc_charge_exchange_source_pui
   !============================================================================
   subroutine calc_charge_exchange_source( &
        i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
