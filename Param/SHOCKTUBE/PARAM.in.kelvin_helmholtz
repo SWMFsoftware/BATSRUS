@@ -1,14 +1,14 @@
 Begin session: 1
 
 #DESCRIPTION
-Param/SHOCKTUBE/PARAM.in.rayleigh_taylor: Raileigh-Taylor test		StringDescription
+Param/SHOCKTUBE/PARAM.in.kelvin_helmholtz: Kelvin-Helmholtz test		StringDescription
 
 #EQUATION
 HD			NameEquation
 5			nVar
 
 #USERMODULE
-Waves			NameUserModule
+KELVIN-HELMHOLTZ INSTABILITY		NameUserModule
 
 #CHECKGRIDSIZE
        8                nI
@@ -25,6 +25,10 @@ NONE			TypeIoUnit
 #NORMALIZATION
 NONE			TypeNormalization
 
+#PROGRESS
+40			DnProgressShort
+200			DnProgressLong
+
 #SHOCKTUBE
 4.0			LeftState Rho
 0.0			LeftState Ux
@@ -38,13 +42,13 @@ NONE			TypeNormalization
 1.0			RightState P
 
 #GRID
-6                    	nRootBlockX
-1                     	nRootBlockY
+4                    	nRootBlockX
+4                     	nRootBlockY
 1                     	nRootBlockZ
--20.                 	xMin
- 20.                 	xMax
--10.                   	yMin
- 10.                   	yMax
+-10.                 	xMin
+ 10.                 	xMax
+-20.                   	yMin
+ 20.                   	yMax
 -1.                   	zMin
  1.                   	zMax
 
@@ -56,13 +60,18 @@ periodic                TypeBc4
 float                   TypeBc5
 float                   TypeBc6
 
+#USERSWITCH
++perturb		StringSwitch
+
 #USERINPUTBEGIN ----------------
 
-#RT
-0.1			X Velocity Amplitude
-2.0			X Perturbation Width
-10.0		LambdaYUx
-F       IsSmoothRho
+#PERTURBATION
+1.0				xWidthUx
+1.0				xWidthUy
+0.01			AmplUx
+1.0				AmplUy
+1.0				yWaveUx
+0.0				zWaveUx
 
 #USERINPUTEND   ----------------
 
@@ -76,7 +85,7 @@ mc3			TypeLimiter
 2			nStage
 0.8			CflExpl
 
-#GRAVITY
+GRAVITY
 T			UseGravity
 1			iDirGravity
 0.1			Gravity
@@ -96,11 +105,11 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1
-z=0 mhd idl             StringPlot
+z=0 hd idl             StringPlot
 -1			DnOutput
-1.0			DtOutput
+200.0		DtOutput
 0.			DxOutput
 
 #STOP
 -1			MaxIteration
-50.0			tSimulationMax
+200.0		tSimulationMax

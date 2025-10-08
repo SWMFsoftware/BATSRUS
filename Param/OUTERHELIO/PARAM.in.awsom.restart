@@ -181,11 +181,10 @@ MultiIon                NameRegionFormula
 1.0                     MachPop1Limit
 
 #PHOTOIONIZATION
-T			UsePhotoionization
-8e-8			PhotoionizationRate
+F			UsePhotoionization
 
 #ELECTRONIMPACT
-T			UseElectronImpact
+F			UseElectronImpact
 
 #TURBULENCE
 20.0			DeltaUDim
@@ -202,18 +201,6 @@ T			UseSourceNe3
 T			UseSourceNe4
 
 #USERINPUTEND -------------------------------------
-
-#LOOKUPTABLE
-ChargeExchange		NameTable
-load			NameCommand
-Param/OUTERHELIO/ChargeExchangeRate_LS.dat		NameFile
-ascii			TypeFile
-
-#LOOKUPTABLE
-ElectronImpact		NameTable
-load			NameCommand
-Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
-ascii			TypeFile
 
 #STOP
 10			MaxIteration

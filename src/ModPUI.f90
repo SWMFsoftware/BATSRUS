@@ -28,7 +28,7 @@ module ModPUI
   real, public :: Vpui_I(nPui)
   real, public :: DeltaVpui_I(nPui)
 
-  real :: DeltaLogVpui
+  real, public :: DeltaLogVpui
 
   real, public :: DivUpui_C(nI,nJ,nK) = 0.0
 
