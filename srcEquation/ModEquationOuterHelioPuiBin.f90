@@ -15,7 +15,7 @@ module ModVarIndexes
   save
 
   character (len=*), parameter :: &
-       NameEquationFile = "ModEquationOuterHelioAwsomPuiBin.f90"
+       NameEquationFile = "ModEquationOuterHelioPuiBin.f90"
 
   ! This equation module contains two ion fluids +
   ! Alfven wave energy + electron pressure + pickup ions spectrum + 4 neutrals
