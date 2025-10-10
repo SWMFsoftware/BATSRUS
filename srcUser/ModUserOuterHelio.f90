@@ -2448,26 +2448,28 @@ contains
       end do
 
       ! Created neutrals all go to same population
-      SourceCx_V(iRho_I(iFluidProduced))    = &
-           SourceCx_V(iRho_I(iFluidProduced)) &
+      call select_fluid(iFluidProduced)
+      SourceCx_V(iRho)    = &
+           SourceCx_V(iRho) &
            +sum(I0px_I) + sum(I0pu3x_I)
-      SourceCx_V(iRhoUx_I(iFluidProduced))  = &
-           SourceCx_V(iRhoUx_I(iFluidProduced)) &
+      SourceCx_V(iRhoUx)  = &
+           SourceCx_V(iRhoUx) &
            +sum(Jpx_DI(x_,:)) + sum(Jpu3x_DI(x_,:))
-      SourceCx_V(iRhoUy_I(iFluidProduced))  = &
-           SourceCx_V(iRhoUy_I(iFluidProduced)) &
+      SourceCx_V(iRhoUy)  = &
+           SourceCx_V(iRhoUy) &
            +sum(Jpx_DI(y_,:)) + sum(Jpu3x_DI(y_,:))
-      SourceCx_V(iRhoUz_I(iFluidProduced))  = &
-           SourceCx_V(iRhoUz_I(iFluidProduced)) &
+      SourceCx_V(iRhoUz)  = &
+           SourceCx_V(iRhoUz) &
            +sum(Jpx_DI(z_,:)) + sum(Jpu3x_DI(z_,:))
-      SourceCx_V(iEnergy_I(iFluidProduced)) = &
-           SourceCx_V(iEnergy_I(iFluidProduced)) &
+      SourceCx_V(iEnergy) = &
+           SourceCx_V(iEnergy) &
            +sum(Kpx_I) + sum(Kpu3x_I)
 
       do iNeu = Neu_,Ne4_
-         SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy_I(iNeu)) &
-              -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx_I(iNeu):iRhoUz_I(iNeu)))) &
-              +0.5*UPui**2*SourceCx_V(iRho_I(iNeu))
+         call select_fluid(iNeu)
+         SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy) &
+              -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz))) &
+              +0.5*UPui**2*SourceCx_V(iRho)
       end do
   contains
     !==========================================================================

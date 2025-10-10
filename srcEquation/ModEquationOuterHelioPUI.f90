@@ -94,9 +94,7 @@ module ModVarIndexes
        iRhoUz_I(nFluid) &
        = [ RhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
        iP_I(nFluid)     &
-       = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_     ], &
-       iEnergy_I(nFluid) &
-       = [ Energy_,Pu3Energy_,NeuEnergy_, Ne2Energy_,Ne3Energy_,Ne4Energy_]
+       = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_     ]
 
   integer, parameter :: iPparIon_I(nIonFluid) = [1,2]
 
