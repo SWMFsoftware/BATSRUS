@@ -292,8 +292,8 @@ contains
           call check_tr_param(&
                rMaxIn = RadiusMin, & ! Max radius of TR gap = MinRadius (SC)
                rMinReflectionTrIn = rMinWaveReflection, &
-               TempInnerIn = tCoronaSi,                 &
-               PressInnerIn = 2*cBoltzmann*tCoronaSi*CoronaN, &
+               tCoronaIn = tCoronaSi,                 &
+               pCoronaIn = 2*cBoltzmann*tCoronaSi*CoronaN, &
                UseStochasticHeatingIn = UseStochasticHeating, &
                StochasticExponentIn = StochasticExponent,     &
                StochasticAmplitudeIn = StochasticAmplitude,   &
@@ -310,8 +310,8 @@ contains
           call check_tr_param(&
                rMaxIn = RadiusMin, & ! Max radius of TR gap = MinRadius (SC)
                rMinReflectionTrIn = rMinWaveReflection, &
-               TempInnerIn = tCoronaSi,                 &
-               PressInnerIn = 2*cBoltzmann*tCoronaSi*CoronaN, &
+               tCoronaIn = tCoronaSi,                   &
+               pCoronaIn = 2*cBoltzmann*tCoronaSi*CoronaN, &
                UseStochasticHeatingIn = UseStochasticHeating, &
                QparPerQtotalIn = QparPerQtotal, &
                QperpPerQtotalIn = QperpPerQtotal)
