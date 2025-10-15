@@ -61,7 +61,7 @@ module ModFieldTrace
 
   ! Trace_DSNB contains the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg.
-  ! Trace_DSNB(2,1,i,j,k,iBlock) is the y StringCoord for direction 1
+  ! Trace_DSNB(2,1,i,j,k,iBlock) is the y coord for direction 1
   ! trace for cell center i,j,k of block iBlock
 
   real, public, allocatable :: Trace_DSNB(:,:,:,:,:,:)
@@ -1587,7 +1587,7 @@ contains
     !==========================================================================
     logical function do_stop_at_sm_equator()
 
-      ! Check if we crossed the Z=0 plane in the SM StringCoord system
+      ! Check if we crossed the Z=0 plane in the SM coordinate system
       ! Return true if there is no reason to follow the trace further
 
       ! SM coordinates
