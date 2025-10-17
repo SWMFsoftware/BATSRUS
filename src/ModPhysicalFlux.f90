@@ -207,6 +207,9 @@ contains
     ! Overwrite Lperp_ for multi-ion
     if(Lperp_ > 1 .and.UseMultiIon) Flux_V(Lperp_) = HallUn*State_V(Lperp_)
 
+    !Overwrite levelHP flux for multi-ion
+    if(LevelHP_ > 1 .and.UseMultiIon) Flux_V(LevelHP_) = HallUn*State_V(LevelHP_)
+
     ! Set flux for electron pressure
     if(UseElectronPressure)then
        ! Set conservative variable to Se
