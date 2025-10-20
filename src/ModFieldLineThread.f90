@@ -946,7 +946,7 @@ contains
     real, intent(in)    :: RightState_VII(nVar, 1:nJ, 1:nK)
     real, intent(inout) :: LeftState_VII(nVar, 1:nJ, 1:nK)
     real, optional, intent(in) :: DtIn, Dt_C(1:nJ, 1:nK)
-    
+
     !--------------------------------------------------------------------------
   end subroutine advance_threaded_block_expl
   !============================================================================
