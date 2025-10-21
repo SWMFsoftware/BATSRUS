@@ -117,7 +117,7 @@ module ModMain
 
   ! Single space separated NameVar string containing all the variable
   ! names of NameVar_V
-  character(len=500) :: NameVarCouple
+  character(len=1000) :: NameVarCouple
 
   ! Intrinsic field B0 may or may not be used if UseB is true.
   logical :: UseB0        = UseB
