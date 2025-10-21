@@ -940,13 +940,13 @@ contains
   end subroutine advance_threads
   !============================================================================
   subroutine advance_threaded_block_expl(iBlock, iStage, &
-       RightState_VII, LeftState_VII, DtIn, Dt_C)
+       RightState_VII, LeftState_VII, DtIn, Dt_II)
 
     integer, intent(in) :: iBlock, iStage
     real, intent(in)    :: RightState_VII(nVar, 1:nJ, 1:nK)
     real, intent(inout) :: LeftState_VII(nVar, 1:nJ, 1:nK)
-    real, optional, intent(in) :: DtIn, Dt_C(1:nJ, 1:nK)
-
+    real, optional, intent(in) :: DtIn, Dt_II(1:nJ, 1:nK)
+    
     !--------------------------------------------------------------------------
   end subroutine advance_threaded_block_expl
   !============================================================================
