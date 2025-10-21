@@ -2045,12 +2045,11 @@ contains
     ! Distribution function parameters
     real, dimension(nPui):: FStarPui_I
     real:: FStarPui, Vpui, DeltaVpui, &
-         VsubBot, VsubTop, DeltaVsub 
+         VsubBot, VsubTop, DeltaVsub
     real, dimension(nSubSample):: &
          Vsub_I, XpSwhSub_I, XmSwhSub_I, XpPuiSub_I, XmPuiSub_I
     real, dimension(Neu_:Ne4_):: Xp_I, Xm_I, XpSwh_I, XmSwh_I, FStarNeu_I
     real:: CumSumFpuiV1, CumSumFpuiV2, CumSumFpuiV3, CumSumFpuiV4
-         
 
     ! Helper functions: h(x)
     real, dimension(Neu_:Ne4_):: H1Xp_I, H1Xm_I, H2Xp_I, H2Xm_I, H3Xp_I, &
@@ -2143,7 +2142,6 @@ contains
     Umean2_I = sum(UMean_ID**2, 2)
     Umean2Pu3_I = sum(UmeanPu3_ID**2, 2)
 
-    
     UThNeu_I = sqrt(UTh2Si_I(Neu_:Ne4_)) * Si2No_V(UnitU_)
     NumDensNeu_I = NumDensSi_I(Neu_:Ne4_) * Si2No_V(UnitN_)
     do iDim = x_,z_
@@ -2249,7 +2247,7 @@ contains
           end do
           XpPuiSub_I = abs((Vsub_I+URelPu3_I(iNeu))/UthNeu_I(iNeu))
           XmPuiSub_I = abs((Vsub_I-URelPu3_I(iNeu))/UthNeu_I(iNeu))
-          
+
           ! Neutral distribution, pitch angle averaged in PUI frame
           FStarNeuSub_I = 0.25*NumDensNeu_I(iNeu)/cPi**1.5/Vsub_I &
               /URelPu3_I(iNeu)/UThNeu_I(iNeu) &
@@ -2306,7 +2304,7 @@ contains
     Integralpu3xU1_I = Integralpu3xU1_I &
        *cPi*UThNeu_I**3/6/NumDensPui/URelPu3_I**3
     Integralpu3xU2_I = Integralpu3xU2_I &
-         *0.5*cPi*UThNeu_I**4/NumDensPui/URelPu3_I**3 
+         *0.5*cPi*UThNeu_I**4/NumDensPui/URelPu3_I**3
 
     g0pu3xUSi_I = Integralpu3xU2_I/Integralpu3xU1_I * No2Si_V(UnitU_)
 
@@ -2322,7 +2320,6 @@ contains
 
     g0xpu3PSi_I = g0xpu3PSi_I &
          *cPi*UThNeu_I**3/3/NumDensPui/URelPu3_I*No2Si_V(UnitU_)
-
 
     SourceRhoxp_I = 4*cPi*SourceRhoxp_I
     SourcePxp_I = 4*cPi/3*SourcePxp_I
@@ -2367,7 +2364,6 @@ contains
          + UNeuDotSourceUxpu3_I &
          + 0.5*UNeu_I**2*SourceRhoxpu3_I
 
-
     XSwh_I = URel_I/sqrt(UTh2Sum_I)
 
     call h8(XSwh_I,H8XSwh_I)
@@ -2375,8 +2371,9 @@ contains
     IntegralpxRho2_I = 0.5*sqrt(cPi)*UTh2Sum_I*URel_I*H8XSwh_I
     g0pxRhoSi_I = IntegralpxRho2_I/IntegralpxRho1_I * No2Si_V(UnitU_)
 
-    IntegralpxRho_I = IntegralpxRho1_I*sigma_cx_array(g0pxRhoSi_I)*g0pxRhoSi_I &
-            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+    IntegralpxRho_I = &
+         IntegralpxRho1_I*sigma_cx_array(g0pxRhoSi_I)*g0pxRhoSi_I &
+         /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
     call h9(XSwh_I,H9XSwh_I)
     IntegralpxU1_I = sqrt(cPi*InvUTh2Sum_I)*URel_I**3
@@ -2440,6 +2437,7 @@ contains
           Jxp_ID(iNeu,:) = 0
           Kpx_I(iNeu) = 0
           Kxp_I(iNeu) = 0
+          SourceFxp_II(iNeu,:) = 0
         end if
       end do
     else
@@ -2449,26 +2447,31 @@ contains
       Jxp_ID = 0
       Kpx_I = 0
       Kxp_I = 0
+      SourceFxp_II = 0
     end if
 
     if (UseSource_I(Pu3_)) then
         do iNeu = Neu_,Ne4_
           if (.not.UseSource_I(iNeu))then
-              I0pu3x_I(iNeu) = 0
-              I0xpu3_I(iNeu) = 0
-              Jpu3x_ID(iNeu, :) = 0
-              Jxpu3_ID(iNeu, :) = 0
-              Kpu3x_I(iNeu) = 0
-              Kxpu3_I(iNeu) = 0
+            I0pu3x_I(iNeu) = 0
+            I0xpu3_I(iNeu) = 0
+            Jpu3x_ID(iNeu, :) = 0
+            Jxpu3_ID(iNeu, :) = 0
+            Kpu3x_I(iNeu) = 0
+            Kxpu3_I(iNeu) = 0
+            SourceFxpu3_II(iNeu,:) = 0
+            SourceFpu3x_II(iNeu,:) = 0
           end if
         end do
     else
-        I0pu3x_I = 0
-        I0xpu3_I = 0
-        Jpu3x_ID = 0
-        Jxpu3_ID = 0
-        Kpu3x_I = 0
-        Kxpu3_I = 0
+      I0pu3x_I = 0
+      I0xpu3_I = 0
+      Jpu3x_ID = 0
+      Jxpu3_ID = 0
+      Kpu3x_I = 0
+      Kxpu3_I = 0
+      SourceFxpu3_II = 0
+      SourceFpu3x_II = 0
     end if
 
     ! PUIs are created in the solar wind (regions 2,3)
