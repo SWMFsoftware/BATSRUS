@@ -17,7 +17,7 @@ module ModExtraVariables
 
   ! Level set fluid
   integer, parameter :: LevelHP_ = 1
-  
+
   ! Electric field and hyperbolic scalar field
   integer, parameter :: Ex_ = 1, Ey_ = 2, Ez_ = 3
   integer, parameter :: HypE_ = 1
