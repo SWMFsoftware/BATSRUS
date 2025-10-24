@@ -14,7 +14,7 @@ module ModVarIndexes
        Redefine8  => PuiLast_, &
        Redefine9  => iPparIon_I, &
        Redefine10 => LevelHP_
-  
+
   implicit none
 
   save

@@ -5,7 +5,7 @@ module ModVarIndexes
 
   use ModExtraVariables, &
        Redefine1 => LevelHP_
-  
+
    implicit none
 
    save
