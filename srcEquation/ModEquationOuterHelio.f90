@@ -3,7 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
-   use ModExtraVariables
+  use ModExtraVariables, &
+       Redefine1 => LevelHP_
 
    implicit none
 

@@ -9,8 +9,8 @@ module ModVarIndexes
        Redefine3  => WaveLast_, &
        Redefine4  => Lperp_, &
        Redefine5  => Pe_, &
-       Redefine6  => iPparIon_I
-
+       Redefine6  => iPparIon_I, &
+       Redefine7  => LevelHP_
   implicit none
 
   save

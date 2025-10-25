@@ -84,9 +84,6 @@ contains
        DeltaVpui_I(iPui) = DeltaVpui_I(iPui-1)*exp(DeltaLogVpui)
     end do
 
-    if(nPui > 1 .and. WaveFirst_==1) &
-         call stop_mpi(NameSub//": PUI can only run together with turbulence")
-
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_pui
   !============================================================================
