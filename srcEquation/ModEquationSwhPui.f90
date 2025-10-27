@@ -4,7 +4,8 @@
 module ModVarIndexes
 
   use ModExtraVariables, &
-       Redefine => iPparIon_I
+       Redefine => iPparIon_I, &
+       Redefine2 => LevelHP_
 
   implicit none
 
