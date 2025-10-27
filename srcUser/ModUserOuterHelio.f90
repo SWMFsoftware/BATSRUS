@@ -3890,7 +3890,7 @@ contains
        end if
 
     case(LevelSetMi_)
-       if (r < rBody) then 
+       if (r < rBody) then
           ! inside inner boundary (inside termination shock)
           iRegion = iNe3
           RETURN
