@@ -8,7 +8,8 @@ module ModVarIndexes
        Redefine2  => nPui, &
        Redefine3  => PuiFirst_, &
        Redefine4  => PuiLast_, &
-       Redefine5  => iPparIon_I
+       Redefine5  => iPparIon_I, &
+       Redefine6  => LevelHP_
 
   implicit none
 
