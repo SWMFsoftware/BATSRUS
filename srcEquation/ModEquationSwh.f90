@@ -4,7 +4,9 @@
 module ModVarIndexes
 
   use ModSingleFluid
-  use ModExtraVariables
+
+  use ModExtraVariables, &
+       Redefine => LevelHP_
 
   implicit none
 

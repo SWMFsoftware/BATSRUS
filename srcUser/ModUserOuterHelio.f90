@@ -153,6 +153,7 @@ module ModUser
   character(len=20) :: NameRegionFormula
   integer, parameter:: SingleIon_ = 1, ColdCloud_ = 2
   integer, parameter:: MultiIon_=3, LevelSet_ = 4
+  integer, parameter:: LevelSetMi_ = 5
   integer :: iRegionFormula = SingleIon_
 
   ! Cross Section Formulas
@@ -364,6 +365,12 @@ contains
              iRegionFormula = LevelSet_
              call read_var('LevelHPLimit',     LevelHPLimit)
              call read_var('MachPop2Limit',    MachPop2Limit)
+             call read_var('MachPop4Limit',    MachPop4Limit)
+
+          case('LevelSetMi')
+             iRegionFormula = LevelSetMi_
+             call read_var('LevelHPLimit',     LevelHPLimit)
+             call read_var('uPop3LimitDim',    uPop3LimitDim)
              call read_var('MachPop4Limit',    MachPop4Limit)
 
           case default
@@ -773,6 +780,7 @@ contains
           State_VGB(Bz_,i,j,k,iBlock) =  VliswBz
 
           State_VGB(Rho_,i,j,k,iBlock) = VliswRho
+          State_VGB(LevelHP_,i,j,k,iBlock) = -VliswRho
           State_VGB(P_,i,j,k,iBlock)   = VliswP
           if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = VliswP
 
@@ -3877,6 +3885,33 @@ contains
              iRegion = iNe2
           else
              ! Inside termination Shock
+             iRegion = iNe3
+          end if
+       end if
+
+    case(LevelSetMi_)
+       if (r < rBody) then
+          ! inside inner boundary (inside termination shock)
+          iRegion = iNe3
+          RETURN
+       end if
+
+       if (LevelHP < LevelHPLimit) then
+          ! Outside Heliopause
+          if (Mach2 > MachPop4Limit**2) then
+             ! Outside bow shock
+             iRegion = iNe4
+          else
+             ! Inside bow shock
+             iRegion = iNe1
+          end if
+       else
+          ! Inside Heliopause
+          if (U2Dim < uPop3LimitDim**2) then
+             ! Outside termination shock
+             iRegion = iNe2
+          else
+             ! Inside termination shock
              iRegion = iNe3
           end if
        end if
