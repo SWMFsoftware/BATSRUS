@@ -2345,10 +2345,6 @@ contains
            *Integralxpu3U1_I*URelPu3_ID(:,iDim) *sigma_cx_array(g0xpu3USi_I)&
            *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
-      SourceUpu3x_ID(:,iDim) =  0.785*NumDensPui*NumDensNeu_I &
-          *Integralpu3xU1_I*URelPu3_ID(:,iDim)*sigma_cx_array(g0pu3xUSi_I) &
-           *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
       Jpu3x_ID(:,iDim) = SourceRhopu3x_I*UPui_D(iDim) &
            + SourceUpu3x_ID(:,iDim)
       Jxpu3_ID(:,iDim) = SourceRhoxpu3_I*UNeu_ID(:,iDim) &
@@ -2554,7 +2550,7 @@ contains
           SourceCx_V(iRho) &
           +sum(I0px_I) + sum(I0pu3x_I)
     SourceCx_V(iRhoUx:iRhoUz)  = &
-          SourceCx_V(iRhoUx) &
+          SourceCx_V(iRhoUx:iRhoUz) &
           +sum(Jpx_ID,1) + sum(Jpu3x_ID,1)
     SourceCx_V(iEnergy) = &
           SourceCx_V(iEnergy) &
