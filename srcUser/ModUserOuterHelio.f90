@@ -2308,7 +2308,6 @@ contains
          *cPi*UThNeu_I**3/6/NumDensPui/URelPu3_I**3
 
     Integralpu3xU2_I = UThPui**2
-         
 
     g0pu3xUSi_I = Integralpu3xU2_I/Integralpu3xU1_I * No2Si_V(UnitU_)
 
