@@ -17,8 +17,8 @@ module ModFieldLineThread
   use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
   use ModTransitionRegion, ONLY: nPointThreadMax=>nPointMax,           &
-       DsThreadMin=>Ds0, rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, &
-       HeatFluxLength_, iTableTr, integrate_emission
+       DsThreadMin=>Ds0, rChromo, PavrL_, TrTable_V, &
+       HeatFluxL_, iTableTr, integrate_emission
 
   implicit none
   SAVE
@@ -887,14 +887,14 @@ contains
       use ModLookupTable, ONLY: interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
-      real :: HeatFluxXLength, Value_V(LengthPavrSi_:DlogLambdaOverDlogT_)
+      real :: HeatFluxL
       !------------------------------------------------------------------------
-      HeatFluxXLength = 2*PoyntingFluxPerBSi*&
+      HeatFluxL = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
       call interpolate_lookup_table(iTable=iTableTR, Arg2In=0.0, &
-           iVal=HeatFluxLength_, &
-           ValIn=HeatFluxXLength,&
-           Value_V=Value_V,      &
+           iVal=HeatFluxL_, &
+           ValIn=HeatFluxL, &
+           Value_V=TrTable_V,      &
            Arg1Out=TMax,  &
            DoExtrapolate=.false.)
       ! Version Easter 2015

@@ -2227,8 +2227,8 @@ contains
           do iSubSample = 1, nSubSample
             Vsub_I(iSubSample) = VsubBot+DeltaVsub*(iSubSample-0.5)
           end do
-          XpSwhSub_I = abs((Vsub_I+URel_I(iNeu))/UthNeu_I(iNeu))
-          XmSwhSub_I = abs((Vsub_I-URel_I(iNeu))/UthNeu_I(iNeu))
+          XpSwhSub_I = (Vsub_I+URel_I(iNeu))/UthNeu_I(iNeu)
+          XmSwhSub_I = (Vsub_I-URel_I(iNeu))/UthNeu_I(iNeu)
 
           call h8_sub(Vsub_I/UThSwh, H8Sub_I)
           g0xpFSiSub_I = UthSwh*H8Sub_I * No2Si_V(UnitU_)
@@ -2283,11 +2283,6 @@ contains
            *(0.2*UThNeu_I**2*(H2Xp_I-H2Xm_I) &
            - (URel2Pu3_I+Vpui**2)*(H1Xp_I-H1Xm_I))
 
-      Integralpu3xU2_I = Integralpu3xU2_I &
-           + FStarPui*Vpui*DeltaVpui &
-           *( UThNeu_I**2*(H4Xp_I-H4Xm_I) &
-           - (URel2Pu3_I+Vpui**2)*(H3Xp_I-H3Xm_I))
-
       Integralxpu3U1_I = Integralxpu3U1_I &
            + FStarPui*Vpui*DeltaVpui*( &
            UThNeu_I**2/3*(H6Xp_I-H6Xm_I) &
@@ -2310,9 +2305,9 @@ contains
     SourceRhoxpu3_I = 4*cPi*SourceRhoxpu3_I
 
     Integralpu3xU1_I = Integralpu3xU1_I &
-       *cPi*UThNeu_I**3/6/NumDensPui/URelPu3_I**3
-    Integralpu3xU2_I = Integralpu3xU2_I &
-         *0.5*cPi*UThNeu_I**4/NumDensPui/URelPu3_I**3
+         *cPi*UThNeu_I**3/6/NumDensPui/URelPu3_I**3
+
+    Integralpu3xU2_I = UThPui**2
 
     g0pu3xUSi_I = Integralpu3xU2_I/Integralpu3xU1_I * No2Si_V(UnitU_)
 

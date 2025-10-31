@@ -10,8 +10,8 @@ module ModThreadedLC
   use BATL_lib, ONLY: test_start, test_stop, iProc, Xyz_DGB
   use ModChromosphere, ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
-       HeatCondParSi, LengthPavrSi_, UHeat_, HeatFluxLength_,&
-       DHeatFluxXOverDcons_, LambdaSi_, DLogLambdaOverDLogT_, init_tr
+       HeatCondParSi, TrTable_V, PavrL_, UHeat_, HeatFluxL_,&
+       DHeatFluxLoverDcons_, Lambda_, DLogLambdaOverDLogT_, init_tr
   use ModFieldLineThread, ONLY: BoundaryThreads, BoundaryThreads_B,     &
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
        DoInit_, Done_, Enthalpy_, Heat_, Restart_
@@ -288,7 +288,6 @@ contains
          DTeOverDsSiOut, PeSiOut, PiSiOut, RhoNoDimOut, AMajorOut
 
     ! Arrays needed to use lookup table
-    real    :: Value_V(LengthPavrSi_:DlogLambdaOverDlogT_)
     ! Limited Speed
     real    :: USi
     !---------Used in 1D numerical model------------------------
@@ -326,17 +325,17 @@ contains
          (TeSiIn*PoyntingFluxPerBSi*&
          BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
     call interpolate_lookup_table(iTableTR, TeSiIn, 0.0, &
-         Value_V=Value_V, DoExtrapolate=.false.)
+         Value_V=TrTable_V, DoExtrapolate=.false.)
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
-    PeSiOut        = Value_V(LengthPAvrSi_)*SqrtZ/&
+    PeSiOut        = TrTable_V(PAvrL_)*SqrtZ/&
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
     PiSiOut = PeSiOut/(Z*TeSiIn)*TiSiIn
     USi = USiIn
     if(USi>0)then
-       USi = min(USi,0.1*Value_V(UHeat_))
+       USi = min(USi,0.1*TrTable_V(UHeat_))
     else
-       USi = max(USi, -0.1*Value_V(HeatFluxLength_)/&
+       USi = max(USi, -0.1*TrTable_V(HeatFluxL_)/&
             (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)*PeSiIn))
     end if
     RhoNoDimOut    = RhoNoDimCoef*PeSiOut/TeSiIn
@@ -375,10 +374,10 @@ contains
        do iPoint = nPoint-1, 1, -1
           call interpolate_lookup_table(Arg2In=0.0, &
                iTable=iTableTR,         &
-               iVal=LengthPAvrSi_,      &
+               iVal=PAvrL_,             &
                ValIn=PeSiOut/SqrtZ*     &
                BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-               Value_V=Value_V,         &
+               Value_V=TrTable_V,       &
                Arg1Out=TeSi_I(iPoint),  &
                DoExtrapolate=.false.)
        end do
@@ -536,9 +535,9 @@ contains
     subroutine set_pressure
       integer::iPoint
       !------------------------------------------------------------------------
-      ! First variable in Value_V  is now the product of the thread length in
+      ! First variable in TrTable_V  is now the product of the thread length in
       ! meters times a geometric mean pressure, so that
-      PSi_I(1) = Value_V(LengthPAvrSi_)*(1 + Z)/(SqrtZ*&
+      PSi_I(1) = TrTable_V(PAvrL_)*(1 + Z)/(SqrtZ*&
            BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k))
       !   Hydrostatic equilibrium in an isothermal corona:
       !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -622,7 +621,7 @@ contains
       EnthalpyFlux = FluxConst*(InvGammaMinus1 +1)*(1 + Z)
       ! Calculate flux to TR and its temperature derivative
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, &
-           Value_V=Value_V, DoExtrapolate=.false.)
+           Value_V=TrTable_V, DoExtrapolate=.false.)
 
       do iIter = 1,nIterHere
          ! Iterations
@@ -761,9 +760,9 @@ contains
          ! For next iteration calculate TR heat flux and
          ! its temperature derivative
          call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, &
-              Value_V=Value_V, DoExtrapolate=.false.)
+              Value_V=TrTable_V, DoExtrapolate=.false.)
          ! Set pressure for updated temperature
-         Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
+         TrTable_V(PAvrL_) = TrTable_V(PAvrL_)*PressureTRCoef
          call set_pressure
          call get_res_heating(nIterIn=nIterHere)
          ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
@@ -880,13 +879,13 @@ contains
            (Cons_I(1:nPoint-1) - Cons_I(2:nPoint)) &
            *Upper_VVI(Cons_,Cons_,1:nPoint-1)
       ! Add left heat flux to the TR
-      HeatFlux2TR = Value_V(HeatFluxLength_)*&
+      HeatFlux2TR = TrTable_V(HeatFluxL_)*&
            BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k)
       ResHeatCond_I(1) = ResHeatCond_I(1) -  HeatFlux2TR
       ! Linearize left heat flux to the TR
 
       Main_VVI(Cons_,Cons_,1) &
-           = -Upper_VVI(Cons_,Cons_,1) + Value_V(DHeatFluxXOverDcons_)  &
+           = -Upper_VVI(Cons_,Cons_,1) + TrTable_V(DHeatFluxLoverDcons_)  &
            *BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(-nPoint,j,k)
       ! Add other left heat fluxes
       ResHeatCond_I(2:nPoint-1) = ResHeatCond_I(2:nPoint-1) + &
@@ -898,7 +897,7 @@ contains
       ! 1. At the TR:
       ! We satisfy the equation, d(LogP) = d(Cons)*(dPAvr/dCons)_{TR}/PAvr
       Main_VVI(LogP_,Cons_,1) = -1/&
-           Value_V(HeatFluxLength_) + TiSi_I(1)/&
+           TrTable_V(HeatFluxL_) + TiSi_I(1)/&
            (3.5*Cons_I(1)*(Z*TeSi_I(1) + TiSi_I(1)))
       Main_VVI(LogP_,Ti_,1)   = -1/(Z*TeSi_I(1) + TiSi_I(1))
 
@@ -948,14 +947,13 @@ contains
             call stop_mpi('Stop!!!')
          end if
          call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), 0.0, &
-              Value_V, &
-              DoExtrapolate=.false.)
+              TrTable_V, DoExtrapolate=.false.)
          ResCooling_I(iPoint) = &
               -BoundaryThreads_B(iBlock)%DsCellOverBSi_III(iPoint-nPoint,j,k)&
-              *Value_V(LambdaSI_)*Z*&
+              *TrTable_V(Lambda_)*Z*&
               (PSi_I(iPoint)/(Z*TeSi_I(iPoint) + TiSi_I(iPoint)))**2
          DResCoolingOverDLogT_I(iPoint) = &
-              ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
+              ResCooling_I(iPoint)*TrTable_V(DLogLambdaOverDLogT_)
       end do
 
     end subroutine get_cooling
