@@ -2552,7 +2552,7 @@ contains
         call select_fluid(iNeu)
         SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy) &
             -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz)) &
-            +0.5*UPui**2*SourceCx_V(iRho) )
+            +0.5*UNeu_I(iNeu)**2*SourceCx_V(iRho) )
     end do
   contains
     !==========================================================================
