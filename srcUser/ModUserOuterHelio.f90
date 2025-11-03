@@ -2088,8 +2088,7 @@ contains
          UPuiDotSourceUpu3x_I, UNeuDotSourceUxpu3_I
     real, dimension(Neu_:Ne4_):: Integralpu3xU1_I, Integralpu3xU2_I, &
          Integralxpu3U1_I, Integralxpu3U2_I, &
-         g0pu3xFSi_I, g0pu3xUSi_I, g0xpu3USi_I, g0pu3xPSi_I, &
-         g0xpu3PSi_I, &
+         g0pu3xFSi_I, g0pu3xUSi_I, g0xpu3USi_I, &
          SourceRhopu3x_I, SourceRhoxpu3_I, SourcePpu3x_I, SourcePxpu3_I
     real:: g0xpu3FSi
     real, dimension(Neu_:Ne4_,3):: SourceUpu3x_ID, SourceUxpu3_ID
@@ -2164,11 +2163,11 @@ contains
     CumSumFpuiV4 = 0
     SourceRhopu3x_I = 0
     SourceRhoxpu3_I = 0
+    SourcePpu3x_I = 0
+    SourcePxpu3_I = 0
     Integralpu3xU1_I = 0
     Integralpu3xU2_I = 0
     Integralxpu3U1_I = 0
-    g0pu3xPSi_I = 0
-    g0xpu3PSi_I = 0
     SourceRhoxp_I = 0
     SourcePxp_I = 0
 
@@ -2288,11 +2287,11 @@ contains
            UThNeu_I**2/3*(H6Xp_I-H6Xm_I) &
            +(Vpui**2-URel2Pu3_I)*(H5Xp_I-H5Xm_I))
 
-      g0pu3xPSi_I = g0pu3xPSi_I &
-           + g0pu3xFSi_I*Vpui**4*DeltaVpui*FStarPui
+      SourcePpu3x_I = SourcePpu3x_I &
+           + SourceFpu3x_II(:,iPui)*Vpui**4*DeltaVpui
 
-      g0xpu3PSi_I = g0xpu3PSi_I &
-           + FStarPui*Vpui*DeltaVpui*(H7Xp_I-H7Xm_I)
+      SourcePxpu3_I = SourcePxpu3_I &
+           + SourceFxpu3_II(:,iPui)*Vpui**4*DeltaVpui
 
       SourceRhoxp_I = SourceRhoxp_I &
            + SourceFxp_II(:,iPui)*Vpui**2*DeltaVpui
@@ -2303,6 +2302,9 @@ contains
 
     SourceRhopu3x_I = 4*cPi*SourceRhopu3x_I
     SourceRhoxpu3_I = 4*cPi*SourceRhoxpu3_I
+
+    SourcePpu3x_I = 4*cPi/3*SourcePpu3x_I
+    SourcePxpu3_I = 4*cPi/3*SourcePxpu3_I
 
     Integralpu3xU1_I = Integralpu3xU1_I &
          *cPi*UThNeu_I**3/6/NumDensPui/URelPu3_I**3
@@ -2317,12 +2319,6 @@ contains
     Integralxpu3U2_I = -UThNeu_I**2
 
     g0xpu3USi_I = Integralxpu3U2_I/Integralxpu3U1_I * No2Si_V(UnitU_)
-
-    g0pu3xPSi_I = g0pu3xPSi_I &
-         *4*cPi/3*MassFluid_I(Pu3_)/PPui
-
-    g0xpu3PSi_I = g0xpu3PSi_I &
-         *cPi*UThNeu_I**3/3/NumDensPui/URelPu3_I*No2Si_V(UnitU_)
 
     SourceRhoxp_I = 4*cPi*SourceRhoxp_I
     SourcePxp_I = 4*cPi/3*SourcePxp_I
@@ -2350,11 +2346,6 @@ contains
       UNeuDotSourceUxpu3_I = UNeuDotSourceUxpu3_I &
            + UNeu_ID(:,iDim)*SourceUxpu3_ID(:,iDim)
     end do
-
-    SourcePpu3x_I = NumDensNeu_I*PPui*sigma_cx_array(g0pu3xPSi_I)*g0pu3xPSi_I &
-         /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-    SourcePxpu3_I = NumDensPui*PNeu_I*sigma_cx_array(g0xpu3PSi_I)*g0xpu3PSi_I &
-         /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
     Kpu3x_I = InvGammaMinus1*SourcePpu3x_I &
          + UPuiDotSourceUpu3x_I &
