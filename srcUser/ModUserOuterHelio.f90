@@ -2480,9 +2480,9 @@ contains
             + Jxpu3_ID(iFluidProduced,:)
         SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + Kxpu3_I(iFLuidProduced) &
             + Kxp_I(iFluidProduced)
-        SourceCx_V(SwhP_) = GammaMinus1*(SourceCx_V(SwhEnergy_) &
-            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_))) &
-            +0.5*USwh**2*SourceCx_V(SwhRho_)
+        SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
+            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_)) &
+            +0.5*USwh**2*SourceCx_V(SwhRho_) )
 
         SourceCx_V(Pu3Rho_) = sum(I0xp_I) - I0xp_I(iFluidProduced) &
             +sum(I0xpu3_I) - I0xpu3_I(iFluidProduced) &
@@ -2494,9 +2494,9 @@ contains
         SourceCx_V(Pu3Energy_) = sum(Kxp_I) - Kxp_I(iFluidProduced) &
             +sum(Kxpu3_I) - Kxpu3_I(iFluidProduced) &
             -sum(Kpu3x_I)
-        SourceCx_V(Pu3P_) = GammaMinus1*(SourceCx_V(Pu3Energy_) &
-            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_))) &
-            +0.5*UPui**2*SourceCx_V(Pu3Rho_)
+        SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
+            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+            +0.5*UPui**2*SourceCx_V(Pu3Rho_) )
         SourceCx_V(PuiFirst_:PuiLast_) = sum(SourceFxp_II,1) &
             -SourceFxp_II(iFluidProduced,:) &
             +sum(SourceFxpu3_II,1) - SourceFxpu3_II(iFluidProduced,:) &
@@ -2507,16 +2507,16 @@ contains
         SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_ID,1) &
             + sum(Jxp_ID,1) + sum(Jxpu3_ID,1)
         SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + sum(Kxpu3_I) + sum(Kxp_I)
-        SourceCx_V(SwhP_) = GammaMinus1*(SourceCx_V(SwhEnergy_) &
-            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_))) &
-            +0.5*USwh**2*SourceCx_V(SwhRho_)
+        SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
+            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_)) &
+            +0.5*USwh**2*SourceCx_V(SwhRho_) )
 
         SourceCx_V(Pu3Rho_) =  -sum(I0pu3x_I)
         SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = -sum(Jpu3x_ID,1)
         SourceCx_V(Pu3Energy_) = -sum(Kpu3x_I)
-        SourceCx_V(Pu3P_) = GammaMinus1*(SourceCx_V(Pu3Energy_) &
-            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_))) &
-            +0.5*UPui**2*SourceCx_V(Pu3Rho_)
+        SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
+            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+            +0.5*UPui**2*SourceCx_V(Pu3Rho_) )
         SourceCx_V(PuiFirst_:PuiLast_) = -sum(SourceFpu3x_II,1)
 
     end if
@@ -2545,8 +2545,8 @@ contains
     do iNeu = Neu_,Ne4_
         call select_fluid(iNeu)
         SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy) &
-            -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz))) &
-            +0.5*UPui**2*SourceCx_V(iRho)
+            -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz)) &
+            +0.5*UPui**2*SourceCx_V(iRho) )
     end do
   contains
     !==========================================================================
