@@ -2198,7 +2198,7 @@ contains
       call h7(Xp_I,H7Xp_I)
       call h7(Xm_I,H7Xm_I)
 
-      g0pu3xFSi_I = UthNeu_I**3/12/Vpui/URelPu3_I*(H1Xp_I-H1Xm_I) &
+      g0pu3xFSi_I = UthNeu_I**3/12/Vpui/URelPu3_I*max(1E-30,H1Xp_I-H1Xm_I) &
          *No2Si_V(UnitU_)
 
       SourceFpu3x_II(:,iPui) = FStarPui*NumDensNeu_I &
@@ -2285,12 +2285,12 @@ contains
 
       Integralpu3xU1_I = Integralpu3xU1_I &
            + FStarPui*Vpui*DeltaVpui &
-           *(0.2*UThNeu_I**2*(H2Xp_I-H2Xm_I) &
+           *max(UThNeu_I**2*1E-30, 0.2*UThNeu_I**2*(H2Xp_I-H2Xm_I) &
            - (URel2Pu3_I+Vpui**2)*(H1Xp_I-H1Xm_I))
 
       Integralxpu3U1_I = Integralxpu3U1_I &
-           + FStarPui*Vpui*DeltaVpui*( &
-           UThNeu_I**2/3*(H6Xp_I-H6Xm_I) &
+           + FStarPui*Vpui*DeltaVpui &
+           *min(-UThNeu_I**2*1E-30, UThNeu_I**2/3*(H6Xp_I-H6Xm_I) &
            +(Vpui**2-URel2Pu3_I)*(H5Xp_I-H5Xm_I))
 
       SourcePpu3x_I = SourcePpu3x_I &
