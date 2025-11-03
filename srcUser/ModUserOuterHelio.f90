@@ -2053,7 +2053,7 @@ contains
     ! Distribution function parameters
     real, dimension(nPui):: FStarPui_I
     real:: FStarPui, Vpui, DeltaVpui, &
-         VsubBot, VsubTop, DeltaVsub
+         VsubBot, VsubTop, DeltaVsub, NormalizedWidth
     real, dimension(nSubSample):: &
          Vsub_I, XpSwhSub_I, XmSwhSub_I, XpPuiSub_I, XmPuiSub_I
     real, dimension(Neu_:Ne4_):: Xp_I, Xm_I, XpSwh_I, XmSwh_I, FStarNeu_I
@@ -2222,6 +2222,10 @@ contains
       VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
       DeltaVsub = (VsubTop-VsubBot)/nSubSample
       do iNeu = Neu_,Ne4_
+      ! If the sample spacing is still larger than thermal speed, 
+      ! Scale each point to the width of the distribution
+      NormalizedWidth = max(1.0, DeltaVsub/UThNeu_I(iNeu))
+      
         if (3*UThNeu_I(iNeu)+0.5*DeltaVpui-abs(Vpui-URel_I(iNeu))> 0) then
           do iSubSample = 1, nSubSample
             Vsub_I(iSubSample) = VsubBot+DeltaVsub*(iSubSample-0.5)
@@ -2238,7 +2242,8 @@ contains
                *sigma_cx_sub(g0xpFSiSub_I)*g0xpFSiSub_I &
                *(exp(-XmSwhSub_I**2)-exp(-XpSwhSub_I**2)) &
                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-          SourceFxp_II(iNeu,iPui) = sum(SourceFxpSub_I)/nSubSample
+          SourceFxp_II(iNeu,iPui) = sum(SourceFxpSub_I*Vsub_I**2)/Vpui**2 &
+               /nSubSample/NormalizedWidth
         else
           call h8_scalar(Vpui/UThSwh, H8Sub)
           g0xpFSi = UthSwh*H8Sub * No2Si_V(UnitU_)
@@ -2259,7 +2264,8 @@ contains
           FStarNeuSub_I = 0.25*NumDensNeu_I(iNeu)/cPi**1.5/Vsub_I &
               /URelPu3_I(iNeu)/UThNeu_I(iNeu) &
               *(exp(-XmPuiSub_I**2) - exp(-XpPuiSub_I**2))
-          FStarNeu_I(iNeu) = sum(FStarNeuSub_I)/nSubSample
+          FStarNeu_I(iNeu) = sum(FStarNeuSub_I*Vsub_I**2)/Vpui**2 &
+               /nSubSample/NormalizedWidth
         else
           FStarNeu_I(iNeu) = 0.25*NumDensNeu_I(iNeu)/cPi**1.5/Vpui &
                 /URelPu3_I(iNeu)/UThNeu_I(iNeu) &
