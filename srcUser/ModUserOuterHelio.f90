@@ -2222,10 +2222,10 @@ contains
       VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
       DeltaVsub = (VsubTop-VsubBot)/nSubSample
       do iNeu = Neu_,Ne4_
-      ! If the sample spacing is still larger than thermal speed, 
+      ! If the sample spacing is still larger than thermal speed,
       ! Scale each point to the width of the distribution
       NormalizedWidth = max(1.0, DeltaVsub/UThNeu_I(iNeu))
-      
+
         if (3*UThNeu_I(iNeu)+0.5*DeltaVpui-abs(Vpui-URel_I(iNeu))> 0) then
           do iSubSample = 1, nSubSample
             Vsub_I(iSubSample) = VsubBot+DeltaVsub*(iSubSample-0.5)
