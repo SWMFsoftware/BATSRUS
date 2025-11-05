@@ -2053,7 +2053,7 @@ contains
     ! Distribution function parameters
     real, dimension(nPui):: FStarPui_I
     real:: FStarPui, Vpui, DeltaVpui, &
-         VsubBot, VsubTop, DeltaVsub
+         VsubBot, VsubTop, DeltaVsub, NormalizedWidth
     real, dimension(nSubSample):: &
          Vsub_I, XpSwhSub_I, XmSwhSub_I, XpPuiSub_I, XmPuiSub_I
     real, dimension(Neu_:Ne4_):: Xp_I, Xm_I, XpSwh_I, XmSwh_I, FStarNeu_I
@@ -2088,8 +2088,7 @@ contains
          UPuiDotSourceUpu3x_I, UNeuDotSourceUxpu3_I
     real, dimension(Neu_:Ne4_):: Integralpu3xU1_I, Integralpu3xU2_I, &
          Integralxpu3U1_I, Integralxpu3U2_I, &
-         g0pu3xFSi_I, g0pu3xUSi_I, g0xpu3USi_I, g0pu3xPSi_I, &
-         g0xpu3PSi_I, &
+         g0pu3xFSi_I, g0pu3xUSi_I, g0xpu3USi_I, &
          SourceRhopu3x_I, SourceRhoxpu3_I, SourcePpu3x_I, SourcePxpu3_I
     real:: g0xpu3FSi
     real, dimension(Neu_:Ne4_,3):: SourceUpu3x_ID, SourceUxpu3_ID
@@ -2164,11 +2163,11 @@ contains
     CumSumFpuiV4 = 0
     SourceRhopu3x_I = 0
     SourceRhoxpu3_I = 0
+    SourcePpu3x_I = 0
+    SourcePxpu3_I = 0
     Integralpu3xU1_I = 0
     Integralpu3xU2_I = 0
     Integralxpu3U1_I = 0
-    g0pu3xPSi_I = 0
-    g0xpu3PSi_I = 0
     SourceRhoxp_I = 0
     SourcePxp_I = 0
 
@@ -2199,7 +2198,7 @@ contains
       call h7(Xp_I,H7Xp_I)
       call h7(Xm_I,H7Xm_I)
 
-      g0pu3xFSi_I = UthNeu_I**3/12/Vpui/URelPu3_I*(H1Xp_I-H1Xm_I) &
+      g0pu3xFSi_I = UthNeu_I**3/12/Vpui/URelPu3_I*max(1E-30,H1Xp_I-H1Xm_I) &
          *No2Si_V(UnitU_)
 
       SourceFpu3x_II(:,iPui) = FStarPui*NumDensNeu_I &
@@ -2223,6 +2222,10 @@ contains
       VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
       DeltaVsub = (VsubTop-VsubBot)/nSubSample
       do iNeu = Neu_,Ne4_
+      ! If the sample spacing is still larger than thermal speed,
+      ! Scale each point to the width of the distribution
+      NormalizedWidth = max(1.0, DeltaVsub/UThNeu_I(iNeu))
+
         if (3*UThNeu_I(iNeu)+0.5*DeltaVpui-abs(Vpui-URel_I(iNeu))> 0) then
           do iSubSample = 1, nSubSample
             Vsub_I(iSubSample) = VsubBot+DeltaVsub*(iSubSample-0.5)
@@ -2239,7 +2242,8 @@ contains
                *sigma_cx_sub(g0xpFSiSub_I)*g0xpFSiSub_I &
                *(exp(-XmSwhSub_I**2)-exp(-XpSwhSub_I**2)) &
                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-          SourceFxp_II(iNeu,iPui) = sum(SourceFxpSub_I)/nSubSample
+          SourceFxp_II(iNeu,iPui) = sum(SourceFxpSub_I*Vsub_I**2)/Vpui**2 &
+               /nSubSample/NormalizedWidth
         else
           call h8_scalar(Vpui/UThSwh, H8Sub)
           g0xpFSi = UthSwh*H8Sub * No2Si_V(UnitU_)
@@ -2260,7 +2264,8 @@ contains
           FStarNeuSub_I = 0.25*NumDensNeu_I(iNeu)/cPi**1.5/Vsub_I &
               /URelPu3_I(iNeu)/UThNeu_I(iNeu) &
               *(exp(-XmPuiSub_I**2) - exp(-XpPuiSub_I**2))
-          FStarNeu_I(iNeu) = sum(FStarNeuSub_I)/nSubSample
+          FStarNeu_I(iNeu) = sum(FStarNeuSub_I*Vsub_I**2)/Vpui**2 &
+               /nSubSample/NormalizedWidth
         else
           FStarNeu_I(iNeu) = 0.25*NumDensNeu_I(iNeu)/cPi**1.5/Vpui &
                 /URelPu3_I(iNeu)/UThNeu_I(iNeu) &
@@ -2280,19 +2285,19 @@ contains
 
       Integralpu3xU1_I = Integralpu3xU1_I &
            + FStarPui*Vpui*DeltaVpui &
-           *(0.2*UThNeu_I**2*(H2Xp_I-H2Xm_I) &
+           *max(UThNeu_I**2*1E-30, 0.2*UThNeu_I**2*(H2Xp_I-H2Xm_I) &
            - (URel2Pu3_I+Vpui**2)*(H1Xp_I-H1Xm_I))
 
       Integralxpu3U1_I = Integralxpu3U1_I &
-           + FStarPui*Vpui*DeltaVpui*( &
-           UThNeu_I**2/3*(H6Xp_I-H6Xm_I) &
+           + FStarPui*Vpui*DeltaVpui &
+           *min(-UThNeu_I**2*1E-30, UThNeu_I**2/3*(H6Xp_I-H6Xm_I) &
            +(Vpui**2-URel2Pu3_I)*(H5Xp_I-H5Xm_I))
 
-      g0pu3xPSi_I = g0pu3xPSi_I &
-           + g0pu3xFSi_I*Vpui**4*DeltaVpui*FStarPui
+      SourcePpu3x_I = SourcePpu3x_I &
+           + SourceFpu3x_II(:,iPui)*Vpui**4*DeltaVpui
 
-      g0xpu3PSi_I = g0xpu3PSi_I &
-           + FStarPui*Vpui*DeltaVpui*(H7Xp_I-H7Xm_I)
+      SourcePxpu3_I = SourcePxpu3_I &
+           + SourceFxpu3_II(:,iPui)*Vpui**4*DeltaVpui
 
       SourceRhoxp_I = SourceRhoxp_I &
            + SourceFxp_II(:,iPui)*Vpui**2*DeltaVpui
@@ -2303,6 +2308,9 @@ contains
 
     SourceRhopu3x_I = 4*cPi*SourceRhopu3x_I
     SourceRhoxpu3_I = 4*cPi*SourceRhoxpu3_I
+
+    SourcePpu3x_I = 4*cPi/3*SourcePpu3x_I
+    SourcePxpu3_I = 4*cPi/3*SourcePxpu3_I
 
     Integralpu3xU1_I = Integralpu3xU1_I &
          *cPi*UThNeu_I**3/6/NumDensPui/URelPu3_I**3
@@ -2317,12 +2325,6 @@ contains
     Integralxpu3U2_I = -UThNeu_I**2
 
     g0xpu3USi_I = Integralxpu3U2_I/Integralxpu3U1_I * No2Si_V(UnitU_)
-
-    g0pu3xPSi_I = g0pu3xPSi_I &
-         *4*cPi/3*MassFluid_I(Pu3_)/PPui
-
-    g0xpu3PSi_I = g0xpu3PSi_I &
-         *cPi*UThNeu_I**3/3/NumDensPui/URelPu3_I*No2Si_V(UnitU_)
 
     SourceRhoxp_I = 4*cPi*SourceRhoxp_I
     SourcePxp_I = 4*cPi/3*SourcePxp_I
@@ -2350,11 +2352,6 @@ contains
       UNeuDotSourceUxpu3_I = UNeuDotSourceUxpu3_I &
            + UNeu_ID(:,iDim)*SourceUxpu3_ID(:,iDim)
     end do
-
-    SourcePpu3x_I = NumDensNeu_I*PPui*sigma_cx_array(g0pu3xPSi_I)*g0pu3xPSi_I &
-         /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-    SourcePxpu3_I = NumDensPui*PNeu_I*sigma_cx_array(g0xpu3PSi_I)*g0xpu3PSi_I &
-         /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
     Kpu3x_I = InvGammaMinus1*SourcePpu3x_I &
          + UPuiDotSourceUpu3x_I &
@@ -2489,9 +2486,9 @@ contains
             + Jxpu3_ID(iFluidProduced,:)
         SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + Kxpu3_I(iFLuidProduced) &
             + Kxp_I(iFluidProduced)
-        SourceCx_V(SwhP_) = GammaMinus1*(SourceCx_V(SwhEnergy_) &
-            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_))) &
-            +0.5*USwh**2*SourceCx_V(SwhRho_)
+        SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
+            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_)) &
+            +0.5*USwh**2*SourceCx_V(SwhRho_) )
 
         SourceCx_V(Pu3Rho_) = sum(I0xp_I) - I0xp_I(iFluidProduced) &
             +sum(I0xpu3_I) - I0xpu3_I(iFluidProduced) &
@@ -2503,9 +2500,9 @@ contains
         SourceCx_V(Pu3Energy_) = sum(Kxp_I) - Kxp_I(iFluidProduced) &
             +sum(Kxpu3_I) - Kxpu3_I(iFluidProduced) &
             -sum(Kpu3x_I)
-        SourceCx_V(Pu3P_) = GammaMinus1*(SourceCx_V(Pu3Energy_) &
-            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_))) &
-            +0.5*UPui**2*SourceCx_V(Pu3Rho_)
+        SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
+            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+            +0.5*UPui**2*SourceCx_V(Pu3Rho_) )
         SourceCx_V(PuiFirst_:PuiLast_) = sum(SourceFxp_II,1) &
             -SourceFxp_II(iFluidProduced,:) &
             +sum(SourceFxpu3_II,1) - SourceFxpu3_II(iFluidProduced,:) &
@@ -2516,16 +2513,16 @@ contains
         SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_ID,1) &
             + sum(Jxp_ID,1) + sum(Jxpu3_ID,1)
         SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + sum(Kxpu3_I) + sum(Kxp_I)
-        SourceCx_V(SwhP_) = GammaMinus1*(SourceCx_V(SwhEnergy_) &
-            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_))) &
-            +0.5*USwh**2*SourceCx_V(SwhRho_)
+        SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
+            -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_)) &
+            +0.5*USwh**2*SourceCx_V(SwhRho_) )
 
         SourceCx_V(Pu3Rho_) =  -sum(I0pu3x_I)
         SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = -sum(Jpu3x_ID,1)
         SourceCx_V(Pu3Energy_) = -sum(Kpu3x_I)
-        SourceCx_V(Pu3P_) = GammaMinus1*(SourceCx_V(Pu3Energy_) &
-            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_))) &
-            +0.5*UPui**2*SourceCx_V(Pu3Rho_)
+        SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
+            -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+            +0.5*UPui**2*SourceCx_V(Pu3Rho_) )
         SourceCx_V(PuiFirst_:PuiLast_) = -sum(SourceFpu3x_II,1)
 
     end if
@@ -2554,8 +2551,8 @@ contains
     do iNeu = Neu_,Ne4_
         call select_fluid(iNeu)
         SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy) &
-            -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz))) &
-            +0.5*UPui**2*SourceCx_V(iRho)
+            -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz)) &
+            +0.5*UNeu_I(iNeu)**2*SourceCx_V(iRho) )
     end do
   contains
     !==========================================================================

@@ -3308,7 +3308,7 @@ contains
       integer :: iTypeBC
       real    :: BetaProlongOrig = 0.0
       logical :: IsFirstCheck = .true.
-      character(len(NameVarRestart_V)) :: NameVarTemp_V(100) = ''
+      character(len(NameVarRestart_V)) :: NameVarTemp_V(150) = ''
       ! Check for some combinations of things that cannot be accepted as input
       !------------------------------------------------------------------------
       if (iProc==0) write (*,*) ' '
