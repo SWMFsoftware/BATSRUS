@@ -407,7 +407,7 @@ contains
             Epot_DGB(:,:,:,:,iBlock) = Efield_DGB(:,:,:,:,iBlock)
 
        ! Epot = grad(Potential)
-       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), &
+       call calc_gradient(iBlock, -Potential_GB(:,:,:,iBlock), &
             nG, Epot_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
     end do
 
