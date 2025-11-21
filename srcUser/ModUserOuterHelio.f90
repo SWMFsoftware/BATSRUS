@@ -2519,23 +2519,6 @@ contains
       SourceFpu3x_II = 0
     end if
 
-    if (DoTest) then
-      write(*,*) "I0px_I   = ", I0px_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-      write(*,*) "I0xp_I   = ", I0xp_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-      write(*,*) "I0pu3x_I = ", I0pu3x_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-      write(*,*) "I0xpu3_I = ", I0xpu3_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-
-      write(*,*) "Jpx_ID   = ", Jpx_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-      write(*,*) "Jxp_ID   = ", Jxp_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-      write(*,*) "Jpu3x_ID = ", Jpu3x_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-      write(*,*) "Jxpu3_ID = ", Jxpu3_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-
-      write(*,*) "Kpx_I   = ", Kpx_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-      write(*,*) "Kxp_I   = ", Kxp_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-      write(*,*) "Kpu3x_I = ", Kpu3x_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-      write(*,*) "Kxpu3_I = ", Kxpu3_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-    end if
-
     ! PUIs are created in the solar wind (regions 2,3)
     ! and destroyed in the ISM (regions 1,4)
     ! in region i, cx with neutral fluid i never produces PUIs
@@ -2620,7 +2603,6 @@ contains
             -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz)) &
             +0.5*UNeu_I(iNeu)**2*SourceCx_V(iRho) )
     end do
-    call test_stop(NameSub, DoTest, iBlock, i, j, k)
   contains
     !==========================================================================
     real function sigma_cx(URelSi)
