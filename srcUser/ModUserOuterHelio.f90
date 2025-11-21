@@ -2056,7 +2056,8 @@ contains
          VsubBot, VsubTop, DeltaVsub, NormalizedWidth
     real, dimension(nSubSample):: &
          Vsub_I, XpSwhSub_I, XmSwhSub_I, XpPuiSub_I, XmPuiSub_I
-    real, dimension(Neu_:Ne4_):: Xp_I, Xm_I, XpSwh_I, XmSwh_I, FStarNeu_I
+    real, dimension(Neu_:Ne4_):: Xp_I, Xm_I, XpSwh_I, XmSwh_I, FStarNeu_I, &
+         FStarNeuVNeu2_I
     real:: CumSumFpuiV1, CumSumFpuiV2, CumSumFpuiV3, CumSumFpuiV4
 
     ! Helper functions: h(x)
@@ -2069,7 +2070,7 @@ contains
     ! For SWH
     real, dimension(Neu_:Ne4_) :: &
          I0xp_I, I0px_I, Kxp_I, Kpx_I,  &
-         UmeanDotURel_I, UPuiDotJxp_I
+         UmeanDotURel_I, UNeuDotJxp_I
     real, dimension(Neu_:Ne4_):: IntegralpxRho_I, IntegralpxRho1_I, &
          IntegralpxRho2_I, &
          IntegralpxU_I, IntegralpxU1_I, IntegralpxU2_I, &
@@ -2079,8 +2080,10 @@ contains
     real:: g0xpFSi
     real:: g0xpFSiSub_I(nSubSample)
     real, dimension(Neu_:Ne4_,3):: Jxp_ID, Jpx_ID
-    real, dimension(nSubSample):: SourceFxpSub_I, FStarNeuSub_I
-    real, dimension(Neu_:Ne4_, nPui):: SourceFxp_II
+    real, dimension(nSubSample):: &
+         SourceFxpSub_I, SourceFV2xpSub_I, FStarNeuSub_I, FStarNeuVNeu2Sub_I
+    real, dimension(Neu_:Ne4_, nPui):: &
+         SourceFxp_II, SourceFV2xp_II
 
     ! For PU3
     real, dimension(Neu_:Ne4_):: &
@@ -2093,7 +2096,8 @@ contains
     real:: g0xpu3FSi
     real, dimension(Neu_:Ne4_,3):: SourceUpu3x_ID, SourceUxpu3_ID
     real, dimension(Neu_:Ne4_,3) :: Jxpu3_ID, Jpu3x_ID
-    real, dimension(Neu_:Ne4_,nPui):: SourceFpu3x_II, SourceFxpu3_II
+    real, dimension(Neu_:Ne4_,nPui):: &
+         SourceFpu3x_II, SourceFxpu3_II, SourceFxpu3P_II
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_charge_exchange_source_pui'
@@ -2244,6 +2248,19 @@ contains
                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
           SourceFxp_II(iNeu,iPui) = sum(SourceFxpSub_I*Vsub_I**2)/Vpui**2 &
                /nSubSample/NormalizedWidth
+
+          SourceFV2xpSub_I = &
+               0.25*NumDensSwh*NumDensNeu_I(iNeu) &
+               /cPi**1.5/UThNeu_I(iNeu) &
+               *sigma_cx_sub(g0xpFSiSub_I)*g0xpFSiSub_I &
+               *( (UThNeu_I(iNeu)**2/Vsub_I/URel_I(iNeu) &
+               +URel_I(iNeu)/Vsub_I + Vsub_I/URel_I(iNeu)) &
+               *(exp(-XmSwhSub_I**2)-exp(-XpSwhSub_I**2)) &
+               - 2.*(exp(-XmSwhSub_I**2)-exp(-XpSwhSub_I**2))) &
+               /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+          SourceFV2xp_II(iNeu,iPui) = &
+               sum(SourceFV2xpSub_I*Vsub_I**2)/Vpui**2 &
+               /nSubSample/NormalizedWidth
         else
           call h8_scalar(Vpui/UThSwh, H8Sub)
           g0xpFSi = UthSwh*H8Sub * No2Si_V(UnitU_)
@@ -2252,6 +2269,16 @@ contains
                 /cPi**1.5/Vpui/URel_I(iNeu)/UThNeu_I(iNeu)*sigma_cx(g0xpFSi) &
                 *g0xpFSi*(exp(-XmSwh_I(iNeu)**2)-exp(-XpSwh_I(iNeu)**2)) &
                 /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+          SourceFV2xp_II(iNeu,iPui) = &
+               0.25*NumDensSwh*NumDensNeu_I(iNeu) &
+               /cPi**1.5/UThNeu_I(iNeu) &
+               *sigma_cx(g0xpFSi)*g0xpFSi &
+               *( (UThNeu_I(iNeu)**2/Vpui/URel_I(iNeu) &
+               +URel_I(iNeu)/Vpui + Vpui/URel_I(iNeu)) &
+               *(exp(-XmSwh_I(iNeu)**2)-exp(-XpSwh_I(iNeu)**2)) &
+               - 2.*(exp(-XmSwh_I(iNeu)**2)-exp(-XpSwh_I(iNeu)**2))) &
+               /Si2No_V(UnitN_)/Si2No_V(UnitT_)
         end if
         if (3*UThNeu_I(iNeu)+0.5*DeltaVpui-abs(Vpui-URelPu3_I(iNeu))> 0) then
           do iSubSample = 1, nSubSample
@@ -2266,14 +2293,36 @@ contains
               *(exp(-XmPuiSub_I**2) - exp(-XpPuiSub_I**2))
           FStarNeu_I(iNeu) = sum(FStarNeuSub_I*Vsub_I**2)/Vpui**2 &
                /nSubSample/NormalizedWidth
+
+          FStarNeuVneu2Sub_I = 0.25*NumDensNeu_I(iNeu) &
+               /cPi**1.5/UThNeu_I(iNeu) &
+               *( (UThNeu_I(iNeu)**2/Vsub_I/URelPu3_I(iNeu) &
+               +URelPu3_I(iNeu)/Vsub_I + Vsub_I/URelPu3_I(iNeu)) &
+               *(exp(-XmPuiSub_I**2)-exp(-XpPuiSub_I**2)) &
+               - 2.*(exp(-XmPuiSub_I**2)-exp(-XpPuiSub_I**2)))
+
+          FStarNeuVneu2_I(iNeu) = sum(FStarNeuVneu2Sub_I*Vsub_I**2)/Vpui**2 &
+               /nSubSample/NormalizedWidth
+
         else
           FStarNeu_I(iNeu) = 0.25*NumDensNeu_I(iNeu)/cPi**1.5/Vpui &
                 /URelPu3_I(iNeu)/UThNeu_I(iNeu) &
                 *(exp(-Xm_I(iNeu)**2) - exp(-Xp_I(iNeu)**2))
+
+          FStarNeuVneu2_I(iNeu) = 0.25*NumDensNeu_I(iNeu) &
+               /cPi**1.5/UThNeu_I(iNeu) &
+               *( (UThNeu_I(iNeu)**2/Vpui/URelPu3_I(iNeu) &
+               +URelPu3_I(iNeu)/Vpui + Vpui/URelPu3_I(iNeu)) &
+               *(exp(-Xm_I(iNeu)**2)-exp(-Xp_I(iNeu)**2)) &
+               - 2.*(exp(-Xm_I(iNeu)**2)-exp(-Xp_I(iNeu)**2)))
         end if
       end do
 
       SourceFxpu3_II(:,iPui) = NumDensPui*FStarNeu_I &
+           *sigma_cx(g0xpu3FSi)*g0xpu3FSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      SourceFxpu3P_II(:,iPui) = NumDensPui*FStarNeuVNeu2_I &
            *sigma_cx(g0xpu3FSi)*g0xpu3FSi &
            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
@@ -2297,13 +2346,13 @@ contains
            + SourceFpu3x_II(:,iPui)*Vpui**4*DeltaVpui
 
       SourcePxpu3_I = SourcePxpu3_I &
-           + SourceFxpu3_II(:,iPui)*Vpui**4*DeltaVpui
+           + SourceFxpu3P_II(:,iPui)*Vpui**2*DeltaVpui
 
       SourceRhoxp_I = SourceRhoxp_I &
            + SourceFxp_II(:,iPui)*Vpui**2*DeltaVpui
 
       SourcePxp_I = SourcePxp_I &
-           + SourceFxp_II(:,iPui)*Vpui**4*DeltaVpui
+           + SourceFV2xp_II(:,iPui)*Vpui**2*DeltaVpui
     end do
 
     SourceRhopu3x_I = 4*cPi*SourceRhopu3x_I
@@ -2394,7 +2443,7 @@ contains
     I0px_I = 2.*NumDensSwh*NumDensNeu_I &
             *sqrt(InvUTh2Sum_I/cPi)/URel_I*IntegralpxRho_I
 
-    UPuiDotJxp_I = 0
+    UNeuDotJxp_I = 0
     do iDim = X_, Z_
       Jpx_ID(:,iDim) = NumDensSwh*NumDensNeu_I &
             *sqrt(InvUTh2Sum_I/cPi)/URel_I &
@@ -2406,8 +2455,8 @@ contains
             *( 2*UMean_ID(:,iDim)*IntegralpxRho_I &
             -UThNeu_I**2*URel_ID(:,iDim)/URel2_I*IntegralpxU_I)
 
-      UPuiDotJxp_I = UPuiDotJxp_I &
-           + UPui_D(iDim)*Jxp_ID(:,iDim)
+      UNeuDotJxp_I = UNeuDotJxp_I &
+           + UNeu_ID(:,iDim)*Jxp_ID(:,iDim)
     end do
 
     UmeanDotUrel_I = sum(Umean_ID*URel_ID, 2)
@@ -2421,7 +2470,7 @@ contains
             + InvUTh2Sum_I**2*UThSwh**4*IntegralpxP_I)
 
     Kxp_I = InvGammaMinus1*SourcePxp_I &
-         + UPuiDotJxp_I - 0.5*UPui**2*SourceRhoxp_I
+         + UNeuDotJxp_I - 0.5*UNeu_I**2*SourceRhoxp_I
 
     ! Only use the source terms requested by the user
     if (UseSource_I(Swh_)) then
@@ -2468,6 +2517,23 @@ contains
       Kxpu3_I = 0
       SourceFxpu3_II = 0
       SourceFpu3x_II = 0
+    end if
+
+    if (DoTest) then
+      write(*,*) "I0px_I   = ", I0px_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+      write(*,*) "I0xp_I   = ", I0xp_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+      write(*,*) "I0pu3x_I = ", I0pu3x_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+      write(*,*) "I0xpu3_I = ", I0xpu3_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+
+      write(*,*) "Jpx_ID   = ", Jpx_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+      write(*,*) "Jxp_ID   = ", Jxp_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+      write(*,*) "Jpu3x_ID = ", Jpu3x_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+      write(*,*) "Jxpu3_ID = ", Jxpu3_ID(:,x_)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+
+      write(*,*) "Kpx_I   = ", Kpx_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+      write(*,*) "Kxp_I   = ", Kxp_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+      write(*,*) "Kpu3x_I = ", Kpu3x_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+      write(*,*) "Kxpu3_I = ", Kxpu3_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
     end if
 
     ! PUIs are created in the solar wind (regions 2,3)
@@ -2550,10 +2616,11 @@ contains
 
     do iNeu = Neu_,Ne4_
         call select_fluid(iNeu)
-        SourceCx_V(iP_I(iNeu)) = GammaMinus1*(SourceCx_V(iEnergy) &
+        SourceCx_V(iP) = GammaMinus1*(SourceCx_V(iEnergy) &
             -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz)) &
             +0.5*UNeu_I(iNeu)**2*SourceCx_V(iRho) )
     end do
+    call test_stop(NameSub, DoTest, iBlock, i, j, k)
   contains
     !==========================================================================
     real function sigma_cx(URelSi)
