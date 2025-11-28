@@ -1016,7 +1016,7 @@ contains
   !============================================================================
   subroutine representative_to_wave_energy
     ! Convert dimensionless representative functions to Alfven wave turbulence
-    ! energy densities. Switch of the logical IsOnAwRepresentative
+    ! energy densities. Switch off the logical IsOnAwRepresentative
     use BATL_lib, ONLY: Unused_B, Used_GB, nBlock
     use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
