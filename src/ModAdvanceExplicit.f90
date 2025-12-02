@@ -164,12 +164,12 @@ contains
                         RightState_VX(:,1, 1:nJ, 1:nK),       &
                         LeftState_VX(:,1, 1:nJ, 1:nK),        &
                         DtIn = Dt*No2Si_V(UnitT_))
-                elseif(iStage > 1)then
-                   call advance_threaded_block_expl(iBlock, iStage, &
-                        RightState_VX(:, 1, 1:nJ, 1:nK),       &
-                        LeftState_VX(:, 1, 1:nJ, 1:nK) ,       &
-                        Dt_II = Cfl*DtMax_CB(1,1:nJ,1:nK,iBlock)*&
-                        No2Si_V(UnitT_))
+                ! elseif(iStage > 1)then
+                !   call advance_threaded_block_expl(iBlock, iStage, &
+                !        RightState_VX(:, 1, 1:nJ, 1:nK),       &
+                !        LeftState_VX(:, 1, 1:nJ, 1:nK) ,       &
+                !        Dt_II = Cfl*DtMax_CB(1,1:nJ,1:nK,iBlock)*&
+                !        No2Si_V(UnitT_))
                 else
                    call advance_threaded_block_expl(iBlock, iStage, &
                         RightState_VX(:, 1, 1:nJ, 1:nK),       &
