@@ -388,7 +388,7 @@ contains
        NameFile = trim(NameSnapshot)//".batl"
     else
        if(UseMpiIO) then
-          if(nProc < 10000) then 
+          if(nProc < 10000) then
              NameFile = trim(NameSnapshot)//'_pe0000.idl'
           elseif(nProc < 100000) then
              NameFile = trim(NameSnapshot)//'_pe00000.idl'
