@@ -388,7 +388,13 @@ contains
        NameFile = trim(NameSnapshot)//".batl"
     else
        if(UseMpiIO) then
-          NameFile = trim(NameSnapshot)//'_pe0000.idl'
+          if(nProc < 10000) then
+             NameFile = trim(NameSnapshot)//'_pe0000.idl'
+          elseif(nProc < 100000) then
+             NameFile = trim(NameSnapshot)//'_pe00000.idl'
+          else
+             NameFile = trim(NameSnapshot)//'_pe000000.idl'
+          end if
           call open_file(FILE=NameFile, iComm=iComm, iUnitMpi=iUnit)
        else
           ! For IDL just open one file
@@ -479,7 +485,7 @@ contains
 
        ! PlotVarBody_V can be different for each block, for example, when
        ! there are 2 bodies in the simulation. So we need to save and
-      ! reuse them later.
+       ! reuse them later.
        PlotVarBody_VB(:,iBlock) = PlotVarBody_V
 
        ! Copy PlotVar_GV for each block into a single array
