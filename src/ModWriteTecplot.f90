@@ -160,7 +160,14 @@ contains
     end if
 
     nOffset = 0
-    if(present(nCellOffset)) nOffset = nCellOffset*nCharPerLine
+    if(present(nCellOffset)) then
+       ! Note: Since nCellOffset is int4 while nOffset is int8, the following
+       ! multiplication can be overflowed when nCellOffset is large.
+       ! nOffset = nCellOffset*nCharPerLine
+       ! To avoid the overflow, we do it in two steps:
+       nOffset = nCellOffset
+       nOffset = nOffset*nCharPerLine
+    end if
   end subroutine write_tecplot_init
   !============================================================================
   subroutine write_tecplot_count(nCell)
@@ -611,7 +618,12 @@ contains
        nOffset = 0
        if(nStage==2 .and. iStage==2) then
           ! Offset in the file for this processor
-          nOffset = nBrickStart*lRecConnect
+          ! Note: Since nBrickStart is int4 while nOffset is int8, using
+          ! nOffset = nBrickStart*lRecConnect can be overflowed when nBrickStart
+          ! is large.
+          ! To avoid the overflow, we do it in two steps:
+          nOffset = nBrickStart
+          nOffset = nOffset*lRecConnect
        end if
 
        nPass = 2
