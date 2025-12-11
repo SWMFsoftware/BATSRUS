@@ -619,7 +619,7 @@ contains
        if(nStage==2 .and. iStage==2) then
           ! Offset in the file for this processor
           ! Note: Since nBrickStart is int4 while nOffset is int8, using
-          ! nOffset = nBrickStart*lRecConnect can be overflowed when 
+          ! nOffset = nBrickStart*lRecConnect can be overflowed when
           ! nBrickStart is large.
           ! To avoid the overflow, we do it in two steps:
           nOffset = nBrickStart
