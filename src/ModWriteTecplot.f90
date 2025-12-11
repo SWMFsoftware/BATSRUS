@@ -7,7 +7,7 @@ module ModWriteTecplot
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, nProc, iComm, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nIjk_D, MaxBlock, &
-       nI, nJ, nK
+       nI, nJ, nK, Unused_B
   use ModBatsrusUtility, ONLY: get_date_time, get_time_string, stop_mpi
 
   use ModKind, ONLY: Int1_
@@ -180,6 +180,7 @@ contains
 
     nCell = 0
     do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
           nCell = nCell + 1
