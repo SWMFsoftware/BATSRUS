@@ -197,6 +197,7 @@ contains
     iMark_GI = 0
     iCount = 1
     do iBlock = iBlockMin, iBlockMax
+       if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(CellIndex_GB(i,j,k,iBlock) == 0) CYCLE
           iMark_GI(i,j,k,iBlock-iBlockMin+1) = iCount
