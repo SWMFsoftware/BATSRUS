@@ -479,6 +479,7 @@ contains
          VarsGhostFace_V(Pu3Rho_)    = Pu3Rho
          VarsGhostFace_V(Pu3P_)      = pPUI  ! Pu3P ???
          VarsGhostFace_V(Pu3Ux_:Pu3Uz_) = matmul(XyzSph_DD, VPUIsph_D)
+         VarsGhostFace_V(LevelHP_) = SwhRho + Pu3Rho
       end if
 
       if(PuiFirst_ > 1) call set_pui_state(VarsGhostFace_V)
@@ -856,6 +857,10 @@ contains
           end if
           State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
                State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
+          if(UseColdCloud .and. r < rBody .or. r < 100.0) &
+               State_VGB(LevelHP_,i,j,k,iBlock) = &
+               State_VGB(SWHRho_,i,j,k,iBlock) &
+               + State_VGB(Pu3Rho_,i,j,k,iBlock)
        end if
 
        if(PuiFirst_ > 1) call set_pui_state(State_VGB(:,i,j,k,iBlock))
@@ -1089,6 +1094,9 @@ contains
               State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
          ! PUI pressure
          State_VGB(Pu3P_,i,j,k,iBlock) = Pu3P * (rBody/r)**(2*Gamma)
+         State_VGB(LevelHP_,i,j,k,iBlock) = &
+               State_VGB(SWHRho_,i,j,k,iBlock) &
+               + State_VGB(Pu3Rho_,i,j,k,iBlock)
       end if
 
     end subroutine calc_time_dep_sw
