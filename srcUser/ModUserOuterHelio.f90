@@ -2115,8 +2115,8 @@ contains
     ! PUI distribution function (Star for pitch-angle averaged)
     FStarPui_I = State_V(PuiFirst_:PuiLast_)
 
-    NumDensPui = 4*cPi*sum(FStarPui_I*Vpui_I**2*DeltaVpui_I)
-    PPui = 4*cPi/3*MassFluid_I(Pu3_)*sum(FStarPui_I*Vpui_I**4*DeltaVpui_I)
+    NumDensPui = NumDensSi_I(Pu3_)*Si2No_V(UnitN_)
+    PPui = State_V(iP_I(Pu3_))
 
     NumDensSwh = NumDensSi_I(Swh_)*Si2No_V(UnitN_)
 
