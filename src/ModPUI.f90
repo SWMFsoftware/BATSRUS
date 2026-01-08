@@ -131,12 +131,12 @@ contains
        State_V(PuiFirst_+iPui1-1) = &
             (3*Ppui - RhoPui*Vpui_I(iPui2)**2) &
             /(Vpui_I(iPui1)**2 - Vpui_I(iPui2)**2) &
-            /(4*cPi*Vpui_I(iPui1)**2*DeltaVpui_I(iPui1)) 
+            /(4*cPi*Vpui_I(iPui1)**2*DeltaVpui_I(iPui1))
 
        State_V(PuiFirst_+iPui2-1) = &
              (3*Ppui - RhoPui*Vpui_I(iPui1)**2) &
             /(Vpui_I(iPui2)**2 - Vpui_I(iPui1)**2) &
-            /(4*cPi*Vpui_I(iPui2)**2*DeltaVpui_I(iPui2)) 
+            /(4*cPi*Vpui_I(iPui2)**2*DeltaVpui_I(iPui2))
     endif
 
     ! Make sure that density and pressure match the new distribution
