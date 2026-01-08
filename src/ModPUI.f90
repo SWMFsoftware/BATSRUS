@@ -116,7 +116,7 @@ contains
        Ppui = State_V(iP_I(Pu3_))
     end if
 
-    Vpui = sqrt(2*Ppui/RhoPui)
+    Vpui = sqrt(3*Ppui/RhoPui)
 
     iPui1 = floor(log(Vpui/Vpui_I(1))/DeltaLogVpui) +1
     iPui2 = iPui1+1
