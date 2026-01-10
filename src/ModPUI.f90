@@ -90,14 +90,15 @@ contains
   subroutine set_pui_state(State_V, StateRead_V, iVarMatch_V)
 
     use ModNumConst, ONLY: cPi
-    use ModMultiFluid, ONLY: iRho_I, iP_I
+    use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
     use ModVarIndexes, ONLY: nVar
 
     real, intent(inout) :: State_V(nVar)
     real, optional, intent(in) :: StateRead_V(:)
     integer, optional, intent(in) :: iVarMatch_V(nVar)
 
-    real :: RhoPui, Tpui
+    real :: RhoPui, Ppui, Vpui
+    integer :: iPui1, iPui2
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_pui_state'
@@ -109,14 +110,40 @@ contains
 
     if(present(StateRead_V))then
        RhoPui = StateRead_V(iVarMatch_V(iRho_I(Pu3_)))
-       Tpui = StateRead_V(iVarMatch_V(iP_I(Pu3_)))/RhoPui
+       Ppui = StateRead_V(iVarMatch_V(iP_I(Pu3_)))
     else
        RhoPui = State_V(iRho_I(Pu3_))
-       Tpui = State_V(iP_I(Pu3_))/RhoPui
+       Ppui = State_V(iP_I(Pu3_))
     end if
 
-    State_V(PuiFirst_:PuiLast_) = &
-         exp(-0.5*Vpui_I**2/Tpui)*RhoPui/(2.0*cPi*Tpui)**1.5
+    Vpui = sqrt(3*Ppui/RhoPui)
+
+    iPui1 = floor(log(Vpui/Vpui_I(1))/DeltaLogVpui) +1
+    iPui2 = iPui1+1
+
+    ! Set all bins to zero except for a shell
+    State_V(PuiFirst_:PuiLast_) = 0
+    if (iPui1 < 1) then
+       State_V(PuiFirst_) = RhoPui/(4*cPi*Vpui_I(1)**2*DeltaVpui_I(1))
+    else if (iPui2 > nPui) then
+       State_V(PuiLast_) = RhoPui/(4*cPi*Vpui_I(nPui)**2*DeltaVpui_I(nPui))
+    else
+       State_V(PuiFirst_+iPui1-1) = &
+            (3*Ppui - RhoPui*Vpui_I(iPui2)**2) &
+            /(Vpui_I(iPui1)**2 - Vpui_I(iPui2)**2) &
+            /(4*cPi*Vpui_I(iPui1)**2*DeltaVpui_I(iPui1))
+
+       State_V(PuiFirst_+iPui2-1) = &
+             (3*Ppui - RhoPui*Vpui_I(iPui1)**2) &
+            /(Vpui_I(iPui2)**2 - Vpui_I(iPui1)**2) &
+            /(4*cPi*Vpui_I(iPui2)**2*DeltaVpui_I(iPui2))
+    endif
+
+    ! Make sure that density and pressure match the new distribution
+    State_V(iRho_I(Pu3_)) = &
+         4*cPi*sum(State_V(PuiFirst_:PuiLast_)*Vpui_I**2*DeltaVpui_I)
+    State_V(iP_I(Pu3_)) = &
+         4*cPi/3*sum(State_V(PuiFirst_:PuiLast_)*Vpui_I**4*DeltaVpui_I)
 
   end subroutine set_pui_state
   !============================================================================
