@@ -2382,8 +2382,15 @@ contains
     SourceRhoxp_I = 4*cPi*SourceRhoxp_I
     SourcePxp_I = 4*cPi/3*SourcePxp_I
 
-    I0pu3x_I = SourceRhopu3x_I
+    I0pu3x_I = SourceRhoxpu3_I
     I0xpu3_I = SourceRhoxpu3_I
+
+    do iNeu = Neu_, Ne4_
+      SourceFpu3x_II(iNeu,:) = SourceFpu3x_II(iNeu,:) &
+           *SourceRhoxpu3_I(iNeu)/SourceRhopu3x_I(iNeu)
+    end do
+
+    SourcePpu3x_I = SourcePpu3x_I*SourceRhoxpu3_I/SourceRhopu3x_I
 
     UPuiDotSourceUpu3x_I = 0
     UNeuDotSourceUxpu3_I = 0
@@ -2444,8 +2451,7 @@ contains
             /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
     I0xp_I = SourceRhoxp_I
-    I0px_I = 2.*NumDensSwh*NumDensNeu_I &
-            *sqrt(InvUTh2Sum_I/cPi)/URel_I*IntegralpxRho_I
+    I0px_I = SourceRhoxp_I
 
     UNeuDotJxp_I = 0
     do iDim = X_, Z_
