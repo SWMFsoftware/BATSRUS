@@ -2069,8 +2069,8 @@ contains
     real:: CumSumFpuiV1, CumSumFpuiV2, CumSumFpuiV3, CumSumFpuiV4
 
     ! Helper functions: h(x)
-    real, dimension(Neu_:Ne4_):: H1Xp_I, H1Xm_I, H2Xp_I, H2Xm_I, H3Xp_I, &
-         H3Xm_I, H4Xp_I, H4Xm_I, H5Xp_I, H5Xm_I, H6Xp_I, H6Xm_I, H7Xp_I, &
+    real, dimension(Neu_:Ne4_):: H1Xp_I, H1Xm_I, H2Xp_I, H2Xm_I, &
+         H5Xp_I, H5Xm_I, H6Xp_I, H6Xm_I, H7Xp_I, &
          H7Xm_I, H8XSwh_I, H9XSwh_I, H10XSwh_I, H11XSwh_I
     real:: H8Sub
     real:: H8Sub_I(nSubSample)
@@ -2199,10 +2199,6 @@ contains
       call h1(Xm_I,H1Xm_I)
       call h2(Xp_I,H2Xp_I)
       call h2(Xm_I,H2Xm_I)
-      call h3(Xp_I,H3Xp_I)
-      call h3(Xm_I,H3Xm_I)
-      call h4(Xp_I,H4Xp_I)
-      call h4(Xm_I,H4Xm_I)
       call h5(Xp_I,H5Xp_I)
       call h5(Xm_I,H5Xm_I)
       call h6(Xp_I,H6Xp_I)
@@ -2386,8 +2382,15 @@ contains
     SourceRhoxp_I = 4*cPi*SourceRhoxp_I
     SourcePxp_I = 4*cPi/3*SourcePxp_I
 
-    I0pu3x_I = SourceRhopu3x_I
+    I0pu3x_I = SourceRhoxpu3_I
     I0xpu3_I = SourceRhoxpu3_I
+
+    do iNeu = Neu_, Ne4_
+      SourceFpu3x_II(iNeu,:) = SourceFpu3x_II(iNeu,:) &
+           *SourceRhoxpu3_I(iNeu)/SourceRhopu3x_I(iNeu)
+    end do
+
+    SourcePpu3x_I = SourcePpu3x_I*SourceRhoxpu3_I/SourceRhopu3x_I
 
     UPuiDotSourceUpu3x_I = 0
     UNeuDotSourceUxpu3_I = 0
@@ -2448,8 +2451,7 @@ contains
             /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
     I0xp_I = SourceRhoxp_I
-    I0px_I = 2.*NumDensSwh*NumDensNeu_I &
-            *sqrt(InvUTh2Sum_I/cPi)/URel_I*IntegralpxRho_I
+    I0px_I = SourceRhoxp_I
 
     UNeuDotJxp_I = 0
     do iDim = X_, Z_
@@ -2656,20 +2658,6 @@ contains
       !------------------------------------------------------------------------
       H2_I = 2/sqrt(cPi)*(1.+X_I**2+3*X_I**4)*exp(-X_I**2) &
            + (5.*X_I**3+6.*X_I**5)*erf(X_I)
-    end subroutine
-    !==========================================================================
-    subroutine h3(X_I, H3_I)
-      real, intent(in):: X_I(Neu_:Ne4_)
-      real, intent(out):: H3_I(Neu_:Ne4_)
-      !------------------------------------------------------------------------
-      H3_I = 1.5*X_I**2 + 0.5*X_I**4
-    end subroutine
-    !==========================================================================
-    subroutine h4(X_I, H4_I)
-      real, intent(in):: X_I(Neu_:Ne4_)
-      real, intent(out):: H4_I(Neu_:Ne4_)
-      !------------------------------------------------------------------------
-      H4_I = 0.75*X_I**4 + X_I**6/3.
     end subroutine
     !==========================================================================
     subroutine h5(X_I, H5_I)
