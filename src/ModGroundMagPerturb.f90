@@ -1673,7 +1673,7 @@ contains
 
       ! Based on the definitions at
       ! https://supermag.jhuapl.edu/indices/?tab=description
- 
+
       use ModMain, ONLY: nStep
       use ModUtilities, ONLY: flush_unit
 
@@ -1725,7 +1725,7 @@ contains
       SuperIndex_I(3) = SuperIndex_I(2) - SuperIndex_I(1)
       ! SMR = average of dBN/cos(Lat)
       SuperIndex_I(4) = SuperIndex_I(4)/nSMR
-      
+
       ! Write date, time and indexes
       call get_date_time(iTime_I)
       write(iUnitSupermag, '(i7.7, i5.4, 5(i3.2), i4.3, 4f10.2)') &
