@@ -109,8 +109,8 @@ module ModGroundMagPerturb
   character(len=*), parameter :: NameKpVars = &
        'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
        'K_00 K_01 K_02 K_03 K_04 K_05 K_06 K_07 K_08 K_09 K_10 K_11 '
-  character(len=*), parameter :: NameAeVars  = 'AL AU AE AO '
-  character(len=*), parameter :: NameSuperVars = 'SML SMU SME SMO '
+  character(len=*), parameter :: NameAeVars  = 'AL AU AE AO'
+  character(len=*), parameter :: NameSuperVars = 'SML SMU SME SMR'
 
 contains
   !============================================================================
@@ -474,7 +474,7 @@ contains
 
        write(iUnitSupermag, '(a)') 'Synthetic SuperMAG Indices'
        write(iUnitSupermag, '(a)') &
-            'it year mo dy hr mn sc msc '//trim(NameSuperVars)
+            'it year mo dy hr mn sc msc '//NameSuperVars
        call flush_unit(iUnitSupermag)
     end if
 
@@ -1671,15 +1671,18 @@ contains
     !==========================================================================
     subroutine write_supermag
 
+      ! Based on the definitions at
+      ! https://supermag.jhuapl.edu/indices/?tab=description
+
       use ModMain, ONLY: nStep
       use ModUtilities, ONLY: flush_unit
-      use ModMpi
 
       integer, parameter:: nVar = 17
-      integer :: iLon, iLat
+
+      integer :: iLon, iLat, nSMR
       integer :: iTime_I(7)
       real    :: SuperIndex_I(4)
-      real    :: LonLat_D(2)
+      real    :: SinLat, Sin40, Sin50, Sin80
 
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'write_supermag'
@@ -1688,38 +1691,45 @@ contains
 
       if(iProc > 0) RETURN ! Write only on head node.
 
-      SuperIndex_I(1) =  99999.
-      SuperIndex_I(2) = -99999.
+      SuperIndex_I(1) =  99999. ! SML
+      SuperIndex_I(2) = -99999. ! SMU
+      SuperIndex_I(4) = 0.0     ! SMR
+      nSMR = 0                  ! number of stations used for SMR
 
-      ! Find SML/SMU indices in latutude range.
+      Sin40 = sin(40*cDegToRad)
+      Sin50 = sin(50*cDegToRad)
+      Sin80 = sin(80*cDegToRad)
+
+      ! Set SML, SMU and SMR indices
       iMag = 0
       do iLat = 1, nGridLat0
          do iLon = 1, nGridLon0
             iMag = iMag + 1
-            MagOut_VII( 1: 3,iLon,iLat) = dBTotal_DI(:,iMag)
-            call xyz_to_lonlat(MagSmXyz_DI(:,iMag), LonLat_D)
-            LonLat_D = LonLat_D*cRadToDeg
-            if(LonLat_D(2) < 80.0 .and. LonLat_D(2) > 40.0)then
-               if(dBTotal_DI(1,iMag) < SuperIndex_I(1)) &  ! SML Index
-                    SuperIndex_I(1) = dBTotal_DI(1,iMag)
-               if(dBTotal_DI(1,iMag) > SuperIndex_I(2)) &  ! SMU Index
-                    SuperIndex_I(2) = dBTotal_DI(1,iMag)
+            SinLat = MagSmXyz_DI(3,iMag)
+            if(SinLat < Sin80 .and. SinLat > Sin40)then
+               ! SML = minimum of dBN
+               SuperIndex_I(1) = min(SuperIndex_I(1), dBTotal_DI(1,iMag))
+               ! SMU = maximum of dBN
+               SuperIndex_I(2) = max(SuperIndex_I(2), dBTotal_DI(1,iMag))
             endif
+            if(abs(SinLat) < Sin50)then
+               ! SMR = average of dBN/cos(Lat)
+               SuperIndex_I(4) = SuperIndex_I(4) &
+                    + dBTotal_DI(1,iMag)/sqrt(1 - SinLat**2)
+               nSMR = nSMR + 1
+            end if
          end do
       end do
 
-      ! Now, calculate SME/SMO indices.
-      SuperIndex_I(3) = SuperIndex_I(2) - SuperIndex_I(1)      ! SME Index
-      SuperIndex_I(4) = (SuperIndex_I(2)+SuperIndex_I(1))/2.   ! SMO Index
+      ! SME = SMU - SML
+      SuperIndex_I(3) = SuperIndex_I(2) - SuperIndex_I(1)
+      ! SMR = average of dBN/cos(Lat)
+      SuperIndex_I(4) = SuperIndex_I(4)/nSMR
 
-      ! Write date and time.
+      ! Write date, time and indexes
       call get_date_time(iTime_I)
-      write(iUnitSupermag, '(i7.7, i5.4, 5(i3.2), i4.3)', ADVANCE='NO') &
-           nStep, iTime_I
-
-      write(iUnitSupermag, '(4(1x,f9.2))', ADVANCE='NO') SuperIndex_I
-      ! Add newline
-      write(iUnitSupermag, *)
+      write(iUnitSupermag, '(i7.7, i5.4, 5(i3.2), i4.3, 4f10.2)') &
+           nStep, iTime_I, SuperIndex_I
 
       call flush_unit(iUnitSupermag)
 
