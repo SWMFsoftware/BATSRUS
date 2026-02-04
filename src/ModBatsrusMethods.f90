@@ -538,6 +538,9 @@ contains
     use ModPIC, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
     use BATL_region, ONLY: Area_I, nArea
+    use BATL_particles, ONLY: message_pass_particles
+    use ModParticleFieldLine, ONLY: UseParticleFieldLine=>UseParticles, &
+         iKindReg
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: xyz_to_lonlat, rot_matrix_y, rot_matrix_z
     use ModSatelliteFile, ONLY: xyz_sat
@@ -775,7 +778,7 @@ contains
 
        ! Write plotfiles after AMR if required
        if(DoSavePlotsAmr)call BATS_save_files('AMRPLOTS')
-
+       if(UseParticleFieldLine)call message_pass_particles(iKindReg)
     else
        ! If AMR is done, then the plotting of BATS_save_files('NORMAL')
        ! is called in ModAMR to save the AMR criteria.
