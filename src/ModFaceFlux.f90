@@ -1253,8 +1253,7 @@ contains
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
           InvElectronDens = BiermannCoeff/(0.5* &
-               sum((StateLeft_V(iRhoIon_I) + StateRight_V(iRhoIon_I))&
-               *ChargeIon_I/MassIon_I))
+               sum(StateLeft_V(iRhoIon_I) + StateRight_V(iRhoIon_I)))
        else
           InvElectronDens = BiermannCoeff &
                /(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
