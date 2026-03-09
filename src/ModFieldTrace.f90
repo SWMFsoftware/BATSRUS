@@ -2504,7 +2504,7 @@ contains
     if(.not.IsMinB)then
 
        NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
-       call open_file(FILE=NameFile)
+       call open_file(FILE=NameFile, NameCaller=NameSub)
        write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
        write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p rCurve'
 
@@ -2522,7 +2522,7 @@ contains
        end do
        deallocate(PlotVar_V)
 
-       call close_file
+       call close_file(NameCaller=NameSub)
     else
        ! StateMinB: x,y,z,state variables and curvature at min B and Z=0
        allocate( &
@@ -3190,7 +3190,7 @@ contains
        ! Figure out the number of points for this trace
        if(IsSingleLine) nPoint1 = count(nint(PlotVar_VI(0,1:nPoint))==iLine)
 
-       call open_file(FILE=NameFile)
+       call open_file(FILE=NameFile, NameCaller=NameSub)
        if(IsIdl)then
           write(UnitTmp_,'(a79)') trim(StringTitle)//'_var11'
           write(UnitTmp_,'(i7,1pe13.5,3i3)') &
@@ -3243,7 +3243,7 @@ contains
              end if
           end do
        end if
-       call close_file
+       call close_file(NameCaller=NameSub)
     end do
 
     deallocate(PlotVar_VI)
@@ -3379,7 +3379,7 @@ contains
        if(IsPlotNameN) write(NameFile,'(a,i7.7)') trim(NameFile)//"_n",nStep
        NameFile = trim(NameFile)//".dat"
 
-       call open_file(FILE=trim(NameFile), STATUS="replace")
+       call open_file(FILE=trim(NameFile), STATUS="replace", NameCaller=NameSub)
        write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
        if(DoSaveIntegral)then
           write(UnitTmp_,'(a)') &
@@ -3581,7 +3581,7 @@ contains
 
     end do  ! iDirZ loop
 
-    if(iProc == 0) call close_file
+    if(iProc == 0) call close_file(NameCaller=NameSub)
 
     if(DoTest)write(*,*)NameSub,': finished'
     call test_stop(NameSub, DoTest)
@@ -3668,7 +3668,7 @@ contains
              end if
              write(NameFile,'(a,i7.7,a)') trim(NameFile)//"_n", nStep,".dat"
 
-             call open_file(FILE=NameFile)
+             call open_file(FILE=NameFile, NameCaller=NameSub)
              if(StringCoord == 'GM')then
                 write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
              else
@@ -3823,7 +3823,7 @@ contains
                 end if
              end if
 
-             call close_file
+             call close_file(NameCaller=NameSub)
           end do
 
           deallocate(PlotVar_VI)

@@ -18,7 +18,6 @@ module ModAdvectPoints
 
 contains
   !============================================================================
-
   subroutine advect_all_points
 
     use ModIO, ONLY: TypePlot_I, nFile, Plot_, &
@@ -44,7 +43,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine advect_all_points
   !============================================================================
-
   subroutine advect_points(nPoint, Xyz_DI)
 
     use ModMain, ONLY: IsTimeAccurate, Dt, nStage
@@ -78,7 +76,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine advect_points
   !============================================================================
-
   subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
     use ModAdvance, ONLY: Rho_, RhoUz_, Ux_, Uz_, &
@@ -163,7 +160,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine advect_points1
   !============================================================================
-
   subroutine advect_test
 
     ! Create a non-trivial flow field and advect a number of points
@@ -208,7 +204,7 @@ contains
     Dt = cTwoPi/nStep
 
     if(iProc==0)then
-       call open_file(FILE='advect_test.log')
+       call open_file(FILE='advect_test.log', NameCaller=NameSub)
        write(UnitTmp_,'(a)')'Shifted circle'
        write(UnitTmp_,'(a)')'xMinBox yMinBox zMinBox xM yM zM xN yN zN'
     end if
@@ -238,7 +234,7 @@ contains
             Xyz_DI(:,1),Xyz_DI(:,nPoint/2), Xyz_DI(:,nPoint)
     end do
 
-    if(iProc==0)call close_file
+    if(iProc==0)call close_file(NameCaller=NameSub)
 
     call timing_stop(NameSub)
 
