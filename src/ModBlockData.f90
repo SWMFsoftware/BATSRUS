@@ -799,7 +799,8 @@ contains
           CYCLE
        end if
 
-       call open_file(file=NameBlockFile, form='UNFORMATTED', NameCaller=NameSub)
+       call open_file(file=NameBlockFile, form='UNFORMATTED', &
+            NameCaller=NameSub)
        write(UnitTmp_) nData_B(iBlock)
        write(UnitTmp_) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
        call close_file(NameCaller=NameSub)

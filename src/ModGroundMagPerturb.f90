@@ -425,8 +425,7 @@ contains
                trim(NamePlotDir), 'geoindex_n', nStep, '.log'
        end if
        iUnitIndices = io_unit_new()
-       call open_file(iUnitIndices, file=NameFile, status='replace', &
-            NameCaller=NameSub)
+       call open_file(iUnitIndices, file=NameFile, NameCaller=NameSub)
 
        write(iUnitIndices, '(2a,f8.2,a,i4.4)') &
             'Synthetic Geomagnetic Indices', &
@@ -471,7 +470,7 @@ contains
                trim(NamePlotDir), 'superindex_n', nStep, '.log'
        end if
        iUnitSupermag = io_unit_new()
-       call open_file(iUnitSupermag, file=NameFile, status='replace')
+       call open_file(iUnitSupermag, file=NameFile, NameCaller=NameSub)
 
        write(iUnitSupermag, '(a)') 'Synthetic SuperMAG Indices'
        write(iUnitSupermag, '(a)') &

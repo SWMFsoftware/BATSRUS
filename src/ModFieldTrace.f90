@@ -3379,7 +3379,7 @@ contains
        if(IsPlotNameN) write(NameFile,'(a,i7.7)') trim(NameFile)//"_n",nStep
        NameFile = trim(NameFile)//".dat"
 
-       call open_file(FILE=trim(NameFile), STATUS="replace", NameCaller=NameSub)
+       call open_file(FILE=NameFile, NameCaller=NameSub)
        write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
        if(DoSaveIntegral)then
           write(UnitTmp_,'(a)') &
