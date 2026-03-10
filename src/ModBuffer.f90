@@ -437,7 +437,7 @@ contains
     call open_file(file=NameThisComp//'/restartOUT/buffer.dat', &
          form='UNFORMATTED', NameCaller=NameSub)
     write(UnitTmp_)BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
-    call close_file
+    call close_file(NameCaller=NameSub)
 
   end subroutine save_buffer_restart
   !============================================================================
@@ -478,7 +478,7 @@ contains
     call open_file(file=NameThisComp//'/restartIN/buffer.dat', &
          status='old', form='UNFORMATTED', NameCaller=NameSub)
     read(UnitTmp_) BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
-    call close_file
+    call close_file(NameCaller=NameSub)
     call fill_in_buffer_grid_gc
 
   end subroutine read_buffer_restart

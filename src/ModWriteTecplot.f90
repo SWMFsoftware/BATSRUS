@@ -801,7 +801,7 @@ contains
     end do ! iStage
 
     if(DoSaveTecBinary) then
-       call close_file
+       call close_file(NameCaller=NameSub)
     else
        call MPI_file_close(iUnit, iError)
     end if
@@ -923,7 +923,8 @@ contains
        ! Actually only works for 3D right now.
        ! hyzhou: This is supposed to be cell-centered data, but why is the node
        ! number and element number different from expected?
-       call open_file(FILE=NameFile, access='stream', form='unformatted')
+       call open_file(FILE=NameFile, access='stream', form='unformatted', &
+            NameCaller=NameSub)
        if(DoCut)then
           write(UnitTmp_) 'TITLE="BATSRUS: cut Data, '//StringDateTime//'"',&
                CharNewLine
@@ -947,7 +948,7 @@ contains
                ', F=FEPOINT, ET=BRICK', CharNewLine
        end select
     else
-       call open_file(File=NameFile)
+       call open_file(File=NameFile, NameCaller=NameSub)
 
        if(DoCut)then
           write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, ' &
@@ -974,7 +975,7 @@ contains
     end if
 
     call write_tecplot_auxdata
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_head

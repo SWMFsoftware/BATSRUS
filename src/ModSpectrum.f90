@@ -180,7 +180,8 @@ contains
 
     ! Start to read data file
     iUnit = io_unit_new()
-    call open_file(iUnit,FILE=NameSpmTable_I(iFile), STATUS='old')
+    call open_file(iUnit,FILE=NameSpmTable_I(iFile), STATUS='old', &
+         NameCaller=NameSub)
 
     ! Read grid size information from header
     READGRID: do
@@ -334,7 +335,7 @@ contains
        LogIonFrac_II(iN,iT) = LogIonFrac
 
     end do READLOOP
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     deallocate(LogG_II, LogIonFrac_II)
     nLineAll = min(nMaxLine,nLineFound)

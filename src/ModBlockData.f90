@@ -6,6 +6,7 @@ module ModBlockData
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iBlockTest, iProcTest, iProc
+  use ModUtilities, ONLY: open_file, close_file
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize, ONLY: MaxBlock
@@ -766,11 +767,9 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine test_block_data
   !============================================================================
-
   subroutine write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
-    use ModUtilities, ONLY: open_file, close_file
     use ModIOUnit, ONLY: UnitTmp_
 
     character(len=*), intent(in) :: NameRestartOutDir
@@ -800,10 +799,10 @@ contains
           CYCLE
        end if
 
-       call open_file(file=NameBlockFile, form='UNFORMATTED')
+       call open_file(file=NameBlockFile, form='UNFORMATTED', NameCaller=NameSub)
        write(UnitTmp_) nData_B(iBlock)
        write(UnitTmp_) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
-       call close_file
+       call close_file(NameCaller=NameSub)
     end do
 
     if(DoTest)then
@@ -818,7 +817,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_block_restart_files
   !============================================================================
-
   subroutine read_block_restart_files(NameRestartInDir, UseRestartInSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
@@ -849,8 +847,8 @@ contains
        call get_block_restart_namefile(iBlock, &
             NameRestartInDir, UseRestartInSeries, NameBlockFile)
 
-       open(UnitTmp_, file=NameBlockFile, status='old', form='UNFORMATTED',&
-            iostat = iError)
+       call open_file(file=NameBlockFile, status='old', form='UNFORMATTED',&
+            iErrorOut=iError, NameCaller=NameSub)
 
        ! Missing block data files (should be blocks without any block data)
        if(iError /= 0) then
@@ -874,7 +872,7 @@ contains
        call put_block_data(iBlock, nData, DataTmp_I(1:nData))
        call set_block_data(iBlock)
 
-       close(UnitTmp_)
+       call close_file(NameCaller=NameSub)
     end do
 
     if(DoTest)then

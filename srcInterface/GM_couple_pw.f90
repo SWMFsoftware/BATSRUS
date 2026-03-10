@@ -459,7 +459,7 @@ contains
             CoordXyzPw1_DI(y_,1:nPoint1), &
             CoordXyzPw1_DI(z_,1:nPoint1), iLst1_I, lPtr1_I, &
             lEnd1_I, 'test1 triangulation',.true., iError )
-       call close_file
+       call close_file(NameCaller=NameSub)
        if(nLinePw2 > 0)then
           ! Southern Hemi
           call open_file(FILE='TestTriangulation_South.eps')
@@ -469,7 +469,7 @@ contains
                CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2),    &
                iLst2_I, lPtr2_I, lEnd2_I, 'test1 triangulation',  &
                .true., iError )
-          call close_file
+          call close_file(NameCaller=NameSub)
        end if
     end if
 

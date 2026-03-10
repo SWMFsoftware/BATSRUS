@@ -273,25 +273,28 @@ contains
        call set_name_file(iSat)
 
        iUnitSat_I(iSat) = io_unit_new()
-       call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
+       call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat), &
+            NameCaller=NameSub)
 
        IsOpen_I(iSat) = .true.
     case('append')
        if(.not.IsNameFileSet_I(iSat)) then
           call set_name_file(iSat)
           iUnitSat_I(iSat) = io_unit_new()
-          call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
+          call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat), &
+               NameCaller=NameSub)
           IsOpen_I(iSat) = .true.
        end if
 
        if(.not.IsOpen_I(iSat))then
           iUnitSat_I(iSat) = io_unit_new()
           call open_file(iUnitSat_I(iSat), FILE=trim(NameFile_I(iSat)), &
-               STATUS='old', POSITION='append')
+               STATUS='old', POSITION='append', NameCaller=NameSub)
           IsOpen_I(iSat) = .true.
        end if
     case('close')
-       if (IsOpen_I(iSat)) call close_file(iUnitSat_I(iSat))
+       if (IsOpen_I(iSat)) &
+            call close_file(iUnitSat_I(iSat), NameCaller=NameSub)
        IsOpen_I(iSat) = .false.
     case default
        call stop_mpi(NameSub//': unknown TypeStatus='//TypeStatus)
@@ -435,7 +438,7 @@ contains
        SATELLITES1: do iSat=1, nSatellite
           if(.not.UseSatFile_I(iSat)) CYCLE SATELLITES1
           NameFile = NameFileSat_I(iSat)
-          call open_file(file=NameFile, status="old")
+          call open_file(file=NameFile, status="old", NameCaller=NameSub)
           nPoint = 0
 
           TypeSatCoord_I(iSat) = TypeCoordSystem
@@ -451,7 +454,7 @@ contains
                 end do READPOINTS1
              end if
           end do READFILE1
-          call close_file
+          call close_file(NameCaller=NameSub)
           MaxPoint = max(MaxPoint, nPoint)
        end do SATELLITES1
     end if
@@ -479,7 +482,7 @@ contains
                   " reading: ",trim(NameFile)
           end if
 
-          call open_file(file=NameFile, status="old")
+          call open_file(file=NameFile, status="old", NameCaller=NameSub)
           nPoint = 0
 
           ! Read the file: read #COOR TypeCoord, #START and points
@@ -518,7 +521,7 @@ contains
 
           enddo READFILE
 
-          call close_file
+          call close_file(NameCaller=NameSub)
 
           if(DoTest)write(*,*) NameSub,': nPoint=',nPoint
 

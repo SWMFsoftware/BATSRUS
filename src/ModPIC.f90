@@ -619,7 +619,7 @@ contains
     write(UnitTmp_) iPicStatusMin_I
     write(UnitTmp_) iPicStatusMax_I
 
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine write_pic_status_file
@@ -651,7 +651,7 @@ contains
     allocate(iPicStatusMax_I(nRegionPic))
     read(UnitTmp_, iostat = iError) iPicStatusMin_I
     read(UnitTmp_, iostat = iError) iPicStatusMax_I
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     if(iError /= 0) call stop_mpi(NameSub// &
          ' could not read data from '//trim(NameFile))

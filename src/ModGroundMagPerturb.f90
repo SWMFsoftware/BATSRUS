@@ -425,7 +425,8 @@ contains
                trim(NamePlotDir), 'geoindex_n', nStep, '.log'
        end if
        iUnitIndices = io_unit_new()
-       call open_file(iUnitIndices, file=NameFile, status='replace')
+       call open_file(iUnitIndices, file=NameFile, status='replace', &
+            NameCaller=NameSub)
 
        write(iUnitIndices, '(2a,f8.2,a,i4.4)') &
             'Synthetic Geomagnetic Indices', &
@@ -1246,7 +1247,7 @@ contains
                " reading: ",trim(NameMagInputFile)
        end if
 
-       call open_file(file=NameMagInputFile, status="old")
+       call open_file(file=NameMagInputFile, status="old", NameCaller=NameSub)
 
        nMag = 0
 
@@ -1288,7 +1289,7 @@ contains
 
        end do READFILE
 
-       call close_file
+       call close_file(NameCaller=NameSub)
 
        if(DoTest)write(*,*) NameSub,': nMagnetometer=', nMag
 
@@ -1338,7 +1339,7 @@ contains
        end if
 
        ! Read in magnetometer positions and names
-       call open_file(file=NameMagInputFile, status="old")
+       call open_file(file=NameMagInputFile, status="old", NameCaller=NameSub)
        READFILE: do
           read(UnitTmp_,'(a)') StringLine
           if(index(StringLine, '#START') > 0)then
@@ -1348,7 +1349,7 @@ contains
              EXIT READFILE
           end if
        end do READFILE
-       call close_file
+       call close_file(NameCaller=NameSub)
     end if
 
     ! Tell the magnetometer name to the other processors
@@ -1417,7 +1418,7 @@ contains
     end if
 
     iUnitNow= io_unit_new()
-    call open_file(iUnitNow, FILE=NameFile)
+    call open_file(iUnitNow, FILE=NameFile, NameCaller=NameSub)
 
     ! Write the header
     write(iUnitNow, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
@@ -1862,7 +1863,7 @@ contains
       end if
 
       ! Open file for output:
-      call open_file(file=NameFile)
+      call open_file(FILE=NameFile, NameCaller=NameSub)
 
       ! Write the header
       write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
@@ -1891,7 +1892,7 @@ contains
       end do
 
       ! Close file:
-      call close_file
+      call close_file(NameCaller=NameSub)
 
     end subroutine write_mag_step
     !==========================================================================

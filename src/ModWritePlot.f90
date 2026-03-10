@@ -374,13 +374,13 @@ contains
        NameFileSouth = trim(NameSnapshot)//"_2"//trim(NameProc)
 
        if(.not.DoSaveTecBinary) then
-          call open_file(UnitTmp_,  FILE=NameFileNorth)
-          call open_file(UnitTmp2_, FILE=NameFileSouth)
+          call open_file(UnitTmp_,  FILE=NameFileNorth, NameCaller=NameSub)
+          call open_file(UnitTmp2_, FILE=NameFileSouth, NameCaller=NameSub)
        else
           call open_file(UnitTmp_,  FILE=NameFileNorth, &
-               access='stream', form='unformatted')
+               access='stream', form='unformatted', NameCaller=NameSub)
           call open_file(UnitTmp2_, FILE=NameFileSouth, &
-               access='stream', form='unformatted')
+               access='stream', form='unformatted', NameCaller=NameSub)
        end if
     elseif(TypePlotFormat_I(iFile)=='hdf') then
        ! Only one plotfile will be generated, so do not include PE number
@@ -395,11 +395,12 @@ contains
           else
              NameFile = trim(NameSnapshot)//'_pe000000.idl'
           end if
-          call open_file(FILE=NameFile, iComm=iComm, iUnitMpi=iUnit)
+          call open_file(FILE=NameFile, iComm=iComm, iUnitMpi=iUnit, &
+               NameCaller=NameSub)
        else
           ! For IDL just open one file
           NameFile = trim(NameSnapshot)//trim(NameProc)
-          call open_file(FILE=NameFile, form=TypeForm)
+          call open_file(FILE=NameFile, form=TypeForm, NameCaller=NameSub)
        end if
     end if
 
@@ -731,9 +732,9 @@ contains
        call MPI_file_close(iUnit, iError)
     else  if(TypePlotFormat_I(iFile) == 'idl') then
        if( nCellProc == 0) then
-          call close_file(status = 'DELETE')
+          call close_file(status='DELETE', NameCaller=NameSub)
        else
-          call close_file
+          call close_file(NameCaller=NameSub)
        end if
     end if
 
@@ -741,9 +742,10 @@ contains
     if(TypePlotFormat_I(iFile)=='tcp') &
          call write_tecplot_head(trim(NameSnapshot)//"_0.tec", StringUnitTec)
 
-    if(TypePlotFormat_I(iFile)=='tec') call close_file(UnitTmp2_)
+    if(TypePlotFormat_I(iFile) == 'tec') &
+         call close_file(UnitTmp2_, NameCaller=NameSub)
 
-    if(DoSaveOneTecFile) call close_file(iUnit)
+    if(DoSaveOneTecFile) call close_file(iUnit, NameCaller=NameSub)
 
     ! START IDL
     if (TypePlotFormat_I(iFile)=='idl')then
@@ -771,7 +773,7 @@ contains
           NameFile = trim(NameSnapshot) // ".h"
        end select
 
-       call open_file(FILE=NameFile)
+       call open_file(FILE=NameFile, NameCaller=NameSub)
 
        select case(TypePlotFormat_I(iFile))
        case('tec','tcp')
@@ -901,7 +903,7 @@ contains
           write(UnitTmp_,*)
 
        end select
-       call close_file
+       call close_file(NameCaller=NameSub)
 
     end if
 

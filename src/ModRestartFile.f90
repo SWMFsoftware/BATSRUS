@@ -598,7 +598,7 @@ contains
     write(UnitTmp_,'(a)')'No2Io_V='
     write(UnitTmp_,'(100es13.5)') No2Io_V
 
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine write_restart_header
@@ -636,7 +636,7 @@ contains
     do iMorton = 1, nBlockAll
        write(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
     end do
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine write_restart_index
@@ -660,7 +660,7 @@ contains
     do iMorton = 1, nBlockAll
        read(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
     end do
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_index
@@ -772,7 +772,7 @@ contains
           iFile = iFileMorton_I(iMorton)
           iRec  = iRecMorton_I(iMorton)
           if(iFile /= iFileLast) then
-             if(iFileLast > 0) call close_file
+             if(iFileLast > 0) call close_file(NameCaller=NameSub)
              call open_direct_restart_file(DoRead = .true., iFile = iFile)
              iFileLast = iFile
           end if
@@ -863,7 +863,7 @@ contains
        end if
     end do
 
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     if(DoRestartPicStatus) call read_pic_status_file
 
@@ -932,7 +932,7 @@ contains
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
     end do
 
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     if(AdaptPic % DoThis) call write_pic_status_file
 
@@ -993,7 +993,7 @@ contains
              write(UnitTmp_, '(es20.12)' ) MagHistory_DII(iDim, i,j)
           end do
        end do
-       call close_file
+       call close_file(NameCaller=NameSub)
     end do
 
     call test_stop(NameSub, DoTest)
@@ -1052,7 +1052,7 @@ contains
              read(UnitTmp_,*) MagHistory_DII(iDim,i,j)
           end do
        end do
-       call close_file
+       call close_file(NameCaller=NameSub)
 
     end do
 

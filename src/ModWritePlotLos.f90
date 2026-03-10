@@ -1940,7 +1940,7 @@ contains
 
       if(TypePlotFormat_I(iFile) == 'tec' .or. &
            TypePlotFormat_I(iFile) == 'tcp') then
-         call open_file(FILE=NameFile)
+         call open_file(FILE=NameFile, NameCaller=NameSub)
 
          if(UseDEM)then
             write(UnitTmp_,*) 'DEM integrals'
@@ -2079,7 +2079,7 @@ contains
             end do
          end if
 
-         call close_file
+         call close_file(NameCaller=NameSub)
       else
          ! description of file contains units, physics and dimension
          if(UseDEM)then

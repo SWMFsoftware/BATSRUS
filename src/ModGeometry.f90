@@ -163,7 +163,7 @@ contains
     ! The formate is a single column with number of points in the
     ! first row, and the folling rows the log(r) value from gen = 0 to 1
 
-    call open_file(FILE=NameFile, STATUS='old')
+    call open_file(FILE=NameFile, STATUS='old', NameCaller=NameSub)
 
     ! read in nGrid
     read(UnitTmp_,*,iostat=iError) nGrid
@@ -186,7 +186,7 @@ contains
        LogRGen_I(i) = LogR
     enddo
 
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_gen_radial_grid

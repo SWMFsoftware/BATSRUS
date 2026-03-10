@@ -147,7 +147,7 @@ contains
     if(UseMultiSpecies) iVarInput_V(7) = SpeciesFirst_
 
     ! Read solar wind file on all processors in parallel
-    call open_file(FILE=NameSolarwindFile, STATUS="old")
+    call open_file(FILE=NameSolarwindFile, STATUS="old", NameCaller=NameSub)
 
     if(lVerbose>0 .and. iProc==0)then
        call write_prefix
@@ -343,7 +343,7 @@ contains
        endif
     enddo
 
-    call close_file
+    call close_file(NameCaller=NameSub)
 
     ! Check if the start time is within 1 day of the input data
     if( StartTime + tSimulation < Time_I(1) - cDay .or. &

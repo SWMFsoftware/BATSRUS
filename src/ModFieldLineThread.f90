@@ -972,13 +972,13 @@ contains
        read(UnitTmp_, iostat = iError)RealNPoint
        if(iError>0)then
           write(*,*)'Error in reading nPoint in Block=', iBlock
-          call close_file
+          call close_file(NameCaller=NameSub)
           RETURN
        end if
        nPoint = nint(RealNPoint)
        if(BoundaryThreads_B(iBlock)%nPoint_II(j,k)/=nPoint)then
           write(*,*)'Incorrect nPoint in Block=', iBlock
-          call close_file
+          call close_file(NameCaller=NameSub)
           RETURN
        end if
        read(UnitTmp_, iostat = iError) &
@@ -988,7 +988,7 @@ contains
             BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k),&
             BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
     end do; end do
-    call close_file
+    call close_file(NameCaller=NameSub)
     BoundaryThreads_B(iBlock)%iAction = Restart_
     call test_stop(NameSub, DoTest, iBlock)
 
@@ -1418,7 +1418,7 @@ contains
                BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k),&
                BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
        end do; end do
-       call close_file
+       call close_file(NameCaller=NameSub)
     end do
     call test_stop(NameSub, DoTest)
 
