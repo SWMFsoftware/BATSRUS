@@ -655,7 +655,7 @@ contains
     do j = 1, nPhiIono - 1; do i = 2, nThetaIono - 1
 #ifdef _OPENACC
        do iMag = 1, nMag
-#endif          
+#endif
 
           iLine = (j - 1)*(nThetaIono - 2) + i - 1
           ! distribute the work among the BATSRUS processors
