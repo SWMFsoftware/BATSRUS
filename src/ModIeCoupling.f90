@@ -653,7 +653,9 @@ contains
     !$acc loop vector gang collapse(3) &
     !$acc private(XyzIono_D, Coef0, dXyz_D, Coef, Cross_D)
     do j = 1, nPhiIono - 1; do i = 2, nThetaIono - 1
+#ifdef _OPENACC
        do iMag = 1, nMag
+#endif
 
           iLine = (j - 1)*(nThetaIono - 2) + i - 1
           ! distribute the work among the BATSRUS processors
@@ -664,6 +666,10 @@ contains
 
           ! 1/4pi times the area of a surface element
           Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
+
+#ifndef _OPENACC
+          do iMag = 1, nMag
+#endif
 
           ! CHECK
           ! Surface = Surface + Coef0
