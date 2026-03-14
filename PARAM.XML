@@ -5876,8 +5876,9 @@ The default value is NameMaxTimeUnit='hour'.
 #SAVEONEFILE
 T			DoSaveOneIdlFile
 
-Save IDL files using MPI-IO. All processors write to one 
-*.idl file to reduce file numbers. 
+Save IDL files using MPI-IO. All processors write to one *.idl file to reduce file numbers.
+
+Default value is shown.
 </command>
 
 <command name="SAVEINITIAL">
