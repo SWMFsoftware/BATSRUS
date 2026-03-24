@@ -1095,8 +1095,8 @@ contains
          ! PUI pressure
          State_VGB(Pu3P_,i,j,k,iBlock) = Pu3P * (rBody/r)**(2*Gamma)
          State_VGB(LevelHP_,i,j,k,iBlock) = &
-               State_VGB(SWHRho_,i,j,k,iBlock) &
-               + State_VGB(Pu3Rho_,i,j,k,iBlock)
+              State_VGB(SWHRho_,i,j,k,iBlock) &
+              + State_VGB(Pu3Rho_,i,j,k,iBlock)
       end if
 
     end subroutine calc_time_dep_sw
@@ -1805,10 +1805,10 @@ contains
        ! Charge Exchange
        if (nPui>1 .and. UsePuiCxHeliosheath) then
           call calc_charge_exchange_source_pui( &
-            i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,Uth2Si_I,SourceCx_V)
+               i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,Uth2Si_I,SourceCx_V)
        else
           call calc_charge_exchange_source( &
-            i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
+               i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
        endif
 
        ! Photoionization
@@ -1855,7 +1855,7 @@ contains
        end if
 
        if(PuiFirst_ > 1 .and. .not.UsePuiCxHeliosheath) call add_pui_source( &
-         i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, UTh2Si_I)
+            i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, UTh2Si_I)
 
        ! Calculate the source terms for this cell
        call calc_source_cell
@@ -2059,15 +2059,14 @@ contains
 
     ! Source Terms
     real, dimension(Neu_:Ne4_) :: I0xp_I, I0px_I, Kxp_I, Kpx_I, &
-        I0xpu3_I, I0pu3x_I, Kxpu3_I, Kpu3x_I
+         I0xpu3_I, I0pu3x_I, Kxpu3_I, Kpu3x_I
     real, dimension(3,Neu_:Ne4_) :: Jxp_DI, Jpx_DI, &
-        Jxpu3_DI, Jpu3x_DI
+         Jxpu3_DI, Jpu3x_DI
     real, dimension(nPui, Neu_:Ne4_) :: SourceFxp_II, &
-        SourceFxpu3_II, SourceFpu3x_II
-    
+         SourceFxpu3_II, SourceFpu3x_II
+
     logical:: DoTest
-    character(len=*), parameter:: NameSub = &
-         'calc_charge_exchange_source_pui'
+    character(len=*), parameter:: NameSub = 'calc_charge_exchange_source_pui'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock, i, j, k)
 
@@ -2101,10 +2100,43 @@ contains
 
     iFluidProduced = iFluidProduced_C(i,j,k)
     if (iFluidProduced == Ne2_ .or. iFluidProduced == Ne3_) then
-      ! PUIs are produced in the solar wind
-      ! The population for the current region does not produce PUIs
-      do iNeu = Neu_,Ne4_
-        if (iNeu == iFluidProduced ) then
+       ! PUIs are produced in the solar wind
+       ! The population for the current region does not produce PUIs
+       do iNeu = Neu_,Ne4_
+          if (iNeu == iFluidProduced ) then
+             call calc_charge_exchange_sw_to_sw( &
+                  NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
+                  UThNeu_I(iNeu), &
+                  I0xp_I(iNeu), Jxp_DI(:,iNeu), Kxp_I(iNeu), &
+                  I0px_I(iNeu), Jpx_DI(:,iNeu), Kpx_I(iNeu))
+
+             call calc_charge_exchange_pui( &
+                  NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
+                  UThNeu_I(iNeu), &
+                  I0xpu3_I(iNeu), Jxpu3_DI(:,iNeu), Kxpu3_I(iNeu), &
+                  I0pu3x_I(iNeu), Jpu3x_DI(:,iNeu), Kpu3x_I(iNeu), &
+                  SourceFpu3x_II(:,iNeu), SourceFxpu3_II(:,iNeu))
+          else
+             call calc_charge_exchange_sw_to_pui( &
+                  NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
+                  UThNeu_I(iNeu), &
+                  I0xp_I(iNeu), Jxp_DI(:,iNeu), Kxp_I(iNeu), &
+                  I0px_I(iNeu), Jpx_DI(:,iNeu), Kpx_I(iNeu), &
+                  SourceFxp_II(:,iNeu))
+
+             call calc_charge_exchange_pui( &
+                  NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
+                  UThNeu_I(iNeu), &
+                  I0xpu3_I(iNeu), Jxpu3_DI(:,iNeu), Kxpu3_I(iNeu), &
+                  I0pu3x_I(iNeu), Jpu3x_DI(:,iNeu), Kpu3x_I(iNeu), &
+                  SourceFpu3x_II(:,iNeu), SourceFxpu3_II(:,iNeu))
+          end if
+
+       end do
+    else
+       ! SWH (not PUIs) is produced in the interstellar medium
+       ! No PUIs are produced here
+       do iNeu = Neu_,Ne4_
           call calc_charge_exchange_sw_to_sw( &
                NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
                UThNeu_I(iNeu), &
@@ -2117,131 +2149,98 @@ contains
                I0xpu3_I(iNeu), Jxpu3_DI(:,iNeu), Kxpu3_I(iNeu), &
                I0pu3x_I(iNeu), Jpu3x_DI(:,iNeu), Kpu3x_I(iNeu), &
                SourceFpu3x_II(:,iNeu), SourceFxpu3_II(:,iNeu))
-        else
-          call calc_charge_exchange_sw_to_pui( &
-               NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
-               UThNeu_I(iNeu), &
-               I0xp_I(iNeu), Jxp_DI(:,iNeu), Kxp_I(iNeu), &
-               I0px_I(iNeu), Jpx_DI(:,iNeu), Kpx_I(iNeu), &
-               SourceFxp_II(:,iNeu))
-
-          call calc_charge_exchange_pui( &
-               NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
-               UThNeu_I(iNeu), &
-               I0xpu3_I(iNeu), Jxpu3_DI(:,iNeu), Kxpu3_I(iNeu), &
-               I0pu3x_I(iNeu), Jpu3x_DI(:,iNeu), Kpu3x_I(iNeu), &
-               SourceFpu3x_II(:,iNeu), SourceFxpu3_II(:,iNeu))
-        end if
-
-      end do
-    else
-      ! SWH (not PUIs) is produced in the interstellar medium
-      ! No PUIs are produced here
-      do iNeu = Neu_,Ne4_
-        call calc_charge_exchange_sw_to_sw( &
-             NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
-             UThNeu_I(iNeu), &
-             I0xp_I(iNeu), Jxp_DI(:,iNeu), Kxp_I(iNeu), &
-             I0px_I(iNeu), Jpx_DI(:,iNeu), Kpx_I(iNeu))
-
-        call calc_charge_exchange_pui( &
-             NumDensNeu_I(iNeu), UNeu_DI(:,iNeu), PNeu_I(iNeu), &
-             UThNeu_I(iNeu), &
-             I0xpu3_I(iNeu), Jxpu3_DI(:,iNeu), Kxpu3_I(iNeu), &
-             I0pu3x_I(iNeu), Jpu3x_DI(:,iNeu), Kpu3x_I(iNeu), &
-             SourceFpu3x_II(:,iNeu), SourceFxpu3_II(:,iNeu))
-      end do
+       end do
     end if
 
     ! Only use the source terms requested by the user
     if (UseSource_I(Swh_)) then
-      do iNeu = Neu_,Ne4_
-        if (.not.UseSource_I(iNeu))then
-          I0px_I(iNeu) = 0
-          I0xp_I(iNeu) = 0
-          Jpx_DI(iNeu,:) = 0
-          Jxp_DI(iNeu,:) = 0
-          Kpx_I(iNeu) = 0
-          Kxp_I(iNeu) = 0
-          SourceFxp_II(iNeu,:) = 0
-        end if
-      end do
+       do iNeu = Neu_,Ne4_
+          if (.not.UseSource_I(iNeu))then
+             I0px_I(iNeu) = 0
+             I0xp_I(iNeu) = 0
+             Jpx_DI(iNeu,:) = 0
+             Jxp_DI(iNeu,:) = 0
+             Kpx_I(iNeu) = 0
+             Kxp_I(iNeu) = 0
+             SourceFxp_II(iNeu,:) = 0
+          end if
+       end do
     else
-      I0px_I = 0
-      I0xp_I = 0
-      Jpx_DI = 0
-      Jxp_DI = 0
-      Kpx_I = 0
-      Kxp_I = 0
-      SourceFxp_II = 0
+       I0px_I = 0
+       I0xp_I = 0
+       Jpx_DI = 0
+       Jxp_DI = 0
+       Kpx_I = 0
+       Kxp_I = 0
+       SourceFxp_II = 0
     end if
 
     if (UseSource_I(Pu3_)) then
-        do iNeu = Neu_,Ne4_
+       do iNeu = Neu_,Ne4_
           if (.not.UseSource_I(iNeu))then
-            I0pu3x_I(iNeu) = 0
-            I0xpu3_I(iNeu) = 0
-            Jpu3x_DI(iNeu, :) = 0
-            Jxpu3_DI(iNeu, :) = 0
-            Kpu3x_I(iNeu) = 0
-            Kxpu3_I(iNeu) = 0
-            SourceFxpu3_II(iNeu,:) = 0
-            SourceFpu3x_II(iNeu,:) = 0
+             I0pu3x_I(iNeu) = 0
+             I0xpu3_I(iNeu) = 0
+             Jpu3x_DI(iNeu, :) = 0
+             Jxpu3_DI(iNeu, :) = 0
+             Kpu3x_I(iNeu) = 0
+             Kxpu3_I(iNeu) = 0
+             SourceFxpu3_II(iNeu,:) = 0
+             SourceFpu3x_II(iNeu,:) = 0
           end if
-        end do
+       end do
     else
-      I0pu3x_I = 0
-      I0xpu3_I = 0
-      Jpu3x_DI = 0
-      Jxpu3_DI = 0
-      Kpu3x_I = 0
-      Kxpu3_I = 0
-      SourceFxpu3_II = 0
-      SourceFpu3x_II = 0
+       I0pu3x_I = 0
+       I0xpu3_I = 0
+       Jpu3x_DI = 0
+       Jxpu3_DI = 0
+       Kpu3x_I = 0
+       Kxpu3_I = 0
+       SourceFxpu3_II = 0
+       SourceFpu3x_II = 0
     end if
 
     if(DoTest) then
-         write(*,*) "iFluidProduced = ", iFluidProduced
-         write(*,*) "I0xp_I    = ", &
-             I0xp_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-         write(*,*) "I0px_I    = ", &
-             I0px_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-         write(*,*) "Jxp_ID(x) = ", &
-             Jxp_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jxp_ID(y) = ", &
-             Jxp_DI(Y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jxp_ID(z) = ", &
-             Jxp_DI(Z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jpx_ID(x) = ", &
-             Jpx_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jpx_ID(y) = ", &
-             Jpx_DI(Y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jpx_ID(z) = ", &
-             Jpx_DI(Z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Kxp_I     = ", &
-             Kxp_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-         write(*,*) "Kpx_I     = ", &
-             Kpx_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-         write(*,*) "I0xpu3_I    = ", &
-             I0xpu3_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-         write(*,*) "I0pu3x_I    = ", &
-             I0pu3x_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
-         write(*,*) "Jxpu3_ID(x) = ", &
-             Jxpu3_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jxpu3_ID(y) = ", &
-             Jxpu3_DI(Y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jxpu3_ID(z) = ", &
-             Jxpu3_DI(Z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jpu3x_ID(x) = ", &
-             Jpu3x_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jpu3x_ID(y) = ", &
-             Jpu3x_DI(y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Jpu3x_ID(z) = ", &
-             Jpu3x_DI(z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
-         write(*,*) "Kxpu3_I     = ", &
-             Kxpu3_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-         write(*,*) "Kpu3x_I     = ", &
-             Kpu3x_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       write(*,*) "iFluidProduced = ", iFluidProduced
+       write(*,*) "I0xp_I    = ", &
+            I0xp_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+       write(*,*) "I0px_I    = ", &
+            I0px_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+       write(*,*) "Jxp_ID(x) = ", &
+            Jxp_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jxp_ID(y) = ", &
+            Jxp_DI(Y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jxp_ID(z) = ", &
+            Jxp_DI(Z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jpx_ID(x) = ", &
+            Jpx_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jpx_ID(y) = ", &
+            Jpx_DI(Y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jpx_ID(z) = ", &
+            Jpx_DI(Z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Kxp_I     = ", &
+            Kxp_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       write(*,*) "Kpx_I     = ", &
+            Kpx_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       write(*,*) "I0xpu3_I    = ", &
+            I0xpu3_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+       write(*,*) "I0pu3x_I    = ", &
+            I0pu3x_I*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+       write(*,*) "Jxpu3_ID(x) = ", &
+            Jxpu3_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jxpu3_ID(y) = ", &
+            Jxpu3_DI(Y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jxpu3_ID(z) = ", &
+            Jxpu3_DI(Z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jpu3x_ID(x) = ", &
+            Jpu3x_DI(X_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jpu3x_ID(y) = ", &
+            Jpu3x_DI(y_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Jpu3x_ID(z) = ", &
+            Jpu3x_DI(z_,:)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       write(*,*) "Kxpu3_I     = ", &
+            Kxpu3_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       write(*,*) "Kpu3x_I     = ", &
+            Kpu3x_I*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
     end if
 
     ! PUIs are created in the solar wind (regions 2,3)
@@ -2252,527 +2251,526 @@ contains
     ! Ion source terms
     iFluidProduced = iFluidProduced_C(i,j,k)
     if (iFluidProduced == Ne2_ .or. iFluidProduced == Ne3_)then
-        ! Solar wind: PUIs are created
-        SourceCx_V(SwhRho_) = -sum(I0px_I) + I0xp_I(iFluidProduced) &
+       ! Solar wind: PUIs are created
+       SourceCx_V(SwhRho_) = -sum(I0px_I) + I0xp_I(iFluidProduced) &
             + I0xpu3_I(iFluidProduced)
-        SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_DI,2) &
+       SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_DI,2) &
             + Jxp_DI(:,iFluidProduced) &
             + Jxpu3_DI(:,iFluidProduced)
-        SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + Kxpu3_I(iFLuidProduced) &
+       SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + Kxpu3_I(iFLuidProduced) &
             + Kxp_I(iFluidProduced)
-        SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
+       SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
             -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_)) &
             +0.5*USwh**2*SourceCx_V(SwhRho_) )
 
-        SourceCx_V(Pu3Rho_) = sum(I0xp_I) - I0xp_I(iFluidProduced) &
+       SourceCx_V(Pu3Rho_) = sum(I0xp_I) - I0xp_I(iFluidProduced) &
             +sum(I0xpu3_I) - I0xpu3_I(iFluidProduced) &
             -sum(I0pu3x_I)
-        SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = &
+       SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = &
             +sum(Jxp_DI,2) - Jxp_DI(:,iFluidProduced) &
             +sum(Jxpu3_DI,2) - Jxpu3_DI(:,iFluidProduced) &
             -sum(Jpu3x_DI,2)
-        SourceCx_V(Pu3Energy_) = sum(Kxp_I) - Kxp_I(iFluidProduced) &
+       SourceCx_V(Pu3Energy_) = sum(Kxp_I) - Kxp_I(iFluidProduced) &
             +sum(Kxpu3_I) - Kxpu3_I(iFluidProduced) &
             -sum(Kpu3x_I)
-        SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
+       SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
             -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
             +0.5*UPui**2*SourceCx_V(Pu3Rho_) )
-        SourceCx_V(PuiFirst_:PuiLast_) = sum(SourceFxp_II,2) &
+       SourceCx_V(PuiFirst_:PuiLast_) = sum(SourceFxp_II,2) &
             -SourceFxp_II(:,iFluidProduced) &
             +sum(SourceFxpu3_II,2) - SourceFxpu3_II(:,iFluidProduced) &
             -sum(SourceFpu3x_II,2)
     else
-        ! ISM: PUIs destroyed here
-        SourceCx_V(SwhRho_) = -sum(I0px_I) + sum(I0xp_I) + sum(I0xpu3_I)
-        SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_DI,2) &
+       ! ISM: PUIs destroyed here
+       SourceCx_V(SwhRho_) = -sum(I0px_I) + sum(I0xp_I) + sum(I0xpu3_I)
+       SourceCx_V(SwhRhoUx_:SwhRhoUz_) = -sum(Jpx_DI,2) &
             + sum(Jxp_DI,2) + sum(Jxpu3_DI,2)
-        SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + sum(Kxpu3_I) + sum(Kxp_I)
-        SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
+       SourceCx_V(SwhEnergy_) = -sum(Kpx_I) + sum(Kxpu3_I) + sum(Kxp_I)
+       SourceCx_V(SwhP_) = GammaMinus1*( SourceCx_V(SwhEnergy_) &
             -sum(USwh_D*SourceCx_V(SwhRhoUx_:SwhRhoUz_)) &
             +0.5*USwh**2*SourceCx_V(SwhRho_) )
 
-        SourceCx_V(Pu3Rho_) =  -sum(I0pu3x_I)
-        SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = -sum(Jpu3x_DI,2)
-        SourceCx_V(Pu3Energy_) = -sum(Kpu3x_I)
-        SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
+       SourceCx_V(Pu3Rho_) =  -sum(I0pu3x_I)
+       SourceCx_V(Pu3RhoUx_:Pu3RhoUz_) = -sum(Jpu3x_DI,2)
+       SourceCx_V(Pu3Energy_) = -sum(Kpu3x_I)
+       SourceCx_V(Pu3P_) = GammaMinus1*( SourceCx_V(Pu3Energy_) &
             -sum(UPui_D*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
             +0.5*UPui**2*SourceCx_V(Pu3Rho_) )
-        SourceCx_V(PuiFirst_:PuiLast_) = -sum(SourceFpu3x_II,2)
+       SourceCx_V(PuiFirst_:PuiLast_) = -sum(SourceFpu3x_II,2)
 
     end if
 
     ! Neutral source terms
     ! Neutrals are lossed from each populations
     do iNeu = Neu_,Ne4_
-        call select_fluid(iNeu)
-        SourceCx_V(iRho)    = -I0xp_I(iNeu) - I0xpu3_I(iNeu)
-        SourceCx_V(iRhoUx:iRhoUz)  = -Jxp_DI(:,iNeu) - Jxpu3_DI(:,iNeu)
-        SourceCx_V(iEnergy) = -Kxp_I(iNeu) - Kxpu3_I(iNeu)
+       call select_fluid(iNeu)
+       SourceCx_V(iRho)    = -I0xp_I(iNeu) - I0xpu3_I(iNeu)
+       SourceCx_V(iRhoUx:iRhoUz)  = -Jxp_DI(:,iNeu) - Jxpu3_DI(:,iNeu)
+       SourceCx_V(iEnergy) = -Kxp_I(iNeu) - Kxpu3_I(iNeu)
     end do
 
     ! Created neutrals all go to same population
     call select_fluid(iFluidProduced)
     SourceCx_V(iRho)    = &
-          SourceCx_V(iRho) &
-          +sum(I0px_I) + sum(I0pu3x_I)
+         SourceCx_V(iRho) &
+         +sum(I0px_I) + sum(I0pu3x_I)
     SourceCx_V(iRhoUx:iRhoUz)  = &
-          SourceCx_V(iRhoUx:iRhoUz) &
-          +sum(Jpx_DI,2) + sum(Jpu3x_DI,2)
+         SourceCx_V(iRhoUx:iRhoUz) &
+         +sum(Jpx_DI,2) + sum(Jpu3x_DI,2)
     SourceCx_V(iEnergy) = &
-          SourceCx_V(iEnergy) &
-          +sum(Kpx_I) + sum(Kpu3x_I)
+         SourceCx_V(iEnergy) &
+         +sum(Kpx_I) + sum(Kpu3x_I)
 
     do iNeu = Neu_,Ne4_
-        call select_fluid(iNeu)
-        SourceCx_V(iP) = GammaMinus1*(SourceCx_V(iEnergy) &
+       call select_fluid(iNeu)
+       SourceCx_V(iP) = GammaMinus1*(SourceCx_V(iEnergy) &
             -sum(U_DI(:,iNeu)*SourceCx_V(iRhoUx:iRhoUz)) &
             +0.5*U2_I(iNeu)*SourceCx_V(iRho) )
     end do
 
     call test_stop(NameSub, DoTest, iBlock, i, j, k)
-    contains
-      !=======================================================================
-      subroutine calc_charge_exchange_sw_to_sw( &
-           NumDensNeu, UNeu_D, PNeu, UThNeu, &
-           I0xp, Jxp_D, Kxp, I0px, Jpx_D, Kpx)
-        
-        use ModPui, ONLY: Vpui_I, DeltaVpui_I
-
-        ! Calculate the source terms for charge exchange between sw and neu
-        ! Output intended for sw, so fluid variables, not kinetic
-
-        real, dimension(3), intent(in) :: UNeu_D
-        real, intent(in) :: NumDensNeu, PNeu, UThNeu
-
-        real, intent(out) :: I0xp, Kxp, I0px, Kpx
-        real, dimension(3), intent(out) :: Jxp_D, Jpx_D
-
-        real :: XSwh
-
-        ! Fluid Variables
-        real :: Umean, Umean2, &
-            URel, URel2, UTh2Sum, InvUTh2Sum,  UNeu
-        real, dimension(3) :: Umean_D, URel_D
-
-        real :: IntegralpxRho, IntegralpxRho1, &
-            IntegralpxRho2, &
-            IntegralpxU, IntegralpxU1, IntegralpxU2, &
-            IntegralpxP, IntegralpxP1, IntegralpxP2, &
-            g0pxRhoSi, g0pxUSi, g0pxPSi, &
-            SourceRhoxp, SourcePxp
-
-        !----------------------------------------------------------------------
-        UNeu = norm2(UNeu_D)
-        URel_D = USwh_D - UNeu_D
-        URel = norm2(URel_D) + 1E-4 ! Add constant to avoid division by zero
-        URel2 = URel**2
-
-        UTh2Sum = (UThSwh**2 + UThNeu**2)
-        InvUTh2Sum = 1./UTh2Sum
-
-        Umean_D = (USwh_D*UThNeu**2 &
-            + UNeu_D*UThSwh**2)*InvUTh2Sum
-
-        Umean = norm2(Umean_D)
-        Umean2 = Umean**2
-
-        XSwh = URel/sqrt(UTh2Sum)
-
-        IntegralpxRho1 = 0.5*sqrt(cPi*UTh2Sum)*URel
-        IntegralpxRho2 = 0.5*sqrt(cPi)*UTh2Sum*URel*h8(XSwh)
-        g0pxRhoSi = IntegralpxRho2/IntegralpxRho1 * No2Si_V(UnitU_)
-
-        IntegralpxRho = &
-            IntegralpxRho1*sigma_cx(g0pxRhoSi)*g0pxRhoSi &
-            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-        IntegralpxU1 = sqrt(cPi*InvUTh2Sum)*URel**3
-        IntegralpxU2 = sqrt(cPi)*URel**3*h9(XSwh)
-        g0pxUSi = IntegralpxU2/IntegralpxU1 * No2Si_V(UnitU_)
-
-        IntegralpxU = IntegralpxU1*sigma_cx(g0pxUSi)*g0pxUSi &
-                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-        IntegralpxP1 = &
-                0.25*sqrt(cPi*UTh2Sum**3)*URel*h10(XSwh)
-        IntegralpxP2 = &
-                0.25*sqrt(cPi)*UTh2Sum**2*URel*h11(XSwh)
-        g0pxPSi = IntegralpxP2/IntegralpxP1 * No2Si_V(UnitU_)
-
-        IntegralpxP = IntegralpxP1*sigma_cx(g0pxPSi)*g0pxPSi &
-                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-        I0xp = 2*NumDensSwh*NumDensNeu*sqrt(InvUTh2Sum/cPi)/URel*IntegralpxRho
-        I0px = I0xp
-
-        Jpx_D = NumDensSwh*NumDensNeu &
-                *sqrt(InvUTh2Sum/cPi)/URel &
-                *( 2*UMean_D*IntegralpxRho &
-                +UThSwh**2*URel_D/URel2*IntegralpxU)
-
-        Jxp_D = NumDensSwh*NumDensNeu &
-                *sqrt(InvUTh2Sum/cPi)/URel &
-                *( 2*UMean_D*IntegralpxRho &
-                -UThNeu**2*URel_D/URel2*IntegralpxU)
-
-        Kpx = NumDensSwh*NumDensNeu &
-                *sqrt(InvUTh2Sum/cPi)/URel*( &
-                (InvGammaMinus1*InvUTh2Sum &
-                *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
-                + UThSwh**2/URel2 &
-                *sum(Umean_D*URel_D)*IntegralpxU &
-                + InvUTh2Sum**2*UThSwh**4*IntegralpxP)
-
-        Kxp = NumDensSwh*NumDensNeu &
-                *sqrt(InvUTh2Sum/cPi)/URel*( &
-                (InvGammaMinus1*InvUTh2Sum &
-                *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
-                - UThNeu**2/URel2 &
-                *sum(Umean_D*URel_D)*IntegralpxU &
-                + InvUTh2Sum**2*UThNeu**4*IntegralpxP)
-      end subroutine calc_charge_exchange_sw_to_sw
-      !========================================================================
-      subroutine calc_charge_exchange_sw_to_pui( &
-           NumDensNeu, UNeu_D, PNeu, UThNeu, &
-           I0xp, Jxp_D, Kxp, I0px, Jpx_D, Kpx, SourceFxp_I)
-        
-        use ModPui, ONLY: Vpui_I, DeltaVpui_I
-
-        ! Calculate the source terms for charge exchange between sw and neu
-        ! Output intended for pui, so both fluid and kinetic source terms
-
-        real, dimension(3), intent(in) :: UNeu_D
-        real, intent(in) :: NumDensNeu, PNeu, UThNeu
-
-        real, intent(out) :: I0xp, Kxp, I0px, Kpx
-        real, dimension(3), intent(out) :: Jxp_D, Jpx_D
-        real, dimension(nPui), intent(out) :: SourceFxp_I
-
-        ! Indices
-        integer :: iPui, iPuiAdd, iPuiSubtract
-
-        ! PUI Bins
-        real :: Vpui, DeltaVpui
-        real:: VsubTop, VsubBot
-
-        real :: XpSwh, XmSwh, XSwh, XpBot, XmBot, XpTop, XmTop
-
-        ! Fluid Variables
-        real :: Umean, Umean2, &
-            URel, URel2, UTh2Sum, InvUTh2Sum, UNeu
-        real, dimension(3) :: Umean_D, URel_D
-
-        real :: IntegralpxRho, IntegralpxRho1, &
-            IntegralpxRho2, &
-            IntegralpxU, IntegralpxU1, IntegralpxU2, &
-            IntegralpxP, IntegralpxP1, IntegralpxP2, &
-            g0pxRhoSi, g0pxUSi, g0pxPSi, &
-            SourceRhoxp, SourcePxp, SourcePxpPrime, &
-            DeltaSourcePxp, DeltaSourceFxpV2
-        real:: g0xpFSi, FStarNeu
-        !----------------------------------------------------------------------
-        UNeu = norm2(UNeu_D)
-        URel_D = USwh_D - UNeu_D
-        URel = norm2(URel_D) + 1E-4
-        URel2 = URel**2
-
-        UTh2Sum = (UThSwh**2 + UThNeu**2)
-        InvUTh2Sum = 1./UTh2Sum
-
-        Umean_D = (USwh_D*UThNeu**2 &
-            + UNeu_D*UThSwh**2)*InvUTh2Sum 
-
-        Umean = norm2(Umean_D)
-        Umean2 = Umean**2
-
-        SourceRhoxp = 0
-        SourcePxp = 0
-
-        do iPui = nPui, 1, -1
-          Vpui = Vpui_I(iPui)
-          DeltaVpui = DeltaVpui_I(iPui)
-
-          XpSwh = abs(Vpui+URel)/UThNeu
-          XmSwh = abs(Vpui-URel)/UThNeu
-
-          ! Find the edges of the bins
-          VsubBot = Vpui*exp(-0.5*DeltaLogVpui)
-          VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
-
-          XpBot = (VsubBot+URel)/UThNeu
-          XmBot = (VsubBot-URel)/UThNeu
-          XpTop = (VsubTop+URel)/UThNeu
-          XmTop = (VsubTop-URel)/UThNeu
-
-          FStarNeu = 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
-                 UThNeu/sqrt(cPi)*(exp(-XmBot**2)-exp(-XpBot**2) &
-                 +exp(-XpTop**2)-exp(-XmTop**2)) &
-                 +URel*(erf(XmTop)-erfc(XpTop) &
-                 -erf(XmBot)+erfc(XpBot)))
-
-          g0xpFSi = UthSwh*h8(Vpui/UThSwh) * No2Si_V(UnitU_)
-
-          SourceFxp_I(iPui) = NumDensSwh*FStarNeu &
-               *sigma_cx(g0xpFSi)*g0xpFSi &
-               /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-        end do
-
-        SourceRhoxp = 4*cPi*sum(SourceFxp_I*Vpui_I**2*DeltaVpui_I)
-        SourcePxpPrime = 4*cPi/3*sum(SourceFxp_I*Vpui_I**4*DeltaVpui_I)
-
-        XSwh = URel/sqrt(UTh2Sum)
-
-        IntegralpxRho1 = 0.5*sqrt(cPi*UTh2Sum)*URel
-        IntegralpxRho2 = 0.5*sqrt(cPi)*UTh2Sum*URel*h8(XSwh)
-        g0pxRhoSi = IntegralpxRho2/IntegralpxRho1 * No2Si_V(UnitU_)
-
-        IntegralpxRho = &
-            IntegralpxRho1*sigma_cx(g0pxRhoSi)*g0pxRhoSi &
-            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-        IntegralpxU1 = sqrt(cPi*InvUTh2Sum)*URel**3
-        IntegralpxU2 = sqrt(cPi)*URel**3*h9(XSwh)
-        g0pxUSi = IntegralpxU2/IntegralpxU1 * No2Si_V(UnitU_)
-
-        IntegralpxU = IntegralpxU1*sigma_cx(g0pxUSi)*g0pxUSi &
-                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-        IntegralpxP1 = &
-                0.25*sqrt(cPi*UTh2Sum**3)*URel*h10(XSwh)
-        IntegralpxP2 = &
-                0.25*sqrt(cPi)*UTh2Sum**2*URel*h11(XSwh)
-        g0pxPSi = IntegralpxP2/IntegralpxP1 * No2Si_V(UnitU_)
-
-        IntegralpxP = IntegralpxP1*sigma_cx(g0pxPSi)*g0pxPSi &
-                /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-        I0xp = SourceRhoxp
-        I0px = SourceRhoxp
-
-        Jpx_D = NumDensSwh*NumDensNeu &
-              *sqrt(InvUTh2Sum/cPi)/URel &
-              *( 2*UMean_D*IntegralpxRho &
-              +UThSwh**2*URel_D/URel2*IntegralpxU)
-
-        Jxp_D = NumDensSwh*NumDensNeu &
-              *sqrt(InvUTh2Sum/cPi)/URel &
-              *( 2*UMean_D*IntegralpxRho &
-              -UThNeu**2*URel_D/URel2*IntegralpxU)
-
-        Kpx = NumDensSwh*NumDensNeu &
-                *sqrt(InvUTh2Sum/cPi)/URel*( &
-                (InvGammaMinus1*InvUTh2Sum &
-                *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
-                + UThSwh**2/URel2 &
-                *sum(Umean_D*URel_D)*IntegralpxU &
-                + InvUTh2Sum**2*UThSwh**4*IntegralpxP)
-
-        Kxp = InvGammaMinus1*SourcePxp &
-            + sum(UPui_D*Jxp_D) - 0.5*UPui**2*I0xp
-
-        Kxp = NumDensSwh*NumDensNeu &
-                *sqrt(InvUTh2Sum/cPi)/URel*( &
-                (InvGammaMinus1*InvUTh2Sum &
-                *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
-                - UThNeu**2/URel2 &
-                *sum(Umean_D*URel_D)*IntegralpxU &
-                + InvUTh2Sum**2*UThNeu**4*IntegralpxP)
-
-        SourcePxp = GammaMinus1*(Kxp - sum(Upui_D*Jxp_D) + 0.5*UPui**2*I0xp)
-
-        ! We need to correct SourceFxp_I to be consistent with SourcePxp
-        DeltaSourcePxp = SourcePxp - SourcePxpPrime
-
-        iPuiSubtract = &
-             min(2, max(nPui-1, nint(log(URel/Vpui_I(1))/DeltaLogVpui) + 1))
-
-        iPuiAdd = iPuiSubtract + nint(sign(1., DeltaSourcePxp))
-
-        DeltaSourceFxpV2 = min(SourceFxp_I(iPuiSubtract) &
-             *Vpui_I(iPuiSubtract)**2*DeltaVpui_I(iPuiSubtract), &
-             0.75/cPi*DeltaSourcePxp &
-             /(Vpui_I(iPuiAdd)**2-Vpui_I(iPuiSubtract)**2))
-
-        SourceFxp_I(iPuiAdd) = SourceFxp_I(iPuiAdd) &
-             + DeltaSourceFxpV2/Vpui_I(iPuiAdd)**2 &
-             /DeltaVpui_I(iPuiAdd)
-
-        SourceFxp_I(iPuiSubtract) = SourceFxp_I(iPuiSubtract)&
-             -DeltaSourceFxpV2/Vpui_I(iPuiSubtract)**2 &
-             /DeltaVpui_I(iPuiSubtract)
-      end subroutine calc_charge_exchange_sw_to_pui
-      !========================================================================
-      subroutine calc_charge_exchange_pui( &
-           NumDensNeu, UNeu_D, PNeu, UThNeu, &
-           I0xpu3, Jxpu3_D, Kxpu3, I0pu3x, Jpu3x_D, Kpu3x, &
-           SourceFpu3x_I, SourceFxpu3_I)
-        
-        use ModPui, ONLY: Vpui_I, DeltaVpui_I
-
-        ! Calculate the source terms for charge exchange between sw and neu
-        ! Output intended for pui
-
-        real, dimension(3), intent(in) :: UNeu_D
-        real, intent(in) :: NumDensNeu, PNeu, UThNeu
-
-        real, intent(out) :: I0xpu3, Kxpu3, I0pu3x, Kpu3x
-        real, dimension(3), intent(out) :: Jxpu3_D, Jpu3x_D
-        real, dimension(nPui), intent(out) :: &
-            SourceFxpu3_I, SourceFpu3x_I
-
-        ! Indices
-        integer :: iPui
-
-        ! PUI Bins
-        real :: FStarNeu, FStarPui, Vpui, DeltaVpui
-
-        real:: VsubTop, VsubBot
-
-        real :: Xp, Xm, XpTop, XpBot, XmTop, XmBot
-
-        ! Fluid Variables
-        real :: Umean, Umean2, &
-            URel, URel2, UTh2Sum, InvUTh2Sum, UNeu
-        real, dimension(3) :: Umean_D, URel_D
-
-        real:: Integralpu3xU1, Integralpu3xU2, &
-            Integralxpu3U1, Integralxpu3U2, &
-            g0pu3xFSi, g0pu3xUSi, g0xpu3USi, &
-            SourceRhopu3x, SourceRhoxpu3, SourcePpu3x, SourcePxpu3, &
-            CumSumFpuiV1, CumSumFpuiV2, CumSumFpuiV3, CumSumFpuiV4
-        real:: g0xpu3FSi
-        real, dimension(3):: SourceUpu3x_D, SourceUxpu3_D
-        real, dimension(nPui):: SourceFxpu3P_I
-
-        !----------------------------------------------------------------------
-        UNeu = norm2(UNeu_D)
-        URel_D = UPui_D - UNeu_D
-        URel = norm2(URel_D) + 1E-4
-        URel2 = URel**2
-
-
-        CumSumFpuiV1 = 0
-        CumSumFpuiV2 = 0
-        CumSumFpuiV3 = 0
-        CumSumFpuiV4 = 0
-        SourceRhopu3x = 0
-        SourceRhoxpu3 = 0
-        SourcePpu3x = 0
-        SourcePxpu3 = 0
-        Integralpu3xU1 = 0
-        Integralpu3xU2 = 0
-        Integralxpu3U1 = 0
-
-        ! Iterate over pui bins
-        ! We go in reverse order for the CumSumFpui terms
-        do iPui = nPui, 1, -1
-          Vpui = Vpui_I(iPui)
-          DeltaVpui = DeltaVpui_I(iPui)
-          FStarPui = FStarPui_I(iPui)
-
-          Xp = (Vpui+URel)/UThNeu
-          Xm = (Vpui-URel)/UThNeu
-
-          ! SourceFpu3x
-          g0pu3xFSi = UthNeu**3/12/Vpui/URel*max(1E-30,h1(Xp)-h1(Xm)) &
-            *No2Si_V(UnitU_)
-
-          SourceFpu3x_I(iPui) = FStarPui*NumDensNeu &
-            *sigma_cx(g0pu3xFSi)*g0pu3xFSi &
-            /Si2No_V(UnitN_)/Si2No_V(UnitT_)
-
-          ! SourceFxpu3
-          CumSumFpuiV1 = CumSumFpuiV1 + FStarPui*DeltaVpui*Vpui
-          CumSumFpuiV2 = CumSumFpuiV2 + FStarPui*DeltaVpui*Vpui**2
-          CumSumFpuiV3 = CumSumFpuiV3 + FStarPui*DeltaVpui*Vpui**3
-          CumSumFpuiV4 = CumSumFpuiV4 + FStarPui*DeltaVpui*Vpui**4
-
-          g0xpu3FSi = Vpui/NumDensPui*(PPui/MassFluid_I(Pu3_)/Vpui**2 &
-            + NumDensPui + 4*cPi*( CumSumFpuiV3/Vpui - CumSumFpuiV2 &
-            + (Vpui*CumSumFpuiV1 - CumSumFpuiV4/Vpui**2)/3 )) &
-            *No2Si_V(UnitU_)
-
-          ! Find the Edges of the bin
-          VsubBot = Vpui*exp(-0.5*DeltaLogVpui)
-          VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
-
-          XpBot = (VsubBot+URel)/UThNeu
-          XmBot = (VsubBot-URel)/UThNeu
-          XpTop = (VsubTop+URel)/UThNeu
-          XmTop = (VsubTop-URel)/UThNeu
-
-          FStarNeu = 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
-                 UThNeu/sqrt(cPi)*(exp(-XmBot**2)-exp(-XpBot**2) &
-                 +exp(-XpTop**2)-exp(-XmTop**2)) &
-                 +URel*(erf(XmTop)-erfc(XpTop) &
-                 -erf(XmBot)+erfc(XpBot)))
-
-          SourceFxpu3_I(iPui) = NumDensPui*FStarNeu &
+  contains
+    !==========================================================================
+    subroutine calc_charge_exchange_sw_to_sw( &
+         NumDensNeu, UNeu_D, PNeu, UThNeu, &
+         I0xp, Jxp_D, Kxp, I0px, Jpx_D, Kpx)
+
+      use ModPui, ONLY: Vpui_I, DeltaVpui_I
+
+      ! Calculate the source terms for charge exchange between sw and neu
+      ! Output intended for sw, so fluid variables, not kinetic
+
+      real, dimension(3), intent(in) :: UNeu_D
+      real, intent(in) :: NumDensNeu, PNeu, UThNeu
+
+      real, intent(out) :: I0xp, Kxp, I0px, Kpx
+      real, dimension(3), intent(out) :: Jxp_D, Jpx_D
+
+      real :: XSwh
+
+      ! Fluid Variables
+      real :: Umean, Umean2, &
+           URel, URel2, UTh2Sum, InvUTh2Sum,  UNeu
+      real, dimension(3) :: Umean_D, URel_D
+
+      real :: IntegralpxRho, IntegralpxRho1, &
+           IntegralpxRho2, &
+           IntegralpxU, IntegralpxU1, IntegralpxU2, &
+           IntegralpxP, IntegralpxP1, IntegralpxP2, &
+           g0pxRhoSi, g0pxUSi, g0pxPSi, &
+           SourceRhoxp, SourcePxp
+
+      !------------------------------------------------------------------------
+      UNeu = norm2(UNeu_D)
+      URel_D = USwh_D - UNeu_D
+      URel = norm2(URel_D) + 1E-4 ! Add constant to avoid division by zero
+      URel2 = URel**2
+
+      UTh2Sum = (UThSwh**2 + UThNeu**2)
+      InvUTh2Sum = 1./UTh2Sum
+
+      Umean_D = (USwh_D*UThNeu**2 &
+           + UNeu_D*UThSwh**2)*InvUTh2Sum
+
+      Umean = norm2(Umean_D)
+      Umean2 = Umean**2
+
+      XSwh = URel/sqrt(UTh2Sum)
+
+      IntegralpxRho1 = 0.5*sqrt(cPi*UTh2Sum)*URel
+      IntegralpxRho2 = 0.5*sqrt(cPi)*UTh2Sum*URel*h8(XSwh)
+      g0pxRhoSi = IntegralpxRho2/IntegralpxRho1 * No2Si_V(UnitU_)
+
+      IntegralpxRho = &
+           IntegralpxRho1*sigma_cx(g0pxRhoSi)*g0pxRhoSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      IntegralpxU1 = sqrt(cPi*InvUTh2Sum)*URel**3
+      IntegralpxU2 = sqrt(cPi)*URel**3*h9(XSwh)
+      g0pxUSi = IntegralpxU2/IntegralpxU1 * No2Si_V(UnitU_)
+
+      IntegralpxU = IntegralpxU1*sigma_cx(g0pxUSi)*g0pxUSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      IntegralpxP1 = &
+           0.25*sqrt(cPi*UTh2Sum**3)*URel*h10(XSwh)
+      IntegralpxP2 = &
+           0.25*sqrt(cPi)*UTh2Sum**2*URel*h11(XSwh)
+      g0pxPSi = IntegralpxP2/IntegralpxP1 * No2Si_V(UnitU_)
+
+      IntegralpxP = IntegralpxP1*sigma_cx(g0pxPSi)*g0pxPSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      I0xp = 2*NumDensSwh*NumDensNeu*sqrt(InvUTh2Sum/cPi)/URel*IntegralpxRho
+      I0px = I0xp
+
+      Jpx_D = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel &
+           *( 2*UMean_D*IntegralpxRho &
+           +UThSwh**2*URel_D/URel2*IntegralpxU)
+
+      Jxp_D = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel &
+           *( 2*UMean_D*IntegralpxRho &
+           -UThNeu**2*URel_D/URel2*IntegralpxU)
+
+      Kpx = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel*( &
+           (InvGammaMinus1*InvUTh2Sum &
+           *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
+           + UThSwh**2/URel2 &
+           *sum(Umean_D*URel_D)*IntegralpxU &
+           + InvUTh2Sum**2*UThSwh**4*IntegralpxP)
+
+      Kxp = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel*( &
+           (InvGammaMinus1*InvUTh2Sum &
+           *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
+           - UThNeu**2/URel2 &
+           *sum(Umean_D*URel_D)*IntegralpxU &
+           + InvUTh2Sum**2*UThNeu**4*IntegralpxP)
+    end subroutine calc_charge_exchange_sw_to_sw
+    !==========================================================================
+    subroutine calc_charge_exchange_sw_to_pui( &
+         NumDensNeu, UNeu_D, PNeu, UThNeu, &
+         I0xp, Jxp_D, Kxp, I0px, Jpx_D, Kpx, SourceFxp_I)
+
+      use ModPui, ONLY: Vpui_I, DeltaVpui_I
+
+      ! Calculate the source terms for charge exchange between sw and neu
+      ! Output intended for pui, so both fluid and kinetic source terms
+
+      real, dimension(3), intent(in) :: UNeu_D
+      real, intent(in) :: NumDensNeu, PNeu, UThNeu
+
+      real, intent(out) :: I0xp, Kxp, I0px, Kpx
+      real, dimension(3), intent(out) :: Jxp_D, Jpx_D
+      real, dimension(nPui), intent(out) :: SourceFxp_I
+
+      ! Indices
+      integer :: iPui, iPuiAdd, iPuiSubtract
+
+      ! PUI Bins
+      real :: Vpui, DeltaVpui
+      real:: VsubTop, VsubBot
+
+      real :: XpSwh, XmSwh, XSwh, XpBot, XmBot, XpTop, XmTop
+
+      ! Fluid Variables
+      real :: Umean, Umean2, &
+           URel, URel2, UTh2Sum, InvUTh2Sum, UNeu
+      real, dimension(3) :: Umean_D, URel_D
+
+      real :: IntegralpxRho, IntegralpxRho1, &
+           IntegralpxRho2, &
+           IntegralpxU, IntegralpxU1, IntegralpxU2, &
+           IntegralpxP, IntegralpxP1, IntegralpxP2, &
+           g0pxRhoSi, g0pxUSi, g0pxPSi, &
+           SourceRhoxp, SourcePxp, SourcePxpPrime, &
+           DeltaSourcePxp, DeltaSourceFxpV2
+      real:: g0xpFSi, FStarNeu
+      !------------------------------------------------------------------------
+      UNeu = norm2(UNeu_D)
+      URel_D = USwh_D - UNeu_D
+      URel = norm2(URel_D) + 1E-4
+      URel2 = URel**2
+
+      UTh2Sum = (UThSwh**2 + UThNeu**2)
+      InvUTh2Sum = 1./UTh2Sum
+
+      Umean_D = (USwh_D*UThNeu**2 &
+           + UNeu_D*UThSwh**2)*InvUTh2Sum
+
+      Umean = norm2(Umean_D)
+      Umean2 = Umean**2
+
+      SourceRhoxp = 0
+      SourcePxp = 0
+
+      do iPui = nPui, 1, -1
+         Vpui = Vpui_I(iPui)
+         DeltaVpui = DeltaVpui_I(iPui)
+
+         XpSwh = abs(Vpui+URel)/UThNeu
+         XmSwh = abs(Vpui-URel)/UThNeu
+
+         ! Find the edges of the bins
+         VsubBot = Vpui*exp(-0.5*DeltaLogVpui)
+         VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
+
+         XpBot = (VsubBot+URel)/UThNeu
+         XmBot = (VsubBot-URel)/UThNeu
+         XpTop = (VsubTop+URel)/UThNeu
+         XmTop = (VsubTop-URel)/UThNeu
+
+         FStarNeu = 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
+              UThNeu/sqrt(cPi)*(exp(-XmBot**2)-exp(-XpBot**2) &
+              +exp(-XpTop**2)-exp(-XmTop**2)) &
+              +URel*(erf(XmTop)-erfc(XpTop) &
+              -erf(XmBot)+erfc(XpBot)))
+
+         g0xpFSi = UthSwh*h8(Vpui/UThSwh) * No2Si_V(UnitU_)
+
+         SourceFxp_I(iPui) = NumDensSwh*FStarNeu &
+              *sigma_cx(g0xpFSi)*g0xpFSi &
+              /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+      end do
+
+      SourceRhoxp = 4*cPi*sum(SourceFxp_I*Vpui_I**2*DeltaVpui_I)
+      SourcePxpPrime = 4*cPi/3*sum(SourceFxp_I*Vpui_I**4*DeltaVpui_I)
+
+      XSwh = URel/sqrt(UTh2Sum)
+
+      IntegralpxRho1 = 0.5*sqrt(cPi*UTh2Sum)*URel
+      IntegralpxRho2 = 0.5*sqrt(cPi)*UTh2Sum*URel*h8(XSwh)
+      g0pxRhoSi = IntegralpxRho2/IntegralpxRho1 * No2Si_V(UnitU_)
+
+      IntegralpxRho = &
+           IntegralpxRho1*sigma_cx(g0pxRhoSi)*g0pxRhoSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      IntegralpxU1 = sqrt(cPi*InvUTh2Sum)*URel**3
+      IntegralpxU2 = sqrt(cPi)*URel**3*h9(XSwh)
+      g0pxUSi = IntegralpxU2/IntegralpxU1 * No2Si_V(UnitU_)
+
+      IntegralpxU = IntegralpxU1*sigma_cx(g0pxUSi)*g0pxUSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      IntegralpxP1 = &
+           0.25*sqrt(cPi*UTh2Sum**3)*URel*h10(XSwh)
+      IntegralpxP2 = &
+           0.25*sqrt(cPi)*UTh2Sum**2*URel*h11(XSwh)
+      g0pxPSi = IntegralpxP2/IntegralpxP1 * No2Si_V(UnitU_)
+
+      IntegralpxP = IntegralpxP1*sigma_cx(g0pxPSi)*g0pxPSi &
+           /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+      I0xp = SourceRhoxp
+      I0px = SourceRhoxp
+
+      Jpx_D = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel &
+           *( 2*UMean_D*IntegralpxRho &
+           +UThSwh**2*URel_D/URel2*IntegralpxU)
+
+      Jxp_D = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel &
+           *( 2*UMean_D*IntegralpxRho &
+           -UThNeu**2*URel_D/URel2*IntegralpxU)
+
+      Kpx = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel*( &
+           (InvGammaMinus1*InvUTh2Sum &
+           *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
+           + UThSwh**2/URel2 &
+           *sum(Umean_D*URel_D)*IntegralpxU &
+           + InvUTh2Sum**2*UThSwh**4*IntegralpxP)
+
+      Kxp = InvGammaMinus1*SourcePxp &
+           + sum(UPui_D*Jxp_D) - 0.5*UPui**2*I0xp
+
+      Kxp = NumDensSwh*NumDensNeu &
+           *sqrt(InvUTh2Sum/cPi)/URel*( &
+           (InvGammaMinus1*InvUTh2Sum &
+           *UThSwh**2*UThNeu**2 + Umean2)*IntegralpxRho &
+           - UThNeu**2/URel2 &
+           *sum(Umean_D*URel_D)*IntegralpxU &
+           + InvUTh2Sum**2*UThNeu**4*IntegralpxP)
+
+      SourcePxp = GammaMinus1*(Kxp - sum(Upui_D*Jxp_D) + 0.5*UPui**2*I0xp)
+
+      ! We need to correct SourceFxp_I to be consistent with SourcePxp
+      DeltaSourcePxp = SourcePxp - SourcePxpPrime
+
+      iPuiSubtract = &
+           min(2, max(nPui-1, nint(log(URel/Vpui_I(1))/DeltaLogVpui) + 1))
+
+      iPuiAdd = iPuiSubtract + nint(sign(1., DeltaSourcePxp))
+
+      DeltaSourceFxpV2 = min(SourceFxp_I(iPuiSubtract) &
+           *Vpui_I(iPuiSubtract)**2*DeltaVpui_I(iPuiSubtract), &
+           0.75/cPi*DeltaSourcePxp &
+           /(Vpui_I(iPuiAdd)**2-Vpui_I(iPuiSubtract)**2))
+
+      SourceFxp_I(iPuiAdd) = SourceFxp_I(iPuiAdd) &
+           + DeltaSourceFxpV2/Vpui_I(iPuiAdd)**2 &
+           /DeltaVpui_I(iPuiAdd)
+
+      SourceFxp_I(iPuiSubtract) = SourceFxp_I(iPuiSubtract)&
+           -DeltaSourceFxpV2/Vpui_I(iPuiSubtract)**2 &
+           /DeltaVpui_I(iPuiSubtract)
+    end subroutine calc_charge_exchange_sw_to_pui
+    !==========================================================================
+    subroutine calc_charge_exchange_pui( &
+         NumDensNeu, UNeu_D, PNeu, UThNeu, &
+         I0xpu3, Jxpu3_D, Kxpu3, I0pu3x, Jpu3x_D, Kpu3x, &
+         SourceFpu3x_I, SourceFxpu3_I)
+
+      use ModPui, ONLY: Vpui_I, DeltaVpui_I
+
+      ! Calculate the source terms for charge exchange between sw and neu
+      ! Output intended for pui
+
+      real, dimension(3), intent(in) :: UNeu_D
+      real, intent(in) :: NumDensNeu, PNeu, UThNeu
+
+      real, intent(out) :: I0xpu3, Kxpu3, I0pu3x, Kpu3x
+      real, dimension(3), intent(out) :: Jxpu3_D, Jpu3x_D
+      real, dimension(nPui), intent(out) :: &
+           SourceFxpu3_I, SourceFpu3x_I
+
+      ! Indices
+      integer :: iPui
+
+      ! PUI Bins
+      real :: FStarNeu, FStarPui, Vpui, DeltaVpui
+
+      real:: VsubTop, VsubBot
+
+      real :: Xp, Xm, XpTop, XpBot, XmTop, XmBot
+
+      ! Fluid Variables
+      real :: Umean, Umean2, &
+           URel, URel2, UTh2Sum, InvUTh2Sum, UNeu
+      real, dimension(3) :: Umean_D, URel_D
+
+      real:: Integralpu3xU1, Integralpu3xU2, &
+           Integralxpu3U1, Integralxpu3U2, &
+           g0pu3xFSi, g0pu3xUSi, g0xpu3USi, &
+           SourceRhopu3x, SourceRhoxpu3, SourcePpu3x, SourcePxpu3, &
+           CumSumFpuiV1, CumSumFpuiV2, CumSumFpuiV3, CumSumFpuiV4
+      real:: g0xpu3FSi
+      real, dimension(3):: SourceUpu3x_D, SourceUxpu3_D
+      real, dimension(nPui):: SourceFxpu3P_I
+
+      !------------------------------------------------------------------------
+      UNeu = norm2(UNeu_D)
+      URel_D = UPui_D - UNeu_D
+      URel = norm2(URel_D) + 1E-4
+      URel2 = URel**2
+
+      CumSumFpuiV1 = 0
+      CumSumFpuiV2 = 0
+      CumSumFpuiV3 = 0
+      CumSumFpuiV4 = 0
+      SourceRhopu3x = 0
+      SourceRhoxpu3 = 0
+      SourcePpu3x = 0
+      SourcePxpu3 = 0
+      Integralpu3xU1 = 0
+      Integralpu3xU2 = 0
+      Integralxpu3U1 = 0
+
+      ! Iterate over pui bins
+      ! We go in reverse order for the CumSumFpui terms
+      do iPui = nPui, 1, -1
+         Vpui = Vpui_I(iPui)
+         DeltaVpui = DeltaVpui_I(iPui)
+         FStarPui = FStarPui_I(iPui)
+
+         Xp = (Vpui+URel)/UThNeu
+         Xm = (Vpui-URel)/UThNeu
+
+         ! SourceFpu3x
+         g0pu3xFSi = UthNeu**3/12/Vpui/URel*max(1E-30,h1(Xp)-h1(Xm)) &
+              *No2Si_V(UnitU_)
+
+         SourceFpu3x_I(iPui) = FStarPui*NumDensNeu &
+              *sigma_cx(g0pu3xFSi)*g0pu3xFSi &
+              /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+
+         ! SourceFxpu3
+         CumSumFpuiV1 = CumSumFpuiV1 + FStarPui*DeltaVpui*Vpui
+         CumSumFpuiV2 = CumSumFpuiV2 + FStarPui*DeltaVpui*Vpui**2
+         CumSumFpuiV3 = CumSumFpuiV3 + FStarPui*DeltaVpui*Vpui**3
+         CumSumFpuiV4 = CumSumFpuiV4 + FStarPui*DeltaVpui*Vpui**4
+
+         g0xpu3FSi = Vpui/NumDensPui*(PPui/MassFluid_I(Pu3_)/Vpui**2 &
+              + NumDensPui + 4*cPi*( CumSumFpuiV3/Vpui - CumSumFpuiV2 &
+              + (Vpui*CumSumFpuiV1 - CumSumFpuiV4/Vpui**2)/3 )) &
+              *No2Si_V(UnitU_)
+
+         ! Find the Edges of the bin
+         VsubBot = Vpui*exp(-0.5*DeltaLogVpui)
+         VsubTop = Vpui*exp(+0.5*DeltaLogVpui)
+
+         XpBot = (VsubBot+URel)/UThNeu
+         XmBot = (VsubBot-URel)/UThNeu
+         XpTop = (VsubTop+URel)/UThNeu
+         XmTop = (VsubTop-URel)/UThNeu
+
+         FStarNeu = 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
+              UThNeu/sqrt(cPi)*(exp(-XmBot**2)-exp(-XpBot**2) &
+              +exp(-XpTop**2)-exp(-XmTop**2)) &
+              +URel*(erf(XmTop)-erfc(XpTop) &
+              -erf(XmBot)+erfc(XpBot)))
+
+         SourceFxpu3_I(iPui) = NumDensPui*FStarNeu &
               *sigma_cx(g0xpu3FSi)*g0xpu3FSi &
               /Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
-          ! Terms for velocity source terms
-          Integralpu3xU1 = Integralpu3xU1 &
+         ! Terms for velocity source terms
+         Integralpu3xU1 = Integralpu3xU1 &
               + FStarPui*Vpui*DeltaVpui &
               *max(UThNeu**2*1E-60, 0.2*UThNeu**2*(h2(Xp)-h2(Xm)) &
               - (URel2+Vpui**2)*(h1(Xp)-h1(Xm)))
 
-          Integralxpu3U1 = Integralxpu3U1 &
+         Integralxpu3U1 = Integralxpu3U1 &
               + FStarPui*Vpui*DeltaVpui &
               *min(-UThNeu**2*1E-60, UThNeu**2/3*(h6(Xp)-H6(Xm)) &
               +(Vpui**2-URel2)*(h5(Xp)-h5(Xm)))
-        end do
+      end do
 
-        SourceRhopu3x = 4*cPi*sum(SourceFpu3x_I*Vpui_I**2*DeltaVpui_I)
-        SourceRhoxpu3 = 4*cPi*sum(SourceFxpu3_I*Vpui_I**2*DeltaVpui_I)
+      SourceRhopu3x = 4*cPi*sum(SourceFpu3x_I*Vpui_I**2*DeltaVpui_I)
+      SourceRhoxpu3 = 4*cPi*sum(SourceFxpu3_I*Vpui_I**2*DeltaVpui_I)
 
-        SourcePpu3x = 4*cPi/3*sum(SourceFpu3x_I*Vpui_I**4*DeltaVpui_I)
-        SourcePxpu3 = 4*cPi/3*sum(SourceFxpu3_I*Vpui_I**4*DeltaVpui_I)
+      SourcePpu3x = 4*cPi/3*sum(SourceFpu3x_I*Vpui_I**4*DeltaVpui_I)
+      SourcePxpu3 = 4*cPi/3*sum(SourceFxpu3_I*Vpui_I**4*DeltaVpui_I)
 
-        Integralpu3xU1 = Integralpu3xU1 &
-            *cPi*UThNeu**3/6/NumDensPui/URel**3
+      Integralpu3xU1 = Integralpu3xU1 &
+           *cPi*UThNeu**3/6/NumDensPui/URel**3
 
-        Integralpu3xU2 = UThPui**2
+      Integralpu3xU2 = UThPui**2
 
-        g0pu3xUSi = Integralpu3xU2/Integralpu3xU1 * No2Si_V(UnitU_)
+      g0pu3xUSi = Integralpu3xU2/Integralpu3xU1 * No2Si_V(UnitU_)
 
-        Integralxpu3U1 = Integralxpu3U1 &
-            *0.25*cPi*UThNeu**3/NumDensPui/URel**3
+      Integralxpu3U1 = Integralxpu3U1 &
+           *0.25*cPi*UThNeu**3/NumDensPui/URel**3
 
-        Integralxpu3U2 = -UThNeu**2
+      Integralxpu3U2 = -UThNeu**2
 
-        g0xpu3USi = Integralxpu3U2/Integralxpu3U1 * No2Si_V(UnitU_)
+      g0xpu3USi = Integralxpu3U2/Integralxpu3U1 * No2Si_V(UnitU_)
 
-        I0pu3x = min(SourceRhopu3x, SourceRhoxpu3)
-        I0xpu3 = I0pu3x
+      I0pu3x = min(SourceRhopu3x, SourceRhoxpu3)
+      I0xpu3 = I0pu3x
 
-        !Scale pu3x and xpu3 terms to match
-        SourceFxpu3_I = SourceFxpu3_I*I0xpu3/(SourceRhoxpu3+1E-30)
-        SourcePxpu3 = SourcePxpu3*I0xpu3/(SourceRhoxpu3+1E-30)
-        SourceFpu3x_I = SourceFpu3x_I*I0pu3x/(SourceRhopu3x+1E-30)
-        SourcePpu3x = SourcePpu3x*I0pu3x/(SourceRhopu3x+1E-30)
+      ! Scale pu3x and xpu3 terms to match
+      SourceFxpu3_I = SourceFxpu3_I*I0xpu3/(SourceRhoxpu3+1E-30)
+      SourcePxpu3 = SourcePxpu3*I0xpu3/(SourceRhoxpu3+1E-30)
+      SourceFpu3x_I = SourceFpu3x_I*I0pu3x/(SourceRhopu3x+1E-30)
+      SourcePpu3x = SourcePpu3x*I0pu3x/(SourceRhopu3x+1E-30)
 
-        SourceUpu3x_D = NumDensPui*NumDensNeu &
-            *Integralpu3xU1*URel_D*sigma_cx(g0pu3xUSi) &
-            *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-        SourceUxpu3_D = NumDensPui*NumDensNeu &
-            *Integralxpu3U1*URel_D*sigma_cx(g0xpu3USi)&
-            *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+      SourceUpu3x_D = NumDensPui*NumDensNeu &
+           *Integralpu3xU1*URel_D*sigma_cx(g0pu3xUSi) &
+           *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+      SourceUxpu3_D = NumDensPui*NumDensNeu &
+           *Integralxpu3U1*URel_D*sigma_cx(g0xpu3USi)&
+           *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
-        Jpu3x_D = I0pu3x*UPui_D &
-            + SourceUpu3x_D
-        Jxpu3_D = I0xpu3*UNeu_D &
-            + SourceUxpu3_D
+      Jpu3x_D = I0pu3x*UPui_D &
+           + SourceUpu3x_D
+      Jxpu3_D = I0xpu3*UNeu_D &
+           + SourceUxpu3_D
 
-        Kpu3x = InvGammaMinus1*SourcePpu3x &
-            + sum(Upui_D*Jpu3x_D) &
-            - 0.5*UPui**2*I0pu3x
-        Kxpu3 = InvGammaMinus1*SourcePxpu3 &
-            + sum(UPui_D*Jxpu3_D) &
-            - 0.5*UPui**2*I0xpu3
-      end subroutine calc_charge_exchange_pui
-      !========================================================================
-    elemental real function sigma_cx(URelSi)
+      Kpu3x = InvGammaMinus1*SourcePpu3x &
+           + sum(Upui_D*Jpu3x_D) &
+           - 0.5*UPui**2*I0pu3x
+      Kxpu3 = InvGammaMinus1*SourcePxpu3 &
+           + sum(UPui_D*Jxpu3_D) &
+           - 0.5*UPui**2*I0xpu3
+    end subroutine calc_charge_exchange_pui
+    !==========================================================================
+    real function sigma_cx(URelSi)
       ! Calculate the charge exchange cross section
       real, intent(in):: URelSi
       !------------------------------------------------------------------------
@@ -2781,65 +2779,66 @@ contains
            ((CrossA1 - CrossA2*log(URelSi*100.))**2)/1.E4
     end function sigma_cx
     !==========================================================================
-    elemental real function h1(X)
+    real function h1(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h1 = 2./sqrt(cPi)*(1.+X**2)*exp(-X**2) &
            + (3.*X+2.*X**3)*erf(X)
     end function h1
     !==========================================================================
-    elemental real function h2(X)
+    real function h2(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h2 = 2/sqrt(cPi)*(1.+X**2+3*X**4)*exp(-X**2) &
            + (5.*X**3+6.*X**5)*erf(X)
     end function h2
     !==========================================================================
-    elemental real function h5(X)
+    real function h5(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h5 = 2./sqrt(cPi)*exp(-X**2) + (1./X + 2.*X)*erf(X)
     end function h5
     !==========================================================================
-    elemental real function h6(X)
+    real function h6(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h6 = 2./sqrt(cPi)*(2.-X**2)*exp(-X**2) &
            + (3*X-2.*X**3)*erf(X)
     end function h6
     !==========================================================================
-    elemental real function h7(X)
+    real function h7(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h7 = 2./sqrt(cPi)*(2.+X**2)*exp(-X**2) &
            + (5.*X+2.*X**3)*erf(X)
     end function h7
     !==========================================================================
-    elemental real function h8(X)
+    real function h8(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h8 = exp(-X**2)/sqrt(cPi) + (0.5/X+X)*erf(X)
     end function h8
     !==========================================================================
-    elemental real function h9(X)
+    real function h9(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h9 = (0.5/X**2+1)/sqrt(cPi)*exp(-X**2) &
            + (-0.25/X**3+1./X+X)*erf(X)
     end function h9
     !==========================================================================
-    elemental real function h10(X)
+    real function h10(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h10 = 3. + 2.*X**2
-    end function
+    end function h10
     !==========================================================================
-    elemental real function h11(X)
+    real function h11(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
       h11 = (5.+2.*X**2)/sqrt(cPi)*exp(-X**2) &
            + (1.5/X+6.*X+2.*X**3)*erf(X)
-    end function
+    end function h11
+    !==========================================================================
   end subroutine calc_charge_exchange_source_pui
   !============================================================================
   subroutine calc_charge_exchange_source( &
