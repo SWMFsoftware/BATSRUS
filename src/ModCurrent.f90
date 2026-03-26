@@ -27,9 +27,9 @@ contains
     !$acc routine seq
 
     ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and
-    ! the current (if iVarMax=nVar+3) for input position
-    ! XyzIn_D given in Cartesian coordinates. The interpolated state
-    ! is second order accurate everywhere except where there is a
+    ! the current (if iVarMax>=nVar+3) and Efield (if iVarMax==nVar+6) for
+    ! input position XyzIn_D given in Cartesian coordinates. The interpolated
+    ! state is second order accurate everywhere except where there is a
     ! resolution change in more than one direction for the cell centers
     ! surrounding the given position. In these exceptional cases the
     ! interpolated state is first order accurate. The interpolation algorithm
@@ -38,7 +38,7 @@ contains
 
     use ModVarIndexes, ONLY: nVar
     use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
-    use ModAdvance, ONLY: State_VGB, StateOld_VGB
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, Efield_DGB
     use ModParallel, ONLY: DiLevel_EB
     use ModGeometry, ONLY: Coord111_DB
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
@@ -200,12 +200,18 @@ contains
                         *State_VGB(iVarMin:iStateMax,i,j,k,iBlock)
 
                    ! The current is always based on the new state
-                   if(iVarMax == nVar + 3)then
+                   if(iVarMax >= nVar + 3)then
                       call get_current(i, j, k, iBlock, Current_D)
                       StateCurrent_V(nState+1:nState+3) = &
                            StateCurrent_V(nState+1:nState+3) &
                            + WeightXyz*Current_D
                    end if
+
+                   ! Electric field is always based on the new state
+                   if (iVarMax == nVar + 6) &
+                      StateCurrent_V(nState+4:nState+6) = &
+                           StateCurrent_V(nState+4:nState+6) &
+                           + WeightXyz*Efield_DGB(:,i,j,k,iBlock)
 
                 end if
              end do
@@ -509,10 +515,10 @@ contains
   end subroutine get_current
   !============================================================================
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
-       Br_II, Bt_DII, b_DII, &
+       Br_II, Bt_DII, b_DII, P_II, Pe_II, Rho_II, S_II, &
        Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, FacMin)
 
-    use ModVarIndexes, ONLY: Bx_, Bz_, nVar
+    use ModVarIndexes, ONLY: Bx_, Bz_, nVar, p_, Pe_, rho_
     use ModMain, ONLY: tSimulation, TypeCoordSystem, nBlock
     use ModPhysics, ONLY: rCurrents, UnitB_, Si2No_V
 #ifdef _OPENACC
@@ -558,6 +564,21 @@ contains
     real, intent(out), optional:: b_DII(3,nTheta,nPhi)
     !$acc declare create(b_DII)
 
+    ! Pressure at rIn
+    real, intent(out), optional:: P_II(nTheta,nPhi)
+    !$acc declare create(P_II)
+
+    ! Electron Pressure at rIn
+    real, intent(out), optional:: Pe_II(nTheta,nPhi)
+    !$acc declare create(Pe_II)
+
+    ! Density at rIn
+    real, intent(out), optional:: Rho_II(nTheta,nPhi)
+    !$acc declare create(Rho_II)
+
+    ! Poynting Flux at rIn
+    real, intent(out), optional:: S_II(nTheta,nPhi)
+
     ! Coordinate arrays allow non-uniform grid
     real, intent(in), optional:: Theta_I(nTheta)
     real, intent(in), optional:: Phi_I(nPhi)
@@ -577,17 +598,19 @@ contains
     ! Local variables
     character(len=3):: TypeCoordFac
 
-    ! Interpolation weight, interpolated agnetic field and current
+    ! Interpolation weight, interpolated magnetic field and current
+    ! Optionally includes pressures, density, and electric field
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
-    integer :: i, j, iHemisphere, iError
+    integer :: i, j, iHemisphere, iError, iVarMin, iVarMax, nVarExtra, iVarExtra
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
-    real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3)
+    real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3), &
+               B1_D(3), e_D(3), Poynting_D(3)
     real    :: bIn_D(3), bIn, Br
     real    :: GmFac_DD(3,3)
     !$acc declare create(GmFac_DD)
-    real    :: State_V(Bx_-1:nVar+3)
+    real, allocatable :: State_V(:)
     real    :: dPhi, dTheta
     logical :: DoMap
 
@@ -601,7 +624,25 @@ contains
     if(present(TypeCoordFacGrid)) TypeCoordFac = TypeCoordFacGrid
     UseGsm = TypeCoordFac == 'GSM'
 
-    if(.not.allocated(bCurrent_VII)) allocate(bCurrent_VII(0:6,nTheta,nPhi))
+    nVarExtra = 0
+    if(present(P_II)) nVarExtra = nVarExtra + 1
+    if(present(Pe_II)) nVarExtra = nVarExtra + 1
+    if(present(Rho_II)) then
+      nVarExtra = nVarExtra + 1
+      iVarMin = Rho_
+    else
+      iVarMin = Bx_
+    end if
+    if(present(S_II)) then
+      nVarExtra = nVarExtra + 3
+      iVarMax = nVar+6
+    else
+      iVarMax = nVar+3
+    end if
+
+    if(.not.allocated(bCurrent_VII)) allocate(bCurrent_VII(0:6+nVarExtra, &
+                                                           nTheta,nPhi), &
+                                              State_V(iVarMin-1:iVarMax))
 
     bCurrent_VII = 0.0
 
@@ -661,8 +702,9 @@ contains
           if(iHemisphere == 0) then
              ! This point does not map
              ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
-             bCurrent_VII(:,i,j) = &
-                  [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+             ! Extra variables are also set to 0
+             bCurrent_VII(2:,i,j) = 0.0
+             bCurrent_VII(0:1,i,j) = 1.0
              CYCLE
           end if
        else
@@ -681,11 +723,26 @@ contains
 #endif
 
        ! Extract currents and magnetic field for this position
-       call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
-       bCurrent_VII(0,  i,j) = State_V(Bx_-1)         ! Weight
+       call get_point_data(0.0, Xyz_D, 1, nBlock, iVarMin, iVarMax, State_V)
+       bCurrent_VII(0,  i,j) = State_V(iVarMin-1)         ! Weight
        bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &   ! B1 + Weight*B0
-            State_V(Bx_-1)*B0_D
+            State_V(iVarMin-1)*B0_D
        bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
+       iVarExtra = 7
+       if(present(P_II)) then
+         bCurrent_VII(iVarExtra,i,j) = State_V(p_)
+         iVarExtra = iVarExtra + 1
+       end if
+       if(present(Pe_II)) then
+         bCurrent_VII(iVarExtra,i,j) = State_V(Pe_)
+         iVarExtra = iVarExtra + 1
+       end if
+       if(present(Rho_II)) then
+         bCurrent_VII(iVarExtra,i,j) = State_V(Rho_)
+         iVarExtra = iVarExtra + 1
+       end if
+       if (iVarMax == nVar+6) bCurrent_VII(iVarExtra:iVarExtra+2,i,j) = &
+                                 State_V(nVar+4:nVar+6)
 
     end do; end do
 
@@ -700,6 +757,7 @@ contains
     if(iProc == 0)then
        !$acc parallel loop vector collapse(2) &
        !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D)
+       !$acc private(e_D, B1_D, Poynting_D)
        do j = 1, nPhi; do i = 1, nTheta
 
           if(present(Phi_I))then
@@ -785,9 +843,38 @@ contains
              b_D = cross_prod(rUnit_D, bIn_D)
              Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
           end if
+
+          ! Extract and save additional variables if present
+          iVarExtra = 7
+          if(present(P_II)) then
+             ! Save Pressure
+             P_II(i,j) = bCurrent_VII(iVarExtra,i,j)
+             iVarExtra=iVarExtra+1
+          end if
+          if(present(Pe_II)) then
+             ! Save Electron Pressure
+             Pe_II(i,j) = bCurrent_VII(iVarExtra,i,j)
+             iVarExtra=iVarExtra+1
+          end if
+          if(present(Rho_II)) then
+             ! Save Density
+             Rho_II(i,j) = bCurrent_VII(iVarExtra,i,j)
+             iVarExtra=iVarExtra+1
+          end if
+          if(present(S_II)) then
+            ! Extract electric field
+            e_D = bCurrent_VII(nVarExtra+4:nVarExtra+6,i,j)
+            ! Extract B1
+            B1_D = bCurrent_VII(1:3,i,j) - bCurrent_VII(0,i,j) * B0_D
+            ! Poynting flux S = ExB1/mu0 for ionospheric purposes (Kelley 91)
+            Poynting_D = cross_prod(e_D, B1_D)
+            ! Parallel is dot product with b unit vector
+            S_II(i,j) = sum(Poynting_D * bUnit_D)
+            if(present(IsRadial)) S_II(i,j) = S_II(i,j) * Br/bIn
+          end if
        end do; end do
     end if
-    deallocate(bCurrent_VII)
+    deallocate(bCurrent_VII, State_V)
 
 #ifdef _OPENACC
     !$acc update host(Fac_II)
@@ -801,6 +888,22 @@ contains
 
     if(present(b_DII))then
        !$acc update host(B_dII)
+    end if
+
+    if(present(P_II))then
+       !$acc update host(P_II)
+    end if
+
+    if(present(Pe_II))then
+       !$acc update host(Pe_II)
+    end if
+
+    if(present(Rho_II))then
+       !$acc update host(Rho_II)
+    end if
+
+    if(present(S_II))then
+       !$acc update host(S_II)
     end if
 #endif
 
