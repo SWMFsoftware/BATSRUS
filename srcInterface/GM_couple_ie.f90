@@ -63,7 +63,7 @@ contains
 
     ! Standard 6 variable tracing: FAC, 1/b, rho, p, dlat, dlon
     if(present(nVarGmIe)) then
-        nVarGmIe = 6
+        nVarGmIe = 7
         ! Add additional space for Pe, Ppar, Pepar if turned on
         if (UseElectronPressure) nVarGmIe = nVarGmIe + 1
         if (UseAnisoPressure) nVarGmIe = nVarGmIe + 1
@@ -91,19 +91,22 @@ contains
          InvB_, RhoInvB_, pInvB_, iXEnd, iYEnd, iZEnd, iPeInvB, CLOSEDRAY, &
          GmSm_DD, integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
-    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_, &
+                          UnitPoynting_
     use ModCoordTransform, ONLY: xyz_to_sph
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModB0, ONLY: B0_DGB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use CON_coupler, ONLY: Grid_C, IE_
+    use ModElectricField, ONLY: get_electric_field
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
 
     integer:: i, j, iVar
     real:: Radius
-    real, allocatable:: FieldAlignedCurrent_II(:,:)
+    real, allocatable:: FieldAlignedCurrent_II(:,:), Pressure_II(:,:), &
+                        Density_II(:,:), PoyntingFlux_II(:,:), Pe_II(:,:)
     real, allocatable:: IeLat_I(:), IeLon_I(:)
     real:: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
     logical:: DoTest, DoTestMe
@@ -125,19 +128,51 @@ contains
 
     ! Put the radial component of the field aligned currents
     ! into the first variable of the buffer
-    call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
-         FieldAlignedCurrent_II, &
-         Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
+    if (DoTraceIE) then
+        call get_electric_field
+        allocate(Pressure_II(iSize,jSize),Density_II(iSize,jSize),&
+                 PoyntingFlux_II(iSize,jSize))
+        if(UseElectronPressure) then
+            allocate(Pe_II(iSize,jSize))
+            call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
+                    FieldAlignedCurrent_II, P_II=Pressure_II, Pe_II=Pe_II, &
+                    Rho_II=Density_II, S_II=PoyntingFlux_II, &
+                    Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
+        else
+            call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
+                    FieldAlignedCurrent_II, P_II=Pressure_II, &
+                    Rho_II=Density_II, S_II=PoyntingFlux_II, &
+                    Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
+        end if
+    else
+        call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
+            FieldAlignedCurrent_II, &
+            Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
+    end if
     if(iProc == 0)then
        ! initialize all elements to zero on proc 0, others should not use it
        Buffer_IIV = 0.0
 
        ! Save the latitude boundary information to the equator
        Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
+       if(DoTraceIE) then
+            Buffer_IIV(:,:,3) = Density_II(:,:) * No2Si_V(UnitRho_)
+            Buffer_IIV(:,:,4) = Pressure_II(:,:) * No2Si_V(UnitP_)
+            Buffer_IIV(:,:,7) = PoyntingFlux_II(:,:) * No2Si_V(UnitPoynting_)
+            iVar = 8
+            if(UseElectronPressure) then
+                Buffer_IIV(:,:,iVar) = Pe_II(:,:) * &
+                                    No2Si_V(UnitP_)
+                iVar = iVar + 1
+            end if
+        end if
        if(DoTest)write(*,*)NameSub, ': sum(FAC**2)=', sum(Buffer_IIV(:,:,1)**2)
     end if
 
     deallocate(FieldAlignedCurrent_II)
+    if(allocated(Pressure_II)) deallocate(Pressure_II,Density_II,&
+                                          PoyntingFlux_II)
+    if(allocated(Pe_II)) deallocate(Pe_II)
     if(DoTraceIE) then
        allocate(IeLat_I(iSize), IeLon_I(jSize))
 
@@ -170,10 +205,12 @@ contains
              RayResult_VII(  pInvB_,:,:) = 0.
           end where
           Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) &
-               * No2Si_V(UnitX_)/No2Si_V(UnitB_)
-          Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
-          Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
-          iVar = 7
+                * No2Si_V(UnitX_)/No2Si_V(UnitB_)
+          where(RayResult_VII(   InvB_,:,:) >= 0)
+            Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
+            Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+          end where
+          iVar = 8
           if(UseElectronPressure) then
               where(RayResult_VII(InvB_,:,:) > 0.)
                   RayResult_VII(iPeInvB,:,:)  = RayResult_VII(iPeInvB,:,:) &
@@ -182,8 +219,10 @@ contains
               where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
                   RayResult_VII(iPeInvB,:,:) = 0.
               end where
-              Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * &
+              where(RayResult_VII(   InvB_,:,:) >= 0)
+                  Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * &
                       No2Si_V(UnitP_)
+              end where
               iVar = iVar + 1
           end if
 
@@ -216,14 +255,15 @@ contains
              Buffer_IIV(i,j,6) = dLon
           end do; end do
           if(DoTest)then
-             iVar=7
+             iVar=8
              write(*,*)NameSub, ': sum(Buf2**2)=', sum(Buffer_IIV(:,:,2)**2)
              write(*,*)NameSub, ': sum(Buf3**2)=', sum(Buffer_IIV(:,:,3)**2)
              write(*,*)NameSub, ': sum(Buf4**2)=', sum(Buffer_IIV(:,:,4)**2)
              write(*,*)NameSub, ': sum(Buf5**2)=', sum(Buffer_IIV(:,:,5)**2)
              write(*,*)NameSub, ': sum(Buf6**2)=', sum(Buffer_IIV(:,:,6)**2)
+             write(*,*)NameSub, ': sum(Buf7**2)=', sum(Buffer_IIV(:,:,7)**2)
              if(UseElectronPressure)then
-                 write(*,*)NameSub, ': sum(Buf7**2)=', &
+                 write(*,*)NameSub, ': sum(Buf8**2)=', &
                          sum(Buffer_IIV(:,:,iVar)**2)
              end if
           end if
