@@ -603,7 +603,8 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
-    integer :: i, j, iHemisphere, iError, iVarMin, iVarMax, nVarExtra, iVarExtra
+    integer :: i, j, iHemisphere, iError, iVarMin, iVarMax, nVarExtra, &
+               iVarExtra
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
     real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3), &
                B1_D(3), e_D(3), Poynting_D(3)
