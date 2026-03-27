@@ -865,12 +865,10 @@ contains
           if(present(S_II)) then
             ! Extract electric field
             e_D = bCurrent_VII(nVarExtra+4:nVarExtra+6,i,j)
-            ! Extract B1
-            B1_D = bCurrent_VII(1:3,i,j) - bCurrent_VII(0,i,j) * B0_D
-            ! Poynting flux S = ExB1/mu0 for ionospheric purposes (Kelley 91)
-            Poynting_D = cross_prod(e_D, B1_D)
-            ! Parallel is dot product with b unit vector
-            S_II(i,j) = sum(Poynting_D * bUnit_D)
+            ! Poynting flux S = ExB/mu0
+            Poynting_D = cross_prod(e_D, b_D)
+            ! Parallel is dot product with b0 unit vector
+            S_II(i,j) = sum(Poynting_D * (B0_D / norm2(B0_D)))
             if(present(IsRadial)) S_II(i,j) = S_II(i,j) * Br/bIn
           end if
        end do; end do
