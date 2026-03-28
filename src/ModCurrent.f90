@@ -757,7 +757,7 @@ contains
     ! Map the field aligned current to rIn sphere
     if(iProc == 0)then
        !$acc parallel loop vector collapse(2) &
-       !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D)
+       !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D) &
        !$acc private(e_D, B1_D, Poynting_D)
        do j = 1, nPhi; do i = 1, nTheta
 
