@@ -134,12 +134,12 @@ contains
                  PoyntingFlux_II(iSize,jSize))
         if(UseElectronPressure) then
             allocate(Pe_II(iSize,jSize))
-            call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
+            call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere,&
                     FieldAlignedCurrent_II, P_II=Pressure_II, Pe_II=Pe_II, &
                     Rho_II=Density_II, S_II=PoyntingFlux_II, &
                     Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
         else
-            call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
+            call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere,&
                     FieldAlignedCurrent_II, P_II=Pressure_II, &
                     Rho_II=Density_II, S_II=PoyntingFlux_II, &
                     Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)

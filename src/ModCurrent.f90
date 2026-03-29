@@ -603,7 +603,8 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
-    integer :: i, j, iHemisphere, iError, iVarMin, iVarMax, nVarExtra, iVarExtra
+    integer :: i, j, iHemisphere, iError, iVarMin, iVarMax, nVarExtra, &
+               iVarExtra
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
     real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3), &
                B1_D(3), e_D(3), Poynting_D(3)
@@ -756,7 +757,7 @@ contains
     ! Map the field aligned current to rIn sphere
     if(iProc == 0)then
        !$acc parallel loop vector collapse(2) &
-       !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D)
+       !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D) &
        !$acc private(e_D, B1_D, Poynting_D)
        do j = 1, nPhi; do i = 1, nTheta
 
@@ -864,12 +865,10 @@ contains
           if(present(S_II)) then
             ! Extract electric field
             e_D = bCurrent_VII(nVarExtra+4:nVarExtra+6,i,j)
-            ! Extract B1
-            B1_D = bCurrent_VII(1:3,i,j) - bCurrent_VII(0,i,j) * B0_D
-            ! Poynting flux S = ExB1/mu0 for ionospheric purposes (Kelley 91)
-            Poynting_D = cross_prod(e_D, B1_D)
-            ! Parallel is dot product with b unit vector
-            S_II(i,j) = sum(Poynting_D * bUnit_D)
+            ! Poynting flux S = ExB/mu0
+            Poynting_D = cross_prod(e_D, b_D)
+            ! Parallel is dot product with b0 unit vector
+            S_II(i,j) = sum(Poynting_D * (B0_D / norm2(B0_D)))
             if(present(IsRadial)) S_II(i,j) = S_II(i,j) * Br/bIn
           end if
        end do; end do
