@@ -390,7 +390,7 @@ contains
           ! Subtract hydro energy densities of fluids 2..nIonFluid if needed
           if(UseMultiIon .and. UseTotalIonEnergy .and. iFluid == 1) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-               - sum(State_VGB(iPIon_I(2:),i,j,k,iBlock))
+               - sum(State_VGB(iPIon_I(min(nIonFluid,2):),i,j,k,iBlock))
 
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
