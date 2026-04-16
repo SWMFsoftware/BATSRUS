@@ -879,7 +879,7 @@ contains
     integer:: nCells_D(2), iError, i, j
 
     integer, allocatable, save:: iRhoIm_I(:), iPIm_I(:), iPparIm_I(:), &
-                                 iPeIm
+                                 iPeIm, iPeparIm
 
     character(len=15), allocatable:: NameVarIm_V(:)
 
@@ -949,7 +949,7 @@ contains
        allocate(iRhoIm_I(nDensity))
        allocate(iPIm_I(nFluid))
        allocate(iPparIm_I(nFluid))
-       allocate(iPeIm)
+       allocate(iPeIm, iPeparIm)
 
        ! Initialize values assuming not present
        iRhoIm_I   = -1
@@ -960,6 +960,8 @@ contains
        IsImPpar_I = .false.
        iPeIm      = -1
        IsImPe     = .false.
+       iPeparIm   = -1
+       IsImPepar  = .false.
 
        do iDensity = 1, nDensity
           do iVarIm = 1, nVarIM - 1
@@ -1011,21 +1013,39 @@ contains
        enddo
 
        ! Only ever 1 electron pressure, no need to check multiple times
-       if (UseElectronPressure) then
-           do iVarIm = 1,nVarIM-1
-               ! get Electron Pressure index for Buffer
-               if(string_to_lower(NameVar_V(Pe_)) &
-                       == string_to_lower(NameVarIm_V(iVarIm)) ) then
-                   ! found a match. set IM fluid index
-                   iPeIm  = iVarIm
-                   IsImPe = .true.
-               elseif(iVarIm == nVarIm) then
-                   ! no match found.
-                   iPeIm  = -1
-                   isImPe = .false.
-               endif
-           end do
-       end if
+       do iVarIm = 1,nVarIM-1
+          ! get Electron Pressure index for Buffer
+          ! Electron pressure should be read in from CIMI even if not present
+          ! in the MHD equation
+          if('pe' == string_to_lower(NameVarIm_V(iVarIm))) then
+                ! found a match. set IM fluid index
+              iPeIm  = iVarIm
+              IsImPe = .true.
+          elseif(iVarIm == nVarIm) then
+              ! no match found.
+              iPeIm  = -1
+              isImPe = .false.
+          endif
+
+          if (DoAnisoPressureIMCoupling) then
+            ! get PePar Pressure index for Buffer
+            ! Same as with isotropic electron pressure, when anisotropic MHD is
+            ! used, pepar should be coupled even when not present in the
+            ! equation
+            if('pepar' == string_to_lower(NameVarIm_V(iVarIm))) then
+                ! found a match. set IM fluid index
+                iPeparIm  = iVarIm
+                IsImPepar = .true.
+            elseif(iVarIm == nVarIm) then
+                ! no match found.
+                iPeparIm = -1
+                IsImPepar = .false.
+            endif
+          else
+            iPeparIm  = -1
+            IsImPepar = .false.
+          endif
+       end do
 
        IsFirstCall = .false.
     endif
@@ -1054,6 +1074,12 @@ contains
         ImPe_II = Buffer_IIV(:,:,iPeIm)
     else if (UseElectronPressure) then
         ImPe_II = -1.0
+    else if(.not.DoMultiFluidIMCoupling .or. UseMultiSpecies .and. IsImPe) then
+       ! Add electron pressure to ion pressure if there is no electron pressure
+       ! Not done for multifluid (taken from RCM implementation)
+       ImP_III(:,:,1) = ImP_III(:,:,1) + Buffer_IIV(:,:,iPeIm)
+       if(DoAnisoPressureIMCoupling .and. IsImPepar) &
+         ImPpar_III(:,:,1) = ImPpar_III(:,:,1) + Buffer_IIV(:,:,iPeparIm)
     end if
 
     ! for anisotropic pressure
