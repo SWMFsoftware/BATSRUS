@@ -116,7 +116,7 @@ contains
          TypeFluxNeutral, UseClimit, DoBurgers
     use ModLookupTable, ONLY: read_lookup_table_param, get_lookup_table, &
          i_lookup_table, copy_lookup_table_to_gpu
-    use ModIeCoupling, ONLY: read_ie_velocity_param
+    use ModIeCoupling, ONLY: read_ie_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
     use ModLaserHeating, ONLY: read_laser_heating_param
     use ModLocalTimeStep, ONLY: read_localstep_param
@@ -2016,8 +2016,8 @@ contains
           call read_field_trace_param(NameCommand)
        case("#PWCOUPLING")
           call read_var("DoLimitRhoPw", DoLimitRhoPw)
-       case("#IECOUPLING")
-          call read_ie_velocity_param
+       case("#IECOUPLING", "#IEVELOCITY", "#IEPRECIP", "#IEPRECIPITATION")
+          call read_ie_param(NameCommand)
        case("#IMCOUPLING","#IM")
           call read_var('TauCoupleIm', TauCoupleIm)
           if(TauCoupleIm < 1.0)then

@@ -99,6 +99,7 @@ contains
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use CON_coupler, ONLY: Grid_C, IE_
     use ModElectricField, ONLY: get_electric_field
+    use ModIeCoupling, ONLY: UseIePrecip
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
@@ -128,7 +129,7 @@ contains
 
     ! Put the radial component of the field aligned currents
     ! into the first variable of the buffer
-    if (DoTraceIE) then
+    if (UseIePrecip) then
         call get_electric_field
         allocate(Pressure_II(iSize,jSize),Density_II(iSize,jSize),&
                  PoyntingFlux_II(iSize,jSize))
@@ -155,7 +156,7 @@ contains
 
        ! Save the latitude boundary information to the equator
        Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
-       if(DoTraceIE) then
+       if(UseIePrecip) then
             Buffer_IIV(:,:,3) = Density_II(:,:) * No2Si_V(UnitRho_)
             Buffer_IIV(:,:,4) = Pressure_II(:,:) * No2Si_V(UnitP_)
             Buffer_IIV(:,:,7) = PoyntingFlux_II(:,:) * No2Si_V(UnitPoynting_)
