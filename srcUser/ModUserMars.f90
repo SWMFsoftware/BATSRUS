@@ -1506,7 +1506,7 @@ contains
        delta=rot - tSimulation/RotPeriodSi*cTwoPi
     end If
 
-    theta = acos(Z0/rr)
+    theta = acos(max(-1.0, min(1.0, Z0/rr)))
 
     if(UseB0Old)then
        call set_mars_b0_old(R0, theta, phi+delta, bb)
@@ -1580,7 +1580,7 @@ contains
     NN = NNm - 1
 !    xtcos=cos(theta)
 !    xtsin=sin(theta)
-    xtsin=sqrt(1.0-xtcos*xtcos)
+    xtsin=sqrt(max(0.0, 1.0-xtcos*xtcos))
 
     do im=0,NN
        xpcos(im)=cos(im*phi)
@@ -1710,7 +1710,7 @@ contains
     bb = 0.0
 
     !	    somx2=sqrt((1.-xtcos)*(1.+xtcos))
-    somx2 = abs(xtsin)
+    somx2 = max(1e-10, abs(xtsin))
     signsx = sign(1., xtsin)
 
     fact=1.
@@ -1749,7 +1749,11 @@ contains
              Rnm(n,m+1)=xtcos*Factor3_I(m)*Rnm(m+1,m+1)
           endif
 
-          dRnm = m*xtcos*Rnm(n,m)/xtsin - Rnm(n,m+1)*signsx*Factor3_II(n,m)
+          if (xtsin < 1e-10) then
+             dRnm = - Rnm(n,m+1)*signsx*Factor3_II(n,m)
+          else
+             dRnm = m*xtcos*Rnm(n,m)/xtsin - Rnm(n,m+1)*signsx*Factor3_II(n,m)
+          end if
 
           bb(1) = bb(1) + (n+1)*arrn*Rnm(n,m)*(cmars(n,m)*xpcos(m) &
                + dmars(n,m)*xpsin(m))
