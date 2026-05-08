@@ -2645,7 +2645,7 @@ contains
 
       !------------------------------------------------------------------------
       UNeu = norm2(UNeu_D)
-      URel_D = UPui_D - UNeu_D
+      URel_D = USwh_D - UNeu_D
       URel = norm2(URel_D) + 1E-4
       URel2 = URel**2
 
@@ -2757,17 +2757,17 @@ contains
            *Integralxpu3U1*URel_D*sigma_cx(g0xpu3USi)&
            *No2Si_V(UnitU_)/Si2No_V(UnitN_)/Si2No_V(UnitT_)
 
-      Jpu3x_D = I0pu3x*UPui_D &
+      Jpu3x_D = I0pu3x*USwh_D &
            + SourceUpu3x_D
       Jxpu3_D = I0xpu3*UNeu_D &
            + SourceUxpu3_D
 
       Kpu3x = InvGammaMinus1*SourcePpu3x &
-           + sum(Upui_D*Jpu3x_D) &
-           - 0.5*UPui**2*I0pu3x
+           + sum(USwh_D*Jpu3x_D) &
+           - 0.5*USwh**2*I0pu3x
       Kxpu3 = InvGammaMinus1*SourcePxpu3 &
-           + sum(UPui_D*Jxpu3_D) &
-           - 0.5*UPui**2*I0xpu3
+           + sum(USwh_D*Jxpu3_D) &
+           - 0.5*USwh**2*I0xpu3
     end subroutine calc_charge_exchange_pui
     !==========================================================================
     real function sigma_cx(URelSi)
