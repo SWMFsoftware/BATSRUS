@@ -69,7 +69,8 @@ module ModUser
        IMPLEMENTED14 => user_init_session,              &
        IMPLEMENTED15 => user_calc_sources_impl,         &
        IMPLEMENTED16 => user_init_point_implicit,       &
-       IMPLEMENTED17 => user_set_boundary_cells
+       IMPLEMENTED17 => user_set_boundary_cells,        &
+       IMPLEMENTED18 => user_amr_criteria
 
   include 'user_module.h' ! list of public methods
 
@@ -4698,6 +4699,33 @@ contains
     end if
 
   end subroutine user_set_boundary_cells
+  !============================================================================
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+    ! User defined AMR criteria. Set the value of UserCriteria for
+    ! block iBlock. Multiple user criteria can be implemented, distinguished
+    ! by TypeCriteria (starting with 'user'). IsFound should be set to .true.
+    ! if TypeCriteria is recognized.
+
+    integer, intent(in) :: iBlock
+    character(len=*), intent(in) :: TypeCriteria
+    real, intent(out) :: UserCriteria
+    logical, intent(inout) :: IsFound
+
+    logical :: IsRegion2, IsRegion3
+
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !--------------------------------------------------------------------------
+    UserCriteria = 0.5
+
+    IsFound = .true.
+
+    call select_region(iBlock)
+    IsRegion2 = any(iFluidProduced_C==Ne2_)
+    IsRegion3 = any(iFluidProduced_C==Ne3_)
+    if(IsRegion2 .and. IsRegion3) UserCriteria = 1.0
+
+  end subroutine user_amr_criteria
   !============================================================================
 
 end module ModUser
