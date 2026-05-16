@@ -69,7 +69,8 @@ module ModUser
        IMPLEMENTED14 => user_init_session,              &
        IMPLEMENTED15 => user_calc_sources_impl,         &
        IMPLEMENTED16 => user_init_point_implicit,       &
-       IMPLEMENTED17 => user_set_boundary_cells
+       IMPLEMENTED17 => user_set_boundary_cells,        &
+       IMPLEMENTED18 => user_amr_criteria
 
   include 'user_module.h' ! list of public methods
 
@@ -2503,11 +2504,11 @@ contains
          XpTop = (VsubTop+URel)/UThNeu
          XmTop = (VsubTop-URel)/UThNeu
 
-         FStarNeu = 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
+         FStarNeu = max(0., 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
               UThNeu/sqrt(cPi)*(exp(-XmBot**2)-exp(-XpBot**2) &
               +exp(-XpTop**2)-exp(-XmTop**2)) &
               +URel*(erf(XmTop)-erfc(XpTop) &
-              -erf(XmBot)+erfc(XpBot)))
+              -erf(XmBot)+erfc(XpBot))) )
 
          g0xpFSi = UthSwh*h8(Vpui/UThSwh) * No2Si_V(UnitU_)
 
@@ -2685,10 +2686,11 @@ contains
          CumSumFpuiV3 = CumSumFpuiV3 + FStarPui*DeltaVpui*Vpui**3
          CumSumFpuiV4 = CumSumFpuiV4 + FStarPui*DeltaVpui*Vpui**4
 
-         g0xpu3FSi = Vpui/NumDensPui*(PPui/MassFluid_I(Pu3_)/Vpui**2 &
+         g0xpu3FSi = max(1e-32, &
+              Vpui/NumDensPui*(PPui/MassFluid_I(Pu3_)/Vpui**2 &
               + NumDensPui + 4*cPi*( CumSumFpuiV3/Vpui - CumSumFpuiV2 &
               + (Vpui*CumSumFpuiV1 - CumSumFpuiV4/Vpui**2)/3 )) &
-              *No2Si_V(UnitU_)
+              *No2Si_V(UnitU_) )
 
          ! Find the Edges of the bin
          VsubBot = Vpui*exp(-0.5*DeltaLogVpui)
@@ -2699,11 +2701,11 @@ contains
          XpTop = (VsubTop+URel)/UThNeu
          XmTop = (VsubTop-URel)/UThNeu
 
-         FStarNeu = 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
+         FStarNeu = max(0., 0.125*NumDensNeu/cPi/URel/Vpui**2/DeltaVpui*( &
               UThNeu/sqrt(cPi)*(exp(-XmBot**2)-exp(-XpBot**2) &
               +exp(-XpTop**2)-exp(-XmTop**2)) &
               +URel*(erf(XmTop)-erfc(XpTop) &
-              -erf(XmBot)+erfc(XpBot)))
+              -erf(XmBot)+erfc(XpBot))) )
 
          SourceFxpu3_I(iPui) = NumDensPui*FStarNeu &
               *sigma_cx(g0xpu3FSi)*g0xpu3FSi &
@@ -2816,7 +2818,7 @@ contains
     real function h8(X)
       real, intent(in):: X
       !------------------------------------------------------------------------
-      h8 = exp(-X**2)/sqrt(cPi) + (0.5/X+X)*erf(X)
+      h8 = exp(-X**2)/sqrt(cPi) + (0.5/(X+1e-32)+X)*erf(X)
     end function h8
     !==========================================================================
     real function h9(X)
@@ -4697,6 +4699,33 @@ contains
     end if
 
   end subroutine user_set_boundary_cells
+  !============================================================================
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+    ! User defined AMR criteria. Set the value of UserCriteria for
+    ! block iBlock. Multiple user criteria can be implemented, distinguished
+    ! by TypeCriteria (starting with 'user'). IsFound should be set to .true.
+    ! if TypeCriteria is recognized.
+
+    integer, intent(in) :: iBlock
+    character(len=*), intent(in) :: TypeCriteria
+    real, intent(out) :: UserCriteria
+    logical, intent(inout) :: IsFound
+
+    logical :: IsRegion2, IsRegion3
+
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !--------------------------------------------------------------------------
+    UserCriteria = 0.5
+
+    IsFound = .true.
+
+    call select_region(iBlock)
+    IsRegion2 = any(iFluidProduced_C==Ne2_)
+    IsRegion3 = any(iFluidProduced_C==Ne3_)
+    if(IsRegion2 .and. IsRegion3) UserCriteria = 1.0
+
+  end subroutine user_amr_criteria
   !============================================================================
 
 end module ModUser
