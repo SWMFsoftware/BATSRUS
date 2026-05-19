@@ -128,7 +128,8 @@ contains
          UnitN_, UnitU_, UnitB_, UnitP_, rBody
     use ModSolarwind, ONLY: get_solar_wind_point
     use ModNumConst, ONLY: cRadToDeg
-    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I
+    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I, &
+                                   DoWriteSuper, SuperIndex_I
     use CON_planet_field, ONLY: map_planet_field
 
     use CON_line_extract, ONLY: line_get, line_clean
@@ -166,8 +167,11 @@ contains
        KpOut = -1
     endif
 
-    ! If Ae is being calculated, share it.  Otherwise, share -1.
-    if(DoCalcAe) then
+    ! If SME is being calculated, share it.  Otherwise, If Ae is being
+    ! calculated, share it.  Otherwise, share -1.
+    if (DoWriteSuper) then
+       AeOut = SuperIndex_I(3)
+    else if(DoCalcAe) then
        AeOut = AeIndex_I(3)
     else
        AeOut = -1
