@@ -1681,7 +1681,6 @@ contains
 
       integer :: iLon, iLat, nSMR
       integer :: iTime_I(7)
-      real    :: SuperIndex_I(4)
       real    :: SinLat, Sin40, Sin50, Sin80
 
       logical:: DoTest
