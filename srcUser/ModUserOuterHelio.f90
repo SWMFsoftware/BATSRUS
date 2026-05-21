@@ -1691,7 +1691,7 @@ contains
 
     real :: U_DI(3,nFluid)
     real :: ForcePerRho_D(3)
-    
+
     integer :: i, j, k, iFluid
 
     logical:: DoTest
@@ -1875,10 +1875,10 @@ contains
     if(UseRadiationRepulsion)then
        do iFluid = Neu_, Ne4_
           if(nFluid > 1) call select_fluid(iFluid)
-          
+
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          
+
              ForcePerRho_D = -RepulsionRatio &
                   *Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
              Source_VC(iRhoUx:iRhoUz,i,j,k) = &
