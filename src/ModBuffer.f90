@@ -189,7 +189,7 @@ contains
          WaveFirst_, WaveLast_, Bx_, Bz_, wDiff_
 #ifndef _OPENACC
     use ModPhysics, ONLY: xBody2,  yBody2, zBody2
-    use ModMain, ONLY: DoThinCurrentSheet
+    use ModMain, ONLY: DoThinCurrentSheet, UseOuterHelio
     use ModWaves, ONLY: UseAlfvenWaves
     use ModTurbulence, ONLY: IsOnAwRepresentative, PoyntingFluxPerB
     use ModSaMhd, ONLY: UseSaMhd, get_samhd_state
@@ -258,6 +258,17 @@ contains
 #endif
        if(UseB) State_V(Bx_:Bz_) = &
             matmul3_left(SourceToTarget_DD, State_V(Bx_:Bz_))
+    end if
+
+    if(UseOuterHelio)then
+       ! No current sheet in outer heliosphere
+       if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0) &
+            State_V(Bx_:Bz_) = -State_V(Bx_:Bz_)
+       if(WaveFirst_ > 1 .and. UseAlfvenWaves)then
+          Ewave = State_V(WaveFirst_)
+          State_V(WaveFirst_) = State_V(WaveLast_)
+          State_V(WaveLast_) = Ewave
+       end if
     end if
 
 #ifndef _OPENACC
