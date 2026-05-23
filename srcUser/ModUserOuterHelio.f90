@@ -44,7 +44,7 @@ module ModUser
        UnitX_, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
        NameTecUnit_V, NameIdlUnit_V, UnitEnergyDens_, &
        UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
-       UnitTemperature_, UnitT_, UnitRhoU_
+       UnitTemperature_, UnitT_, UnitRhoU_, Gbody
   use ModConst, ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
        cRyToEv, cSecondPerYear, iYearBase
   use ModTimeConvert, ONLY: n_day_of_year
@@ -214,6 +214,10 @@ module ModUser
   integer :: nSubSample = 5
 
   logical :: UsePuiCxHeliosheath = .true.
+
+  ! Effect of radiation repulsion
+  logical :: UseRadiationRepulsion = .false.
+  real :: RepulsionRatio = 0.1
 
 contains
   !============================================================================
@@ -388,6 +392,11 @@ contains
        case("#SINGLEIONVELOCITYREGION3")
           call read_var('UseSingleIonVelocityRegion3', &
                UseSingleIonVelocityRegion3)
+
+       case("#RADIATIONREPULSION")
+          call read_var('UseRadiationRepulsion', UseRadiationRepulsion)
+          if(UseRadiationRepulsion) &
+               call read_var('RepulsionRatio', RepulsionRatio)
 
        case default
           if(iProc==0) call stop_mpi( &
@@ -1681,8 +1690,9 @@ contains
     real :: HeatElectron
 
     real :: U_DI(3,nFluid)
+    real :: ForcePerRho_D(3)
 
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources_expl'
@@ -1861,6 +1871,24 @@ contains
        ! Calculate the source terms for this cell
        call calc_source_cell
     end do; end do; end do
+
+    if(UseRadiationRepulsion)then
+       do iFluid = Neu_, Ne4_
+          if(nFluid > 1) call select_fluid(iFluid)
+
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+             ForcePerRho_D = -RepulsionRatio &
+                  *Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
+             Source_VC(iRhoUx:iRhoUz,i,j,k) = &
+                  Source_VC(iRhoUx:iRhoUz,i,j,k) &
+                  + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
+             Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
+                  sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*ForcePerRho_D)
+          end do; end do; end do
+       end do
+    end if
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
