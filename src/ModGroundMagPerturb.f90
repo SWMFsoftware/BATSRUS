@@ -239,6 +239,9 @@ contains
           write(*,*)'Warning: MagnetometerGrid must cover longitude ', &
           'range [0, 360]. Setting DoWriteSupermagIndices to False.'
           DoWriteSuper = .false.
+        elseif(DoWriteSuper) then
+          ! Initialize a small value of SME to signal that we plan to pass
+          SuperIndex_I(3) = 1e-50
        endif
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
