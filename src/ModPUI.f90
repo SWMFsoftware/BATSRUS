@@ -242,7 +242,7 @@ contains
     logical:: IsRegion2, IsRegion3
     logical:: IsNewBlockPuiDiffusion_I(PuiFirst_:PuiLast_)
 
-    logical :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_pui_flux'
     !--------------------------------------------------------------------------
 
