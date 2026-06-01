@@ -37,8 +37,10 @@ module ModPhysicalFlux
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
   real :: DiffCoef = 0.0, EradFlux = 0.0, RadDiffCoef = 0.0
   real :: HeatFlux = 0.0, IonHeatFlux = 0.0, HeatCondCoefNormal = 0.0
+  real :: PuiDiffCoef = 0.0
+  real :: FpuiFlux_I(PuiFirst_:PuiLast_) = 0.0
   !$omp threadprivate(DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux)
-  !$omp threadprivate(HeatCondCoefNormal)
+  !$omp threadprivate(HeatCondCoefNormal, FpuiFlux_I)
 
   ! Variables needed by viscosity
   real :: ViscoCoeff = 0.0
@@ -85,25 +87,26 @@ contains
 
     use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModAdvance, ONLY: &
-       nFlux, eFluid_, UseMhdMomentumFlux, UseElectronPressure,  UseEfield, &
-       UseIonEntropy, UseElectronEntropy, UseElectronEnergy, &
-       UseTotalIonEnergy, UseAnisoPe
+         nFlux, eFluid_, UseMhdMomentumFlux, UseElectronPressure,  UseEfield, &
+         UseIonEntropy, UseElectronEntropy, UseElectronEnergy, &
+         UseTotalIonEnergy, UseAnisoPe
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
     use ModHallResist, ONLY: UseHallResist
     use ModImplicit, ONLY: UseSemiHallResist
     use ModPhysics, ONLY: ElectronPressureRatio, GammaElectron, &
-       GammaElectronMinus1, InvGammaElectronMinus1, GammaMinus1, &
-       InvGammaMinus1, InvGammaMinus1_I, GammaMinus1_I, &
-       C2light, Clight
+         GammaElectronMinus1, InvGammaElectronMinus1, GammaMinus1, &
+         InvGammaMinus1, InvGammaMinus1_I, GammaMinus1_I, &
+         C2light, Clight
     use ModViscosity, ONLY: Visco_DDI
     use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
-       AlfvenPlusFirst_, AlfvenPlusLast_, &
-       GammaWave, UseWavePressure, UseWavePressureLtd
+         AlfvenPlusFirst_, AlfvenPlusLast_, &
+         GammaWave, UseWavePressure, UseWavePressureLtd
     use ModTurbulence, ONLY: IsOnAwRepresentative
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
          IsIon_I, nIonFluid, UseMultiIon, ElectronPerMass_I, select_fluid
+    use ModPUI, ONLY: UsePuiDiffusion, DoPuiDiffusion_B
     use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: nDim, x_, y_, z_
 
@@ -329,6 +332,10 @@ contains
     end if
 
     if(EradFlux /= 0) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+    if(UsePuiDiffusion)then
+       if(DoPuiDiffusion_B(iBlockFace)) Flux_V(PuiFirst_:PuiLast_) = &
+            Flux_V(PuiFirst_:PuiLast_) + FpuiFlux_I
+    end if
     if(HeatFlux /= 0)then
        if(UseElectronPressure)then
           if(UseElectronEntropy) call stop_mpi(NameSub// &
@@ -819,7 +826,7 @@ contains
          Flux_V(Energy_) = Flux_V(Energy_) + HallUn*pExtra
          ! Add Ue*Pe/(ge-1) if electron energy is included
          if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
-             + HallUn*Pe*InvGammaElectronMinus1
+              + HallUn*Pe*InvGammaElectronMinus1
       end if
 
       if(UseBorisSimple)then

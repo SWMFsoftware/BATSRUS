@@ -4,6 +4,7 @@
 module ModPUI
 
   use BATL_lib, ONLY: test_start, test_stop
+  use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModVarIndexes, ONLY: nPui, PuiFirst_, PuiLast_, nIonFluid
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModSize, ONLY: nI, nJ, nK
@@ -17,6 +18,7 @@ module ModPUI
   public :: init_mod_pui
   public :: set_pui_state
   public :: pui_advection_diffusion
+  public :: get_pui_flux
 
   integer, parameter, public :: Pu3_ = nIonFluid
 
@@ -31,6 +33,13 @@ module ModPUI
   real, public :: DeltaLogVpui
 
   real, public :: DivUpui_C(nI,nJ,nK) = 0.0
+
+  ! For spatial diffusion at the termination shock
+  logical, public :: UsePuiDiffusion = .false.
+  logical, allocatable, public :: DoPuiDiffusion_B(:)
+  real, public :: PuiDiffCoefSi = 1.E17   ! m^2/s
+  real, public :: PuiDiffCoef = 0.0
+  real, allocatable :: Fpui_IG(:,:,:,:)
 
 contains
   !============================================================================
@@ -49,6 +58,9 @@ contains
     case("#PUIGRID")
        call read_var('VpuiMinSi', VpuiMinSi)
        call read_var('VpuiMaxSi', VpuiMaxSi)
+    case("#PUIDIFFUSION")
+       call read_var('UsePuiDiffusion', UsePuiDiffusion)
+       if(UsePuiDiffusion) call read_var('PuiDiffCoefSi', PuiDiffCoefSi)
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -59,7 +71,8 @@ contains
   subroutine init_mod_pui
 
     use ModWaves, ONLY: WaveFirst_
-    use ModPhysics, ONLY: Si2No_V, UnitU_
+    use ModPhysics, ONLY: Si2No_V, UnitU_, UnitX_
+    use BATL_size, ONLY: MaxBlock
 
     integer ::  iPui
 
@@ -83,6 +96,19 @@ contains
     do iPui = 2, nPui
        DeltaVpui_I(iPui) = DeltaVpui_I(iPui-1)*exp(DeltaLogVpui)
     end do
+
+    if (UsePuiDiffusion)then
+       PuiDiffCoef = PuiDiffCoefSi * Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       if (.not. allocated(DoPuiDiffusion_B)) &
+            allocate(DoPuiDiffusion_B(MaxBlock))
+       if (.not. allocated(Fpui_IG)) &
+            allocate(Fpui_IG(PuiFirst_:PuiLast_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    else
+       if(allocated(DoPuiDiffusion_B)) &
+            deallocate(DoPuiDiffusion_B)
+       if(allocated(Fpui_IG)) &
+            deallocate(Fpui_IG)
+    end if
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_pui
@@ -134,7 +160,7 @@ contains
             /(4*cPi*Vpui_I(iPui1)**2*DeltaVpui_I(iPui1))
 
        State_V(PuiFirst_+iPui2-1) = &
-             (3*Ppui - RhoPui*Vpui_I(iPui1)**2) &
+            (3*Ppui - RhoPui*Vpui_I(iPui1)**2) &
             /(Vpui_I(iPui2)**2 - Vpui_I(iPui1)**2) &
             /(4*cPi*Vpui_I(iPui2)**2*DeltaVpui_I(iPui2))
     endif
@@ -195,5 +221,50 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine pui_advection_diffusion
   !============================================================================
+  subroutine get_pui_flux(iDir, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, &
+       PuiDiffCoefOut, FpuiFlux_I, IsNewBlockPuiDiffusion)
+
+    use ModAdvance, ONLY: State_VGB, Erad_
+    use ModFaceGradient, ONLY: get_face_gradient
+    use ModVarIndexes, ONLY: nVar
+    use BATL_size, ONLY: MaxDim
+
+    integer, intent(in):: iDir, i, j, k, iBlock
+    real, intent(in):: StateLeft_V(nVar)
+    real, intent(in):: StateRight_V(nVar)
+    real, intent(in):: Normal_D(MaxDim)
+    real, intent(out):: PuiDiffCoefOut, FpuiFlux_I(PuiFirst_:PuiLast_)
+    logical, intent(inout):: IsNewBlockPuiDiffusion
+
+    integer :: iPui
+    real :: FaceGrad_D(3)
+    logical:: IsRegion2, IsRegion3
+    logical:: IsNewBlockPuiDiffusion_I(PuiFirst_:PuiLast_)
+
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'get_pui_flux'
+    !--------------------------------------------------------------------------
+
+    if(.not. DoPuiDiffusion_B(iBlock))then
+       IsNewBlockPuiDiffusion = .false.
+       PuiDiffCoefOut = 0.0
+       FpuiFlux_I = 0
+       RETURN
+    end if
+
+    if(IsNewBlockPuiDiffusion) &
+         Fpui_IG = State_VGB(PuiFirst_:PuiLast_,:,:,:,iBlock)
+    IsNewBlockPuiDiffusion_I = IsNewBlockPuiDiffusion
+    do iPui = PuiFirst_,PuiLast_
+       call get_face_gradient(iDir, i, j, k, iBlock, &
+            IsNewBlockPuiDiffusion_I(iPui), Fpui_IG(iPui,:,:,:), FaceGrad_D)
+       PuiDiffCoefOut = PuiDiffCoef*(Vpui_I(iPui-PuiFirst_+1)/Vpui_I(1))**(10./9.)
+       FpuiFlux_I(iPui) = -PuiDiffCoefOut*sum(Normal_D*FaceGrad_D)
+    end do
+    IsNewBlockPuiDiffusion = .false.
+  end subroutine get_pui_flux
+  !============================================================================
+
 end module ModPUI
 !==============================================================================

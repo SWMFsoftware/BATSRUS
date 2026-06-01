@@ -1115,76 +1115,94 @@ contains
   !============================================================================
   subroutine user_action(NameAction)
 
+    use ModPui, ONLY: UsePuiDiffusion, DoPuiDiffusion_B
+    use BATL_lib, ONLY: nBlock
+
     character(len=*), intent(in):: NameAction
 
     character(len=*), parameter:: StringFormat = '(10X,A19,F15.6,A11,F15.6)'
+
+    integer :: iBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_action'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(NameAction /= 'write progress') RETURN
 
-    write(*,StringFormat) 'SwhRhoDim [n/cc]:',SwhRhoDim,'SwhRho:',SwhRho
-    write(*,StringFormat) 'SwhUxDim  [km/s]:',SwhUxDim,'SwhUx:',SwhUx
-    write(*,StringFormat) 'SwhUyDim  [km/s]:',SwhUyDim,'SwhUy:',SwhUy
-    write(*,StringFormat) 'SwhUzDim  [km/s]:',SwhUzDim,'SwhUz:',SwhUz
-    write(*,StringFormat) 'SwhTDim   [   K]:',SwhTDim,'SwhP:',SwhP
-    write(*,StringFormat) 'SwhBxDim  [  nT]:',SwhBxDim,'SwhBx:',SwhBx
-    write(*,StringFormat) 'SwhByDim  [  nT]:',SwhByDim,'SwhBy:',SwhBy
-    write(*,StringFormat) 'SwhBzDim  [  nT]:',SwhBzDim,'SwhBz:',SwhBz
-    write(*,'(10X,A19,F15.6)')           'SwhTDim   [   K]:',SwhTDim
-    write(*,*)
-    write(*,*)
-    write(*,StringFormat) 'VliswRhoDim[n/cc]:',VliswRhoDim,'VliswRho:',VliswRho
-    write(*,StringFormat) 'VliswUxDim[km/s]: ',VliswUxDim,'VliswUx:',VliswUx
-    write(*,StringFormat) 'VliswUyDim[km/s]: ',VliswUyDim,'VliswUy:',VliswUy
-    write(*,StringFormat) 'VliswUzDim[km/s]: ',VliswUzDim,'VliswUz:',VliswUz
-    write(*,StringFormat) 'VliswPDim [nPa]: ',VliswPDim,'VliswP:',VliswP
-    write(*,StringFormat) 'VliswBxDim[nT]: ',VliswBxDim,'VliswBx:',VliswBx
-    write(*,StringFormat) 'VliswByDim[nT]:',VliswByDim,'VliswBy:',VliswBy
-    write(*,StringFormat) 'VliswBzDim[nT]:',VliswBzDim,'VliswBz:',VliswBz
-    write(*,'(10X,A19,F15.6)') 'VliswTDim[K]: ',VliswTDim!
+    select case(NameAction)
 
-    if(iTableSolarWind > 0)then
+    case('write progress')
+       write(*,StringFormat) 'SwhRhoDim [n/cc]:',SwhRhoDim,'SwhRho:',SwhRho
+       write(*,StringFormat) 'SwhUxDim  [km/s]:',SwhUxDim,'SwhUx:',SwhUx
+       write(*,StringFormat) 'SwhUyDim  [km/s]:',SwhUyDim,'SwhUy:',SwhUy
+       write(*,StringFormat) 'SwhUzDim  [km/s]:',SwhUzDim,'SwhUz:',SwhUz
+       write(*,StringFormat) 'SwhTDim   [   K]:',SwhTDim,'SwhP:',SwhP
+       write(*,StringFormat) 'SwhBxDim  [  nT]:',SwhBxDim,'SwhBx:',SwhBx
+       write(*,StringFormat) 'SwhByDim  [  nT]:',SwhByDim,'SwhBy:',SwhBy
+       write(*,StringFormat) 'SwhBzDim  [  nT]:',SwhBzDim,'SwhBz:',SwhBz
+       write(*,'(10X,A19,F15.6)')           'SwhTDim   [   K]:',SwhTDim
        write(*,*)
-       write(*,'(10X,A19,F15.6)') 'RunStart[yr]:', RunStart
-       write(*,'(10X,A19,F15.6)') 'Offset[yr]:',Offset
-    end if
+       write(*,*)
+       write(*,StringFormat) 'VliswRhoDim[n/cc]:',VliswRhoDim,'VliswRho:',VliswRho
+       write(*,StringFormat) 'VliswUxDim[km/s]: ',VliswUxDim,'VliswUx:',VliswUx
+       write(*,StringFormat) 'VliswUyDim[km/s]: ',VliswUyDim,'VliswUy:',VliswUy
+       write(*,StringFormat) 'VliswUzDim[km/s]: ',VliswUzDim,'VliswUz:',VliswUz
+       write(*,StringFormat) 'VliswPDim [nPa]: ',VliswPDim,'VliswP:',VliswP
+       write(*,StringFormat) 'VliswBxDim[nT]: ',VliswBxDim,'VliswBx:',VliswBx
+       write(*,StringFormat) 'VliswByDim[nT]:',VliswByDim,'VliswBy:',VliswBy
+       write(*,StringFormat) 'VliswBzDim[nT]:',VliswBzDim,'VliswBz:',VliswBz
+       write(*,'(10X,A19,F15.6)') 'VliswTDim[K]: ',VliswTDim!
 
-    if(UseNeutralFluid)then
-       ! neutrals
-       write(*,*)
-       write(*,StringFormat) &
-            'RhoNeuWindDim:',RhoNeuWindDim ,'RhoNeutralsISW:',RhoNeutralsISW
-       write(*,StringFormat) &
-            'UxNeuWindDim:',UxNeuWindDim,'UxNeutralsISW:',UxNeutralsISW
-       write(*,StringFormat) &
-            'UyNeuWindDim:',UyNeuWindDim,'UyNeutralsISW:',UyNeutralsISW
-       write(*,StringFormat) &
-            'UzNeuWindDim:',UzNeuWindDim,'UzNeutralsISW:',UzNeutralsISW
-       write(*,StringFormat) &
-            'pNeuWindDim:',pNeuWindDim,'PNeutralsISW:',PNeutralsISW
-       write(*,'(10X,A19,F15.6)') 'TempNeuWindDim:',TempNeuWindDim
-       write(*,*)
-    end if
-    if(.not.IsMhd)then
-       write(*,*)
-       write(*,StringFormat) 'Pu3RhoDim [n/cc]:',Pu3RhoDim,'SwhRho:',Pu3Rho
-       write(*,StringFormat) 'Pu3UxDim  [km/s]:',Pu3UxDim,'Pu3Ux:',Pu3Ux
-       write(*,StringFormat) 'Pu3UyDim  [km/s]:',Pu3UyDim,'Pu3Uy:',Pu3Uy
-       write(*,StringFormat) 'Pu3UzDim  [km/s]:',Pu3UzDim,'Pu3Uz:',Pu3Uz
-       write(*,StringFormat) 'Pu3TDim   [   K]:',Pu3TDim,'Pu3P:',Pu3P
-       write(*,'(10X,A19,F15.6)')           'Pu3TDim   [   K]:',Pu3TDim
-       write(*,*)
-    end if
-    if(UseElectronPressure)then
-       write(*,StringFormat) 'VliswPeDim [nPa]: ', &
-            VliswPeDim,' VliswPe:', VliswPe
-       write(*,'(10X,A19,F15.6)') 'VliswTeDim[K]: ', VliswTeDim
-       write(*,StringFormat) 'SwhTeDim   [   K]:', SwhTeDim, &
-            ' SwhPe:', SwhPe
-    end if
+       if(iTableSolarWind > 0)then
+          write(*,*)
+          write(*,'(10X,A19,F15.6)') 'RunStart[yr]:', RunStart
+          write(*,'(10X,A19,F15.6)') 'Offset[yr]:',Offset
+       end if
+
+       if(UseNeutralFluid)then
+          ! neutrals
+          write(*,*)
+          write(*,StringFormat) &
+               'RhoNeuWindDim:',RhoNeuWindDim ,'RhoNeutralsISW:',RhoNeutralsISW
+          write(*,StringFormat) &
+               'UxNeuWindDim:',UxNeuWindDim,'UxNeutralsISW:',UxNeutralsISW
+          write(*,StringFormat) &
+               'UyNeuWindDim:',UyNeuWindDim,'UyNeutralsISW:',UyNeutralsISW
+          write(*,StringFormat) &
+               'UzNeuWindDim:',UzNeuWindDim,'UzNeutralsISW:',UzNeutralsISW
+          write(*,StringFormat) &
+               'pNeuWindDim:',pNeuWindDim,'PNeutralsISW:',PNeutralsISW
+          write(*,'(10X,A19,F15.6)') 'TempNeuWindDim:',TempNeuWindDim
+          write(*,*)
+       end if
+       if(.not.IsMhd)then
+          write(*,*)
+          write(*,StringFormat) 'Pu3RhoDim [n/cc]:',Pu3RhoDim,'SwhRho:',Pu3Rho
+          write(*,StringFormat) 'Pu3UxDim  [km/s]:',Pu3UxDim,'Pu3Ux:',Pu3Ux
+          write(*,StringFormat) 'Pu3UyDim  [km/s]:',Pu3UyDim,'Pu3Uy:',Pu3Uy
+          write(*,StringFormat) 'Pu3UzDim  [km/s]:',Pu3UzDim,'Pu3Uz:',Pu3Uz
+          write(*,StringFormat) 'Pu3TDim   [   K]:',Pu3TDim,'Pu3P:',Pu3P
+          write(*,'(10X,A19,F15.6)')           'Pu3TDim   [   K]:',Pu3TDim
+          write(*,*)
+       end if
+       if(UseElectronPressure)then
+          write(*,StringFormat) 'VliswPeDim [nPa]: ', &
+               VliswPeDim,' VliswPe:', VliswPe
+          write(*,'(10X,A19,F15.6)') 'VliswTeDim[K]: ', VliswTeDim
+          write(*,StringFormat) 'SwhTeDim   [   K]:', SwhTeDim, &
+               ' SwhPe:', SwhPe
+       end if
+
+    case('load balance done')
+       if(UsePuiDiffusion)then
+          do iBlock = 1, nBlock
+             ! call get_termination_shock(iBlock, DoPuiDiffusion_B(iBlock))
+             call select_region(iBlock)
+             DoPuiDiffusion_B(iBlock) = any(iFluidProduced_C==Ne3_)
+          end do
+       end if
+
+    end select
 
     call test_stop(NameSub, DoTest)
   end subroutine user_action

@@ -42,6 +42,7 @@ module ModFaceFlux
   use ModRadDiffusion, ONLY: get_radiation_energy_flux
   use ModHeatConduction, ONLY: get_heat_flux, get_ion_heat_flux
   use ModResistivity, ONLY: UseResistiveFlux, Eta_GB
+  use ModPui, ONLY: UsePuiDiffusion, get_pui_flux
   use ModIonElectron, ONLY: iVarUseCmax_I
   use ModVarIndexes
   use ModNumConst, ONLY: cSqrtHalf, cTiny
@@ -221,9 +222,11 @@ module ModFaceFlux
   logical :: IsNewBlockIonHeatCond = .true.
   logical :: IsNewBlockRadDiffusion = .true.
   logical :: IsNewBlockAlfven = .true.
+  logical :: IsNewBlockPuiDiffusion = .true.
   !$omp threadprivate(IsNewBlockVisco, IsNewBlockGradPe, IsNewBlockCurrent)
   !$omp threadprivate(IsNewBlockHeatCond, IsNewBlockIonHeatCond)
   !$omp threadprivate(IsNewBlockRadDiffusion, IsNewBlockAlfven)
+  !$omp threadprivate(IsNewBlockPuiDiffusion)
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
@@ -511,6 +514,7 @@ contains
     IsNewBlockIonHeatCond  = .true.
     IsNewBlockVisco        = .true.
     IsNewBlockAlfven       = .true.
+    IsNewBlockPuiDiffusion = .true.
 
     UseAlfvenWaveSpeed = UseAlfvenWaves.and..not.IsOnAwRepresentative
     !$acc update device(UseAlfvenWaveSpeed)
@@ -1271,6 +1275,13 @@ contains
             iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
             RadDiffCoef, EradFlux, IsNewBlockRadDiffusion)
        DiffCoef = DiffCoef + RadDiffCoef
+    end if
+
+    if(UsePuiDiffusion)then
+       call get_pui_flux(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
+            PuiDiffCoef, FpuiFlux_I, IsNewBlockPuiDiffusion)
+       DiffCoef = DiffCoef + PuiDiffCoef
     end if
 
     if(DoHeatConduction)then
