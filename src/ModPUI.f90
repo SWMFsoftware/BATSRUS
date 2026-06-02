@@ -65,7 +65,7 @@ contains
        call read_var('UsePuiDiffusion', UsePuiDiffusion)
        if(UsePuiDiffusion) then
           call read_var('PuiDiffCoefSi', PuiDiffCoefSi)
-          call read_var('PuiDiffV0', PuiDiffV0)
+          call read_var('PuiDiffV0Si', PuiDiffV0Si)
           call read_var('PuiDiffSlope', PuiDiffSlope)
        end if
     case default
@@ -106,6 +106,7 @@ contains
 
     if (UsePuiDiffusion)then
        PuiDiffCoef = PuiDiffCoefSi * Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       PuiDiffV0 = PuiDiffV0Si *Si2No_V(UnitU_)
        if (.not. allocated(DoPuiDiffusion_B)) &
             allocate(DoPuiDiffusion_B(MaxBlock))
        if (.not. allocated(Fpui_IG)) &
