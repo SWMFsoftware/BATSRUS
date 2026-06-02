@@ -2792,7 +2792,7 @@ contains
              end do
           end if
 
-       case("#PUIGRID")
+       case("#PUIGRID", "#PUIDIFFUSION")
           call read_pui_param(NameCommand)
 
           ! CORONA SPECIFIC COMMANDS
@@ -3851,13 +3851,13 @@ contains
       ! database is used (venus, mars, mercury)
       do iSat = 1, nSatellite
          if (index(NameFileSat_I(iSat), 'sta') > 0 .or.  &
-                 index(NameFileSat_I(iSat), 'stereoa') > 0) &
-                 NameSat_I(iSat) = 'sta'
+              index(NameFileSat_I(iSat), 'stereoa') > 0) &
+              NameSat_I(iSat) = 'sta'
          if (index(NameFileSat_I(iSat), 'stb') > 0 .or.  &
-                 index(NameFileSat_I(iSat), 'stereob') > 0) &
-                 NameSat_I(iSat) = 'stb'
+              index(NameFileSat_I(iSat), 'stereob') > 0) &
+              NameSat_I(iSat) = 'stb'
          if (index(NameFileSat_I(iSat), 'earth') > 0)    &
-                 NameSat_I(iSat) = 'earth'
+              NameSat_I(iSat) = 'earth'
       end do
 
       ! stop the code if there are two stereo a/b, earth traj files
