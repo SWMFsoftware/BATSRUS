@@ -39,6 +39,9 @@ module ModPUI
   logical, allocatable, public :: DoPuiDiffusion_B(:)
   real, public :: PuiDiffCoefSi = 1.E17   ! m^2/s
   real, public :: PuiDiffCoef = 0.0
+  real, public :: PuiDiffV0Si
+  real, public :: PuiDiffV0
+  real, public :: PuiDiffSlope
   real, allocatable :: Fpui_IG(:,:,:,:)
 
 contains
@@ -60,7 +63,11 @@ contains
        call read_var('VpuiMaxSi', VpuiMaxSi)
     case("#PUIDIFFUSION")
        call read_var('UsePuiDiffusion', UsePuiDiffusion)
-       if(UsePuiDiffusion) call read_var('PuiDiffCoefSi', PuiDiffCoefSi)
+       if(UsePuiDiffusion) then
+          call read_var('PuiDiffCoefSi', PuiDiffCoefSi)
+          call read_var('PuiDiffV0Si', PuiDiffV0Si)
+          call read_var('PuiDiffSlope', PuiDiffSlope)
+       end if
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -99,6 +106,7 @@ contains
 
     if (UsePuiDiffusion)then
        PuiDiffCoef = PuiDiffCoefSi * Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       PuiDiffV0 = PuiDiffV0Si *Si2No_V(UnitU_)
        if (.not. allocated(DoPuiDiffusion_B)) &
             allocate(DoPuiDiffusion_B(MaxBlock))
        if (.not. allocated(Fpui_IG)) &
@@ -259,7 +267,8 @@ contains
     do iPui = PuiFirst_,PuiLast_
        call get_face_gradient(iDir, i, j, k, iBlock, &
             IsNewBlockPuiDiffusion_I(iPui), Fpui_IG(iPui,:,:,:), FaceGrad_D)
-       PuiDiffCoefOut = PuiDiffCoef*(Vpui_I(iPui-PuiFirst_+1)/Vpui_I(1))**(10./9.)
+       PuiDiffCoefOut = &
+            PuiDiffCoef*(Vpui_I(iPui-PuiFirst_+1)/PuiDiffV0)**(PuiDiffSlope)
        FpuiFlux_I(iPui) = -PuiDiffCoefOut*sum(Normal_D*FaceGrad_D)
     end do
     IsNewBlockPuiDiffusion = .false.
