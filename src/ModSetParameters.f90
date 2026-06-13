@@ -348,7 +348,7 @@ contains
           call init_axes(StartTime)
 
           if(NameThisComp == 'GM') then
-             ! Set and obtain GM specific parameters from CON_planet and CON_axes
+             ! Obtain GM specific parameters from CON_planet and CON_axes
              call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
              call get_planet(DipoleStrengthOut = DipoleStrengthSi)
           end if
