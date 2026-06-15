@@ -57,15 +57,15 @@ contains
     use ModFieldTrace, ONLY: init_mod_field_trace, read_field_trace_param, &
          DoMapEquatorRay
     use ModIO
-    use CON_planet, ONLY: read_planet_var, check_planet_var
-    use CON_star, ONLY: read_star_var
     use ModPlanetConst
+    use CON_planet, ONLY: read_planet_var, check_planet_var, get_planet, &
+         NamePlanet
+    use CON_star, ONLY: read_star_var
     use CON_axes, ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
     use ModUtilities, ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
          split_string, join_string, open_file, lower_case, &
          DoWriteCallSequence, StringTestSwmf => StringTest
-    use CON_planet, ONLY: get_planet
     use ModTimeConvert, ONLY: time_int_to_real, time_real_to_int
     use ModReadParam
     use ModMessagePass, ONLY: DoOneCoarserLayer
@@ -343,13 +343,15 @@ contains
        call adjust_freq(AdaptPic, &
             nStep+1, tSimulation+1e-6, IsTimeAccurate)
 
-       ! Initialize axes (coordinate transformation matrices)
-       call init_axes(StartTime)
+       if(NamePlanet /= 'NONE')then
+          ! Initialize axes (coordinate transformation matrices)
+          call init_axes(StartTime)
 
-       if(NameThisComp == 'GM') then
-          ! Set and obtain GM specific parameters from CON_planet and CON_axes
-          call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
-          call get_planet(DipoleStrengthOut = DipoleStrengthSi)
+          if(NameThisComp == 'GM') then
+             ! Obtain GM specific parameters from CON_planet and CON_axes
+             call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
+             call get_planet(DipoleStrengthOut = DipoleStrengthSi)
+          end if
        end if
 
        if(MonopoleStrengthSi /= 0.0 .or. UseB0Wave)then
@@ -358,11 +360,12 @@ contains
           UseCurlB0   = UseB0Wave
           DoUpdateB0  = .false.
           DtUpdateB0  = -1.0
-       elseif(IsStandAlone .and. NameThisComp=='GM') then
+       elseif(IsStandAlone .and. NameThisComp=='GM')then
           ! Check and set some planet variables (e.g. DoUpdateB0)
-          call check_planet_var(iProc==0, IsTimeAccurate)
+          if(NamePlanet /= 'NONE') &
+               call check_planet_var(iProc==0, IsTimeAccurate)
 
-          if(UseBody)then
+          if(UseBody .and. NamePlanet /= 'NONE')then
              call get_planet(UseRotationOut = UseRotatingBc)
           else
              UseRotatingBc = .false.
@@ -376,7 +379,7 @@ contains
              UseCurlB0   = .false.
              DoUpdateB0  = .false.
              DtUpdateB0  = -1.0
-          else
+          elseif(NamePlanet /= 'NONE')then
              call get_planet( &
                   DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = DtUpdateB0)
           end if

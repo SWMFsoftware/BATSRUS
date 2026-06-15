@@ -608,7 +608,7 @@ contains
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
     real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3), &
                B1_D(3), e_D(3), Poynting_D(3)
-    real    :: bIn_D(3), bIn, Br
+    real    :: bIn_D(3), bIn, Br, bRatio
     real    :: GmFac_DD(3,3)
     !$acc declare create(GmFac_DD)
     real, allocatable :: State_V(:)
@@ -812,9 +812,13 @@ contains
 
              ! Multiply by the ratio of the magnetic field strengths
              Fac = bIn / bRcurrents * Fac
+
+             bRatio = bIn / bRcurrents
           else
              bIn_D = b_D
              bIn   = norm2(bIn_D)
+
+             bRatio = 1
           end if
 
           ! Zero out small Fac if requested
@@ -849,17 +853,17 @@ contains
           iVarExtra = 7
           if(present(P_II)) then
              ! Save Pressure
-             P_II(i,j) = bCurrent_VII(iVarExtra,i,j)
+             P_II(i,j) = bCurrent_VII(iVarExtra,i,j) * bRatio
              iVarExtra=iVarExtra+1
           end if
           if(present(Pe_II)) then
              ! Save Electron Pressure
-             Pe_II(i,j) = bCurrent_VII(iVarExtra,i,j)
+             Pe_II(i,j) = bCurrent_VII(iVarExtra,i,j) * bRatio
              iVarExtra=iVarExtra+1
           end if
           if(present(Rho_II)) then
              ! Save Density
-             Rho_II(i,j) = bCurrent_VII(iVarExtra,i,j)
+             Rho_II(i,j) = bCurrent_VII(iVarExtra,i,j) * bRatio
              iVarExtra=iVarExtra+1
           end if
           if(present(S_II)) then
@@ -868,7 +872,7 @@ contains
             ! Poynting flux S = ExB/mu0
             Poynting_D = cross_prod(e_D, b_D)
             ! Parallel is dot product with b0 unit vector
-            S_II(i,j) = sum(Poynting_D * (B0_D / norm2(B0_D)))
+            S_II(i,j) = sum(Poynting_D * (B0_D / norm2(B0_D))) * bRatio
             if(present(IsRadial)) S_II(i,j) = S_II(i,j) * Br/bIn
           end if
        end do; end do
