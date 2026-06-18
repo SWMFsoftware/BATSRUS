@@ -593,6 +593,62 @@ Header line (is not read) - n m g h (follow this specific order)
 Where g and h are the Legendre coefficients in units of nT.
 </command>
 
+
+<command name="ORBIT" if="$_IsFirstSession">
+  <parameter name="OrbitalPeriodPlanet" type="real" min="0" />
+  <parameter name="rOrbitPlanet" type="real" min="0" />
+  <parameter name="Excentricity" type="real" min="0" max="1"/>
+  <parameter name="RightAscension" type="real" min="0" />
+  <parameter name="Inclination" type="real" min="0" />
+  <parameter name="ArgPeriapsis" type="real" min="0" />
+	
+#ORBIT
+3.14e7          OrbitalPeriodPlanet [s]	
+1.49e11         rOrbitPlanet [m]
+0.016           Excentricity
+174.9           RightAscension [deg]
+7.155           Inclination    [deg]
+288.9           ArgPeriapsis   [deg]
+
+Set orbital parameters in HGI system.
+
+The default values are defined in share/Library/src/ModPlanetConst.f90 
+</command>
+
+<command name="TIMEEQUINOX" if="$_IsFirstSession">
+  <parameter name="iYear" type="integer" min="1965" default="2000"/>
+  <parameter name="iMonth" type="integer" min="1" default="1"/>
+  <parameter name="iDay" type="integer" min="1" default="1"/>
+  <parameter name="iHour" type="integer" min="0" default="0"/>
+  <parameter name="iMinute" type="integer" min="0" default="0"/>
+
+#TIMEEQUINOX
+2000                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+
+Set the time of equinox for any planet.
+
+The default value is defined in share/Library/src/ModPlanetConst.f90
+</command>
+
+<command name="ANGLEEQUINOX" if="$_IsFirstSession">
+  <parameter name="AngleEquinox" type="real" min="0" max="360"/>
+
+#ANGLEEQUINOX
+135.32                AngleEquinox
+
+Set the longitude of midnight at the default equinox time or the time
+defined by #TIMEEQUINOX. This angle is needed to calculate the rotation
+angle between the GEO and GEI coordinate systems. This can be determined
+from the time of day for Earth, but for other planets there is a much more
+complicated procedure that will be provided by the
+share/Python/Scripts/get_planet_const.py Python script.
+
+The default values will be provided in share/Library/src/ModPlanetConst.f90
+</command>
 </commandgroup>
 
 <commandgroup name="USER DEFINED INPUT">
@@ -1463,8 +1519,8 @@ Default values are shown.
 </command>
 
 <command name="STAR" if="$_IsFirstSession">
-  <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
-  <parameter name="MassStar"   type="real" minimum="0" default="1"/>
+  <parameter name="RadiusStar" type="real" min="0" default="1"/>
+  <parameter name="MassStar"   type="real" min="0" default="1"/>
   <parameter name="RotationPeriodStar" type="real"/>
 
 #STAR
@@ -1480,7 +1536,7 @@ By default the Sun is the central star.
 </command>
 
 <command name="ROTPERIOD">
-  <parameter name="RotPeriodSi" type="real" minimum="0"/>
+  <parameter name="RotPeriodSi" type="real" min="0"/>
 
 #ROTPERIOD
 0.0                     RotPeriodSI (in second)
@@ -1491,8 +1547,6 @@ since it also modifies the infrastructure (HGI to HGR stransformation matrix,
 Earth location, Carrington rotations etc). For this purpose #ROTPERIOD
 command works, which affects only the model, not the infrastructure.
 </command>
-
-
 
 <command name="NORMALIZATION" if="$_IsFirstSession">
   <parameter name="TypeNormalization" type="string" case="upper"
