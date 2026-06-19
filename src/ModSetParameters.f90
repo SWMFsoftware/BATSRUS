@@ -2610,9 +2610,11 @@ contains
           call read_var('BdpDimBody2y', BdpDimBody2_D(2))
           call read_var('BdpDimBody2z', BdpDimBody2_D(3))
 
-       case('#PLANET', '#MOON', '#COMET', '#IDEALAXES', '#ROTATIONAXIS',&
-            '#MAGNETICAXIS', '#MAGNETICCENTER', '#ROTATION', '#DIPOLE', &
-            '#NONDIPOLE', '#UPDATEB0',  '#MULTIPOLEB0')
+       case('#PLANET', '#MOON', '#COMET', &
+            '#TIMEEQUINOX', '#ANGLEEQUINOX', '#ORBIT', &
+            '#IDEALAXES', '#ROTATIONAXIS', '#ROTATION', &
+            '#MAGNETICAXIS', '#MAGNETICCENTER', &
+            '#DIPOLE', '#NONDIPOLE', '#MULTIPOLEB0', '#UPDATEB0')
 
           call check_stand_alone
           if(.not.is_first_session())CYCLE READPARAM
