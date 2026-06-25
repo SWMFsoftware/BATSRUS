@@ -99,7 +99,7 @@ contains
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use CON_coupler, ONLY: Grid_C, IE_
     use ModElectricField, ONLY: get_electric_field
-    use ModIeCoupling, ONLY: UseIePrecip
+    use ModIeCoupling, ONLY: UseIePrecip, UseIeTraceState
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
@@ -207,24 +207,26 @@ contains
           end where
           Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) &
                 * No2Si_V(UnitX_)/No2Si_V(UnitB_)
-          where(RayResult_VII(   InvB_,:,:) >= 0)
-            Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
-            Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
-          end where
-          iVar = 8
-          if(UseElectronPressure) then
-              where(RayResult_VII(InvB_,:,:) > 0.)
-                  RayResult_VII(iPeInvB,:,:)  = RayResult_VII(iPeInvB,:,:) &
-                          /RayResult_VII(InvB_,:,:)
-              end where
-              where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
-                  RayResult_VII(iPeInvB,:,:) = 0.
-              end where
-              where(RayResult_VII(   InvB_,:,:) >= 0)
-                  Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * &
-                      No2Si_V(UnitP_)
-              end where
-              iVar = iVar + 1
+          if(UseIeTraceState .or. .not. UseIePrecip) then
+             where(RayResult_VII(   InvB_,:,:) >= 0)
+             Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
+             Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+             end where
+             iVar = 8
+             if(UseElectronPressure) then
+             where(RayResult_VII(InvB_,:,:) > 0.)
+                 RayResult_VII(iPeInvB,:,:)  = RayResult_VII(iPeInvB,:,:) &
+                             /RayResult_VII(InvB_,:,:)
+             end where
+             where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
+                 RayResult_VII(iPeInvB,:,:) = 0.
+             end where
+             where(RayResult_VII(   InvB_,:,:) >= 0)
+                 Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * &
+                     No2Si_V(UnitP_)
+             end where
+             iVar = iVar + 1
+             end if
           end if
 
           ! Transformation matrix from default (GM) to SM coordinates

@@ -8888,15 +8888,24 @@ By default the coupling is switched off.
 
 <command name="IEPRECIP">
   <parameter name="UseIePrecip" type="logical" default="F"/>
+  <parameter name="UseIeTraceState" type="logical" default="F"/>
 
 #IEPRECIP
 T                      UseIePrecip
+T                      UseIeTraceState
 
 If UseIePrecip is true, all pressure state variables, along with density and 
 poynting flux are gathered at rCurrents and passed to IE. This is not yet 
 implemented for multifluid MHD. 
 
-Default is UseIePrecip false.
+If UseIePrecip and #TRACEIE are both used, there are conflicting values along
+closed field lines. In this case, UseIeTraceState is used to determine which
+values are passed to IE. If UseIeTraceState is true, the values from field line
+traces are used. If UseIeTraceState is false, the values gathered at rCurrents
+are used. Traced values are more robust, but create a discontinuity with
+rCurrents values along the open closed field line boundary. 
+
+Default is UseIePrecip and UseIeTraceState are false.
 
 </command>
 
