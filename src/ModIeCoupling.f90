@@ -65,7 +65,7 @@ module ModIeCoupling
   real, allocatable:: SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
 
   ! Precipitation Coupling
-  logical, public :: UseIePrecip = .false.
+  logical, public :: UseIePrecip = .false., UseIeTraceState = .false.
 
   ! Velocity nudging
   logical :: UseIonoVelocity = .false.
@@ -763,6 +763,7 @@ contains
        end if
     case("#IEPRECIP", "#IEPRECIPITATION")
        call read_var('UseIePrecip', UseIePrecip)
+       call read_var('UseIeTraceState', UseIeTraceState)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
