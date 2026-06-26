@@ -209,7 +209,8 @@ contains
                 * No2Si_V(UnitX_)/No2Si_V(UnitB_)
           if(UseIeTraceState .or. .not. UseIePrecip) then
              where(RayResult_VII(   InvB_,:,:) >= 0)
-             Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
+             Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) &
+                                 * No2Si_V(UnitRho_)
              Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
              end where
              iVar = 8
