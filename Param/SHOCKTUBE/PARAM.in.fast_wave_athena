@@ -1,0 +1,135 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.fast_wave_athena: 1D fast MHD wave test listed in https://henry2004y.github.io/KeyNotes/contents/test.html#d-adiabatic-mhd (params from Stone et al. 2008, ApJS). 	StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRID
+10			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+0.0			xMin
+1.0			xMax
+-0.05			yMin
+0.05			yMax
+-0.05			zMin
+0.05			zMax
+
+#GRIDBLOCKALL
+20			MaxBlock
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+1.0			StateVar Bx
+1.41421356		StateVar By
+0.5			StateVar Bz
+0.6			StateVar p
+
+#WAVE
+Rho			NameVar
+1000.0			Width
+4.472135955e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+Ux			NameVar
+1000.0			Width
+-8.94427191e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+Uy			NameVar
+1000.0			Width
+4.21637021e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+Uz			NameVar
+1000.0			Width
+1.49071198e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+By			NameVar
+1000.0			Width
+8.43274043e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+Bz			NameVar
+1000.0			Width
+2.98142397e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+p			NameVar
+1000.0			Width
+4.47211359e-7		Amplitude
+1.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+-1			DnSaveLogfile
+0.05			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+1d mhd idl_ascii		StringPlot
+-1			DnSavePlot
+0.05			DtSavePlot
+-1.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+0.5			tSimulationMax
