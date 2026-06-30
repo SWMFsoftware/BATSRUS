@@ -47,6 +47,7 @@ test_help:
 	@echo "    test_earth_large_gpu       (run large Earth test for GPU)"
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_fastwave              (run 3D fast wave test on GPU)"
+	@echo "    test_fastwave_athena       (run 1D fast wave test, Athena params)"
 	@echo "    test_fastwave_2d           (run 2D rotated fast wave test on GPU)"
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
 	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
@@ -541,6 +542,32 @@ test_fastwave_check:
 		Param/SHOCKTUBE/TestOutput/fast_wave_ref.out \
 		> test_fastwave_gpu.diff)
 	ls -l test_fastwave_gpu.diff
+
+### 1D FAST WAVE TEST (ATHENA PARAMETERS) ###
+
+test_fastwave_athena:
+	touch test_fastwave_athena.diff
+	@echo "test_fastwave_athena_compile..." > test_fastwave_athena.diff
+	$(MAKE) test_fastwave_athena_compile
+	@echo "test_fastwave_athena_rundir..." > test_fastwave_athena.diff
+	$(MAKE) test_fastwave_athena_rundir
+	@echo "test_fastwave_athena_run..." > test_fastwave_athena.diff
+	$(MAKE) test_fastwave_athena_run
+
+test_fastwave_athena_compile:
+	./Config.pl -default
+	./Config.pl -u=Default -e=Mhd -ng=2 -g=10,1,1
+	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave_athena
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_fastwave_athena_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.fast_wave_athena PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_fastwave_athena_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 ### 3D BX0 TEST ###
 
