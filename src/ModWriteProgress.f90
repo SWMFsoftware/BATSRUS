@@ -78,8 +78,7 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiFluid, ONLY: UseNeutralFluid
     use ModFaceFlux, ONLY: TypeFluxNeutral
-    use CON_planet, ONLY: NamePlanet, IsPlanetModified, &
-         Planet_, NewPlanet_, &
+    use CON_planet, ONLY: NamePlanet, IsPlanetModified, iPlanet, NewPlanet_, &
          RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
          IonosphereHeight
     use ModIonElectron, ONLY: iVarUseCmax_I
@@ -111,7 +110,7 @@ contains
        call write_prefix; write(iUnitOut,*)'   --------------------'
        call write_prefix; write(iUnitOut,*)
        String = ''
-       if (IsPlanetModified .and. (Planet_ /= NewPlanet_)) &
+       if (IsPlanetModified .and. (iPlanet /= NewPlanet_)) &
             String = '( default values were modified! )'
        call write_prefix; write(iUnitOUT,'(10X,A,A,2x,A)')  &
             'Name:           ', trim(NamePlanet), trim(String)
