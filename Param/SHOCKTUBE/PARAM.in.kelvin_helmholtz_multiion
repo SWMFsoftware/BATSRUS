@@ -1,0 +1,123 @@
+Begin session: 1
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.kelvin_helmholtz_multiion: 2D multi-ion MHD Kelvin-Helmholtz instability test (Athena, Stone et al. 2008)	StringDescription
+
+#EQUATION
+Multi-ion MHD		NameEquation
+13				nVar
+
+#USERMODULE
+KELVIN-HELMHOLTZ INSTABILITY		NameUserModule
+
+#CHECKGRIDSIZE
+8                 nI
+8                 nJ
+1                 nK
+64                MinBlockAll
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#PROGRESS
+40			DnProgressShort
+200			DnProgressLong
+
+#GAMMA
+1.4			Gamma_I H+
+1.4			Gamma_I O+
+
+! Outer state: H+ (rho=0.5, Ux=-0.5) + O+ (rho=0.5, Ux=-0.5)
+! Total rho=1.0, total P=2.5, Bx=0.5
+#UNIFORMSTATE
+0.5			StateVar Rho H+
+-0.5			StateVar Ux H+
+0.0			StateVar Uy H+
+0.0			StateVar Uz H+
+0.5			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+1.25			StateVar P H+
+0.5			StateVar Rho O+
+-0.5			StateVar Ux O+
+0.0			StateVar Uy O+
+0.0			StateVar Uz O+
+1.25			StateVar P O+
+
+#GRID
+16                nRootBlockX
+16                nRootBlockY
+1                 nRootBlockZ
+-0.5              xMin
+ 0.5              xMax
+-0.5              yMin
+ 0.5              yMax
+-0.5              zMin
+ 0.5              zMax
+
+#OUTERBOUNDARY
+periodic          TypeBc1
+periodic          TypeBc2
+periodic          TypeBc3
+periodic          TypeBc4
+periodic          TypeBc5
+periodic          TypeBc6
+
+#USERSWITCH
++perturb		StringSwitch
+
+#USERINPUTBEGIN ----------------
+
+#PERTURBATION
+0.25			yShear
+0.0			ySmooth
+2.0			rhoInner
+1.0			rhoOuter
+0.5			dvx
+0.01			pertAmp
+1.0			nWaveX
+0.0			pertWidth
+1.0			SeedPert
+random		TypePerturbation
+
+#USERINPUTEND   ----------------
+
+#SCHEME
+2                 nOrder
+Linde             TypeFlux
+mc3               TypeLimiter
+2.0               BetaLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+var			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+rho ekinx ekiny mx my bx p pmin pmax
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+z=0 mhd idl       StringPlot
+-1			DnOutput
+0.5			DtOutput
+0.			DxOutput
+
+#STOP
+-1                MaxIteration
+5.0			tSimulationMax

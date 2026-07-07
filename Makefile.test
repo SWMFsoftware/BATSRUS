@@ -55,6 +55,10 @@ test_help:
 	@echo "    test_fluxemergence         (run flux emergence test)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
 	@echo "    test_jupiter               (run Jupiter test)"
+	@echo "    test_kelvinhelmholtz       (run all Kelvin-Helmholtz tests)"
+	@echo "    test_kelvinhelmholtz_hd    (run Kelvin-Helmholtz HD test)"
+	@echo "    test_kelvinhelmholtz_mhd   (run Kelvin-Helmholtz MHD test)"
+	@echo "    test_kelvinhelmholtz_multiion (run Kelvin-Helmholtz MultiIon test)"
 	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
 	@echo "    test_mars                  (run Mars test)"
@@ -566,6 +570,79 @@ test_fastwave_athena_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fastwave_athena_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
+
+### KELVIN-HELMHOLTZ INSTABILITY TEST ###
+
+test_kelvinhelmholtz:
+	@($(MAKE) test_kelvinhelmholtz_hd)
+	@($(MAKE) test_kelvinhelmholtz_mhd)
+	@($(MAKE) test_kelvinhelmholtz_multiion)
+
+test_kelvinhelmholtz_hd:
+	touch test_kelvinhelmholtz_hd.diff
+	@echo "test_kelvinhelmholtz_hd_compile..." > test_kelvinhelmholtz_hd.diff
+	$(MAKE) test_kelvinhelmholtz_hd_compile
+	@echo "test_kelvinhelmholtz_hd_rundir..." > test_kelvinhelmholtz_hd.diff
+	$(MAKE) test_kelvinhelmholtz_hd_rundir
+	@echo "test_kelvinhelmholtz_hd_run..." > test_kelvinhelmholtz_hd.diff
+	$(MAKE) test_kelvinhelmholtz_hd_run
+
+test_kelvinhelmholtz_hd_compile:
+	./Config.pl -default -u=KelvinHelmholtz -e=Hd -ng=2 -g=8,8,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_kelvinhelmholtz_hd_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.kelvin_helmholtz_hd PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_kelvinhelmholtz_hd_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
+
+test_kelvinhelmholtz_mhd:
+	touch test_kelvinhelmholtz_mhd.diff
+	@echo "test_kelvinhelmholtz_mhd_compile..." > test_kelvinhelmholtz_mhd.diff
+	$(MAKE) test_kelvinhelmholtz_mhd_compile
+	@echo "test_kelvinhelmholtz_mhd_rundir..." > test_kelvinhelmholtz_mhd.diff
+	$(MAKE) test_kelvinhelmholtz_mhd_rundir
+	@echo "test_kelvinhelmholtz_mhd_run..." > test_kelvinhelmholtz_mhd.diff
+	$(MAKE) test_kelvinhelmholtz_mhd_run
+
+test_kelvinhelmholtz_mhd_compile:
+	./Config.pl -default -u=KelvinHelmholtz -e=Mhd -ng=2 -g=8,8,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_kelvinhelmholtz_mhd_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.kelvin_helmholtz_mhd PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_kelvinhelmholtz_mhd_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
+
+test_kelvinhelmholtz_multiion:
+	touch test_kelvinhelmholtz_multiion.diff
+	@echo "test_kelvinhelmholtz_multiion_compile..." > test_kelvinhelmholtz_multiion.diff
+	$(MAKE) test_kelvinhelmholtz_multiion_compile
+	@echo "test_kelvinhelmholtz_multiion_rundir..." > test_kelvinhelmholtz_multiion.diff
+	$(MAKE) test_kelvinhelmholtz_multiion_rundir
+	@echo "test_kelvinhelmholtz_multiion_run..." > test_kelvinhelmholtz_multiion.diff
+	$(MAKE) test_kelvinhelmholtz_multiion_run
+
+test_kelvinhelmholtz_multiion_compile:
+	./Config.pl -default -u=KelvinHelmholtz -e=MultiIon -ng=2 -g=8,8,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_kelvinhelmholtz_multiion_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.kelvin_helmholtz_multiion PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_kelvinhelmholtz_multiion_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
