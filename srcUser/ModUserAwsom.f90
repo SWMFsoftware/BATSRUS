@@ -1606,12 +1606,13 @@ contains
     use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
+    use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, UnitU_, &
+         No2Si_V
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, Xyz_DGB, &
          iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
     integer :: i, j, k, iBlock, iError
-    real :: x_D(MaxDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
+    real :: x_D(MaxDim), Rho, U_D(MaxDim), B_D(MaxDim), B0_D(MaxDim), p
     real :: Mass, MassDim, MassTotal
 
     logical:: DoTest, IsFound
@@ -1628,9 +1629,10 @@ contains
 
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_init(x_D, Rho, B_D, p, nStep, nIteration)
+             call EEE_get_state_init(x_D, Rho, u_D, B_D, p)
 
              Rho = Rho*Si2No_V(UnitRho_)
+             U_D = U_D*Si2No_V(UnitU_)
              B_D = B_D*Si2No_V(UnitB_)
              p = p*Si2No_V(UnitP_)
 
@@ -1638,7 +1640,7 @@ contains
              ! Convert momentum density to velocity
              State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock)
+                  State_VGB(Rho_,i,j,k,iBlock) + U_D
 
              State_VGB(Rho_,i,j,k,iBlock) = &
                   max(0.25*State_VGB(Rho_,i,j,k,iBlock), &
@@ -1711,17 +1713,18 @@ contains
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              x_D = Xyz_DGB(:,i,j,k,iBlock)
-             call EEE_get_state_init(x_D, Rho, B_D, p, nStep, nIteration)
+             call EEE_get_state_init(x_D, Rho, U_D, B_D, p)
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
              p = p*Si2No_V(UnitP_)
+             U_D = U_D*Si2No_V(UnitU_)
 
              ! Add the eruptive event state to the solar wind
 
              ! Convert momentum density to velocity
              State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock)
+                  State_VGB(Rho_,i,j,k,iBlock) + U_D
              if(State_VGB(Rho_,i,j,k,iBlock) + Rho &
                   < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
                 State_VGB(Rho_,i,j,k,iBlock) = &

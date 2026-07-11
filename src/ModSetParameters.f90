@@ -1330,6 +1330,23 @@ contains
                             call stop_mpi(NameSub//': unknown INS: '//  &
                                  StringInstrument_I(iInstrument))
                          end select
+                      case('punch')
+                         TypeSatPos_I(iFileInstrument) = 'earth'
+
+                         nPixel_I(iFileInstrument)         = 300
+                         MuLimbDarkening                   = 0.5
+
+                         select case(trim(NameInstrument))
+                         case('nfi')
+                            rSizeImage_I(iFileInstrument)  = 32.0
+                            rOccult_I(iFileInstrument)     = 6.0
+                         case('wfi')
+                            rSizeImage_I(iFileInstrument)  = 180.0
+                            rOccult_I(iFileInstrument)     = 19.0
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '//  &
+                                 StringInstrument_I(iInstrument))
+                         end select
                       case default
                          call stop_mpi(NameSub//': unknown satellite: '// &
                               StringInstrument_I(iInstrument))
