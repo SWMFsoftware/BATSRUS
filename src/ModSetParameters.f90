@@ -3319,7 +3319,6 @@ contains
       use ModFieldLineThread, ONLY: DoPlotThreads
       use ModMain, ONLY: iTypeCellBc_I
       use ModCellBoundary, ONLY: NameCellBc_I, nTypeBC, UnknownBC_
-      use CON_planet, ONLY: UseOrbitElements
 
       ! option and module parameters
       character (len=40) :: Name
@@ -3951,17 +3950,6 @@ contains
       if(.not.IsMhd .or. (UseNonConservative .and. nConservCrit == 0) .or. &
            (nStage == 1 .and. IsTimeAccurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
-
-      if(UseBody2Orbit)then
-         if(.not.UseOrbitElements)then
-            if(iProc == 0)then
-               write(*,'(a)') NameSub//' WARNING: ' &
-                    //'Orbit elements are not availlable for second body orbit'
-               if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            end if
-            UseBody2Orbit = .false.
-         end if
-      end if
 
       if(UseChargedParticles)then
          if(.not.IsTimeAccurate)then
