@@ -337,7 +337,7 @@ These modified commands cannot precede the #PLANET command!
     <option name="NEPTUNE" 		/>
     <option name="PLUTO" 		/>
     <option name="MOON"			/>
-    <option name="IO"			/>	
+    <option name="IO"			/>
     <option name="EUROPA"		/>
     <option name="GANYMEDE"		/>
     <option name="TITAN"		/>
@@ -354,15 +354,18 @@ These modified commands cannot precede the #PLANET command!
     <parameter name="RadiusPlanet" type="real" min="0" />
     <parameter name="MassPlanet"   type="real" min="0" />
     <parameter name="OmegaPlanet"  type="real" min="0" />
-    <parameter name="TiltRotation" type="real" min="0" />
+    <if expr="$OmegaPlanet">
+      <parameter name="RotAxisTheta" type="real" min="0" max="90"/>
+      <parameter name="RotAxisPhi" type="real" min="0" max="360" if="$RotAxisTheta"/>
+    </if>
     <parameter name="TypeBField"   type="string" input="select">
       <option name="NONE" />
       <option name="DIPOLE" default="T" />
     </parameter>
   </if>
   <if expr="$TypeBField eq 'DIPOLE'">
-    <parameter name="MagAxisThetaGeo" type="real" min="0" max="180"/>
-    <parameter name="MagAxisPhiGeo"   type="real" min="0" max="360"/>
+    <parameter name="MagAxisTheta" type="real" min="0" max="180"/>
+    <parameter name="MagAxisPhi"   type="real" min="0" max="360" if="$MaxAxisTheta"/>
     <parameter name="DipoleStrength"  type="real"    />
   </if>
   <rule expr="not $PlanetCommand">
@@ -374,11 +377,12 @@ NEW			NamePlanet (rest of parameters read for unknown planet)
 6300000.0		RadiusPlanet [m]
 5.976E+24		MassPlanet   [kg]
 0.000000199		OmegaPlanet  [radian/s]
-23.5			TiltRotation [degree]
+23.5			RotAxisTheta [deg] read if OmegaPlanet is not 0
+130.0                   RotAxisPhi   [deg] read if RotAxisTheta is not 0
 DIPOLE			TypeBField
-11.0			MagAxisThetaGeo [degree]
-289.1			MagAxisPhiGeo   [degree]
--31100.0E-9		DipoleStrength  [T]
+11.0			MagAxisTheta [deg] rest read if TypeBField=DIPOLE
+289.1			MagAxisPhi   [deg] read if MaxAxisTheta is not 0
+-31100.0E-9		DipoleStrength [T]
 
 The NamePlanet parameter contains the name of the planet
 with arbitrary capitalization. In case the name of the planet
@@ -386,19 +390,18 @@ is not recognized, the following variables are read:
 RadiusPlanet is the radius of the planet,
 MassPlanet is the mass of the planet,
 OmegaPlanet is the angular speed relative to an inertial frame, and
-TiltRotation is the tilt of the rotation axis relative to ecliptic North,
-TypeBField, which can be "NONE" or "DIPOLE".
+RotAxisTheta is the tilt of the rotation axis relative to ecliptic North,
+RotAxisPhi is the orientation relative to the GSE X axis.
+TypeBField can be "NONE" or "DIPOLE".
 TypeBField="NONE" means that the planet does not have magnetic field.
 If TypeBField is set to "DIPOLE" then the following variables are read:
-MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
-of the north magnetic pole in corotating planetocentric coordinates.
+MagAxisTheta and MagAxisPhi are the colatitude and longitude
+of the north magnetic pole in GSE coordinates.
 Finally DipoleStrength is the equatorial strength of the magnetic dipole
 field. The units are indicated in the above example, which shows the
 Earth values approximately.
 
-The default value is NamePlanet="Earth". Although many other planets
-and some of the moons are recognized, some of the parameters,
-like the equinox time are not yet properly set.
+The default value is NamePlanet="Earth".
 </command>
 
 <command name="ROTATIONAXIS" if="$_IsStandAlone">
@@ -593,53 +596,32 @@ Header line (is not read) - n m g h (follow this specific order)
 Where g and h are the Legendre coefficients in units of nT.
 </command>
 
-
 <command name="ORBIT" if="$_IsFirstSession">
-  <parameter name="OrbitalPeriodPlanet" type="real" min="0" />
-  <parameter name="rOrbitPlanet" type="real" min="0" />
-  <parameter name="Excentricity" type="real" min="0" max="1"/>
-  <parameter name="RightAscension" type="real" min="0" />
-  <parameter name="Inclination" type="real" min="0" />
-  <parameter name="ArgPeriapsis" type="real" min="0" />
+  <parameter name="OrbitalPeriodPlanet" type="real" min="0"/>
+  <parameter name="rOrbitPlanet"  type="real" min="0"/>
+  <parameter name="Eccentricity"  type="real" min="0" max="1"/>
+  <parameter name="Inclination"   type="real" min="0" max="90"/>
+  <parameter name="MeanLongitude" type="real" min="0" max="360"/>
+  <parameter name="LongitudePeri" type="real" min="0" max="360"/>
+  <parameter name="LongitudeNode" type="real" min="0" max="360"/>
 	
 #ORBIT
 3.14e7          OrbitalPeriodPlanet [s]	
 1.49e11         rOrbitPlanet [m]
-0.016           Excentricity
-174.9           RightAscension [deg]
-7.155           Inclination    [deg]
-288.9           ArgPeriapsis   [deg]
+0.016           Eccentricity
+7.155           Inclination   [deg]
+122.4           MeanLongitude [deg]
+288.9           LongitudePeri [deg]
+174.9           LongitudeNode [deg]
 
-Set orbital parameters in HGI system.
+Set orbital parameters in HGI system. The inclination is relative to
+the HGI/solar equator. The MeanLongitude is the phase of the orbit
+assuming a constant angular velocity (this is then corrected to the
+true longitude). LongitudeNode is the location of the vernal equinox
+(only meaningful for non-zero Inclination) and LongitudePeri is the
+longitude of the perihelion (only meaningful for non-zero Eccentricity).
 
 The default values are defined in share/Library/src/ModPlanetConst.f90 
-</command>
-
-<command name="TIMEEQUINOX" if="$_IsFirstSession">
-  <parameter name="iYear" type="integer" min="1965" default="2000"/>
-  <parameter name="iMonth" type="integer" min="1" default="1"/>
-  <parameter name="iDay" type="integer" min="1" default="1"/>
-  <parameter name="iHour" type="integer" min="0" default="0"/>
-  <parameter name="iMinute" type="integer" min="0" default="0"/>
-  <parameter name="AngleEquinox" type="real" min="0" max="360"/>
-
-#TIMEEQUINOX
-2000                    iYear
-1                       iMonth
-1                       iDay
-0                       iHour
-0                       iMinute
-135.32                  AngleEquinox
-
-The AngleEquinox parameter gives the longitude of the midnight direction
-at the equinox time. This is needed to calculate the rotation
-angle between the GEO and GEI coordinate systems. This can be determined
-from the time of day for Earth, but for other planets there is a much more
-complicated procedure that will be provided by the
-share/Python/Scripts/get_planet_const.py Python script.
-Set the time of equinox for any planet.
-
-The default value is defined in share/Library/src/ModPlanetConst.f90
 </command>
 
 </commandgroup>
@@ -8693,7 +8675,7 @@ rel			TypeProjStop
 
 </commandgroup>
 
-<commandgroup name="COUPLING PARAMATERS">
+<commandgroup name="COUPLING PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! COUPLING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

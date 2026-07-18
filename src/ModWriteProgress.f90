@@ -79,7 +79,7 @@ contains
     use ModMultiFluid, ONLY: UseNeutralFluid
     use ModFaceFlux, ONLY: TypeFluxNeutral
     use CON_planet, ONLY: NamePlanet, IsPlanetModified, iPlanet, NewPlanet_, &
-         RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
+         RadiusPlanet, MassPlanet, OmegaPlanet, RotAxisTheta, OmegaOrbit, &
          IonosphereHeight
     use ModIonElectron, ONLY: iVarUseCmax_I
     use ModMpi
@@ -124,7 +124,7 @@ contains
        call write_prefix; write(iUnitOUT,'(10X,A,A)')'Rotation Period:', &
             trim(String)
        call write_prefix; write(iUnitOUT,StringFormat) &
-            'Rot. Tilt [deg]:', TiltRotation*cRadToDeg
+            'Rot. Tilt [deg]:', RotAxisTheta*cRadToDeg
        String = ' Not Orbiting'
        if (OmegaOrbit /= 0.0) write(String, '(ES13.5)') cTwoPi/OmegaOrbit
        call write_prefix; write(iUnitOUT,'(10X,A,A)')'Orbit Period:   ', &

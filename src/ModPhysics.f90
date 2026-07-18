@@ -1454,14 +1454,14 @@ contains
   !============================================================================
   subroutine set_second_body_coord
 
-    use ModMain, ONLY:tSimulation, StartTime, TypeCoordSystem
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
     use CON_axes, ONLY: transform_matrix
     use CON_planet, ONLY: orbit_in_hgi
     ! Second body location in HGI
     real:: XyzBody2Hgi_D(3), XyzBody2_D(3), vBody2Hgi_D(3)
     real:: Transform_DD(3,3)
     !--------------------------------------------------------------------------
-    call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D,vBody2Hgi_D)
+    call orbit_in_hgi(tSimulation, XyzBody2Hgi_D, vBody2Hgi_D)
     ! Convert to the coordinate system of the model, if needed
     Transform_DD = transform_matrix(TimeSim=tSimulation,&
          TypeCoordIn = 'HGI', TypeCoordOut = TypeCoordSystem)
