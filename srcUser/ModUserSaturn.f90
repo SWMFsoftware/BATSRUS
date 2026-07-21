@@ -114,8 +114,8 @@ contains
       call test_start(NameSub, DoTest, iBlock)
 
       rSaturn = rPlanet_I(Saturn_)
-      rTitan_Orbit  = rOrbitPlanet_I(Titan_)
-      omegaTitan_orbit = 2.0*cPi/OrbitalPeriodPlanet_I(Titan_)
+      rTitan_Orbit = rOrbitMoon_I(Titan_)
+      OmegaTitan_orbit = cTwoPi/OrbitalPeriodMoon_I(Titan_)
 
       if(UseMassLoading)then
          ! First rotate the coordinate system. The mass loading functions are

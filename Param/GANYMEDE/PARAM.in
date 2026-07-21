@@ -7,21 +7,21 @@ face-based innerBC
 #TEST
 init_axes set_axes		StringTest
 
-#PLANET
+#MOON
 Ganymede		NamePlanet
 2634000			RadiusPlanet [m]
 1.4819E+23		MassPlanet   [kg]
-0.0			OmegaPlanet  [radian/s]
+0.0			OmegaPlanet  [rad/s]
 DIPOLE			TypeBField
-4.3764			MagAxisThetaGeo [degree]
-289.1550		MagAxisPhiGeo   [degree]
--718.8961E-9		DipoleStrength  [T]
+4.3764			MagAxisTheta [deg]
+289.1550		MagAxisPhi   [deg]
+-718.8961E-9		DipoleStrength [T]
 
 Alternative description
 DIPOLE
-175.63			MagAxisThetaGeo [degree]
-109.162			MagAxisPhiGeo   [degree]
-718.895E-9		DipoleStrength  [T]
+175.63			MagAxisTheta   [deg]
+109.162			MagAxisPhi     [deg]
+718.895E-9		DipoleStrength [T]
 
 #ROTATION
 F			UseRotation
