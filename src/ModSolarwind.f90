@@ -103,7 +103,6 @@ contains
     use ModIoUnit, ONLY: UnitTmp_
     use ModNumConst, ONLY: cDegToRad, cHalfPi
     use ModConst, ONLY: cDay => cSecondPerDay
-    use CON_geopack, ONLY: geopack_recalc, HgiGse_DD, GsmGse_DD
     use CON_axes, ONLY: transform_matrix
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
@@ -313,25 +312,8 @@ contains
 
        if(NameInputCoord /= TypeCoordSystem) then
           ! Transform vector variables from input to model coordinates
-
-          call geopack_recalc(iTime_I)
-
-          if(TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then
-             ! GSE -> GSM
-             Transform_DD = GsmGse_DD
-          elseif(TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then
-             ! GSM -> GSE
-             Transform_DD = transpose(GsmGse_DD)
-          elseif(TypeCoordSystem == 'HGI' .and. NameInputCoord == 'GSM') then
-             ! GSM -> GSE -> HGI
-             Transform_DD = matmul(GsmGse_DD, HgiGse_DD)
-          elseif(TypeCoordSystem == 'HGI' .and. NameInputCoord == 'GSE')then
-             ! GSE -> HGI
-             Transform_DD = HgiGse_DD
-          else
-             Transform_DD = transform_matrix( &
-                  tSimulation, TypeCoordSystem, NameInputCoord)
-          end if
+          Transform_DD = transform_matrix( &
+               tSimulation, TypeCoordSystem, NameInputCoord)
 
           do iVectorVar = 1, nVectorVar
              iVar = iVectorVar_I(iVectorVar)
