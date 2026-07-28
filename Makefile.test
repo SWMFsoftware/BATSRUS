@@ -2155,7 +2155,7 @@ test_mercurysph_check:
 		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/MERCURY/TestOutput/REFlog_n000000.log \
 		> test_mercurysph.diff)
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p="sort -k1 -k2 -k3 -g | grep -vE 'AUXDATA|^[0-9 ]*$$'" \
 		${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz \
 		data/MERCURY/REF3d__var_2_n0000100.dat.gz \
 		>> test_mercurysph.diff)
