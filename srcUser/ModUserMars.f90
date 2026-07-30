@@ -19,6 +19,7 @@ module ModUser
   use ModUtilities, ONLY: open_file, close_file, upper_case
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
   use ModIoUnit, ONLY: UnitTmp_
+  use CON_axes, ONLY: get_axes, PlanetDistance
   use ModUserEmpty, &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -168,7 +169,7 @@ module ModUser
   ! coefficient of Mars magnetic field
   real, dimension(0:111,0:111) :: cmars, dmars
   integer :: NNm
-  real :: SMDist = 1.52
+  real :: SMDist = -1.0
 
   logical :: UseMarsB0 = .false., UseMso = .false., UseB0Old
   character(len=100):: NameFileB0 = '???'
@@ -236,26 +237,9 @@ contains
        case("#MSO", "#USEMSO")
           ! Rotate the crustal field in the MSO system
           call read_var('UseMso', UseMso)
-          if(UseMso) then
-             call read_var('RotAxisMsoX', RotAxisMso_D(1))
-             call read_var('RotAxisMsoY', RotAxisMso_D(2))
-             call read_var('RotAxisMsoZ', RotAxisMso_D(3))
-
-             RotAxisMso_D = RotAxisMso_D/sqrt(sum(RotAxisMso_D**2))
-
-             u = RotAxisMso_D(1)
-             v = RotAxisMso_D(2)
-             w = RotAxisMso_D(3)
-
-             uv=sqrt(u**2+v**2)
-             cost1=u/uv
-             sint1=v/uv
-             uvw=sqrt((u*w)**2+v**2)
-             cost2=w*u/uvw
-             sint2=v/uvw
-          end if
 
        case ("#SMDIST")
+          ! Set an artificial distance (default is the true distance)
           call read_var('SMDist', SMDist)
 
        case ("#PHOTOIONIZATION")
@@ -689,6 +673,24 @@ contains
        allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
        allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
        allocate(Nu_CB(nI,nJ,nK,MaxBlock))
+    end if
+
+    if(SMDist < 0.0) SMDist = PlanetDistance/cAU
+
+    if(UseMso) then
+       call get_axes(0.0, RotAxisGseOut_D=RotAxisMso_D)
+       ! write(*,*)'RotAxisMso_D=', RotAxisMso_D
+
+       u = RotAxisMso_D(1)
+       v = RotAxisMso_D(2)
+       w = RotAxisMso_D(3)
+
+       uv=sqrt(u**2+v**2)
+       cost1=u/uv
+       sint1=v/uv
+       uvw=sqrt((u*w)**2+v**2)
+       cost2=w*u/uvw
+       sint2=v/uvw
     end if
 
     if(UseMarsB0)then
