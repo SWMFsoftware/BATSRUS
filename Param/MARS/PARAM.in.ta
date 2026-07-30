@@ -136,9 +136,6 @@ Param/MARS/marsmgsp.txt		NameFileB0
 
 #MSO
 T			UseMso
-0.36905			RotAxisMsoX
-0.21215			RotAxisMsoY
-0.90487			RotAxisMsoZ
 
 #SMDIST
 1.6464906		SMDist
