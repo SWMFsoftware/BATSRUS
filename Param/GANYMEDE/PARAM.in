@@ -193,7 +193,10 @@ T
 T			UseSemiImplicit
 resistivity		TypeSemiImplicit
 
-By default the semi-Krylov solver is used.
+#SEMIKRYLOV
+GMRES           TypeKrylov  (GMRES, BICGSTAB, CG)
+1e-8            ErrorMaxKrylov
+100             MaxMatvecKrylov
 
 #SAVEINITIAL
 F			DoSaveInitial

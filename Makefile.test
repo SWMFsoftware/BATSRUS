@@ -2194,7 +2194,7 @@ test_ganymede_check:
 	   ${TESTDIR}/RESULTS/GM/log_n000001.log \
 	   Param/GANYMEDE/TestOutput/REFlog_n000001.log \
 		> test_ganymede.diff)
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6\
+	-@(${DIFFNUM} -t -r=5e-5 -a=1e-6\
 	   ${TESTDIR}/RESULTS/GM/y=0_var_1_n00000005.out \
 	   data/GANYMEDE/REFy=0.out.gz \
 	   	>> test_ganymede.diff)
