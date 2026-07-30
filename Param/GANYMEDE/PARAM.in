@@ -194,9 +194,9 @@ T			UseSemiImplicit
 resistivity		TypeSemiImplicit
 
 #SEMIKRYLOV
-GMRES           TypeKrylov  (GMRES, BICGSTAB, CG)
-1e-8            ErrorMaxKrylov
-100             MaxMatvecKrylov
+GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
+1e-8			ErrorMaxKrylov
+100			MaxMatvecKrylov
 
 #SAVEINITIAL
 F			DoSaveInitial
