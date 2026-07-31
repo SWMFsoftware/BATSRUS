@@ -14,10 +14,10 @@ module ModUser
   use ModMain, ONLY: IsNewUaState, UaState_VCB, rMaxUa
   use BATL_lib, ONLY: nI, nJ, nK, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc, &
-       Xyz_DGB, CellVolume_GB, Used_GB, Unused_B
+       Xyz_DGB, CellVolume_GB, Used_GB
   use ModGeometry, ONLY: TypeGeometry, r_GB
   use ModUtilities, ONLY: open_file, close_file, upper_case
-  use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
+  use ModNumConst, ONLY: cPi, cDegToRad
   use ModIoUnit, ONLY: UnitTmp_
   use ModUserEmpty, &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -41,8 +41,7 @@ module ModUser
        'Mars 4 species MHD code, Yingjuan Ma and Wenyi Sun'
 
   character(len=10) :: SolarCond='solarmax  '
-  real:: F107 = 130.0   ! default value for solar med
-  logical :: UsePhotoIonizationRate=.false., UseZeroU=.false.
+  logical :: UsePhotoIonizationRate=.false.
   real:: IrateCO2, IrateO
   real:: EUVfactor = 1.0
 
@@ -174,10 +173,6 @@ module ModUser
   character(len=100):: NameFileB0 = '???'
   character(len=*), parameter:: NameFileB0Old = 'marsmgsp.txt'
 
-  ! variables needed to be converted from MSO to GEO
-  real :: RotAxisMso_D(3) ! rotation axis in MSO coordinate
-  real :: u, v, w, uv, uvw, sint1, cost1, sint2, cost2
-
   real:: LonSubsolar = -10.0, LatSubsolar = -10.0
   logical :: UseHotO = .false.
   logical :: UseImpactIon = .false.
@@ -287,7 +282,6 @@ contains
   !============================================================================
   subroutine user_init_point_implicit
 
-    use ModMain, ONLY: nBlock, Unused_B
     use ModVarIndexes
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
@@ -343,7 +337,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
-         RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
+         RhoUx_, RhoUy_, RhoUz_, P_, Energy_
     use ModPhysics, ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
          No2Io_V, No2Si_V, UnitT_, UnitN_, UnitTemperature_
     use ModPointImplicit, ONLY: UsePointImplicit
@@ -654,10 +648,10 @@ contains
     use ModPhysics
     use ModVarIndexes
     use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
-    use CON_axes, ONLY: get_axes, PlanetDistance, GeoGse_DD
+    use CON_axes, ONLY: PlanetDistance, GeoGse_DD
     use ModCoordTransform, ONLY: xyz_to_lonlat
 
-    integer:: iBoundary, i, j, k, m, n
+    integer:: iBoundary, i, j, m, n
     character(len=100):: StringLine
 
     ! Upper coordinate limits of UA lookup table and gravity at max altitude
@@ -686,22 +680,6 @@ contains
        call xyz_to_lonlat(GeoGse_DD(:,x_), LonSubsolar, LatSubsolar)
        if(iProc == 0) write(*,*) NameSub, ': Lon,LatSubsolar=', &
             LonSubsolar*cRadToDeg, LatSubsolar*cRadToDeg
-    end if
-
-    if(UseMso) then
-       call get_axes(0.0, RotAxisGseOut_D=RotAxisMso_D)
-       ! write(*,*)'RotAxisMso_D=', RotAxisMso_D
-
-       u = RotAxisMso_D(1)
-       v = RotAxisMso_D(2)
-       w = RotAxisMso_D(3)
-
-       uv=sqrt(u**2+v**2)
-       cost1=u/uv
-       sint1=v/uv
-       uvw=sqrt((u*w)**2+v**2)
-       cost2=w*u/uvw
-       sint2=v/uvw
     end if
 
     if(UseMarsB0)then
@@ -1373,7 +1351,7 @@ contains
   subroutine user_set_face_boundary(FBC)
 
     use ModMain, ONLY: UseRotatingBc, ExtraBc_,Body1_,xMinBc_, FaceBCType
-    use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
+    use ModVarIndexes, ONLY: RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
     use ModPhysics, ONLY: SolarWindRho, FaceState_VI, OmegaBody_D
     use ModCoordTransform, ONLY: cross_product
 
@@ -1454,146 +1432,87 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
   !============================================================================
-  subroutine user_get_b0(x1, y1, z1, B1)
+  subroutine user_get_b0(x, y, z, b_D)
 
     use ModMain
     use ModPhysics
     use ModNumConst
+    use CON_axes, ONLY: transform_matrix
+    use ModCoordTransform, ONLY: xyz_to_sph, rot_xyz_sph
+
     ! use BATL_test, ONLY: xTest, yTest, zTest
 
-    real, intent(in) :: x1, y1, z1
-    real, intent(out):: B1(3)
+    real, intent(in) :: x, y, z
+    real, intent(out):: b_D(3)
 
-    real :: R0, theta, phi, rr, X0, Y0, Z0, delta
-    real, dimension(3) :: bb, B0, B2
-    real :: sint, sinp, cost, cosp
-    real :: x2, y2, z2
+    real :: r, Theta, Phi
+
+    real:: tSimulationLast = -1.0
+    real:: GeoGm_DD(3,3) = 0.0 ! has to be saved
+    
+    real:: XyzGeo_D(3), bGeo_D(3), bSph_D(3)
+    real:: XyzSph_DD(3,3)
     !--------------------------------------------------------------------------
     if(.not. UseMarsB0) then
-       B1 = 0.0
+       b_D = 0.0
        RETURN
     end if
-
+    
     call timing_start('user_get_b0')
 
-    if(UseMso)then  ! change location from MSO to GEO
-       ! rotate around Z axis to make the axis in the XZ plane
-       x0 =  x1*cost1 + y1*sint1
-       y0 = -x1*sint1 + y1*cost1
-       ! rotate around Y axis
-       x2 = X0*w - z1*uv
-       y2 = Y0
-       z2 = X0*uv + z1*w
-       ! rotate back around Z axis so that the subsolar point is along the x
-       ! axis
-       x0 = x2*cost2 - y2*sint2
-       z0 = z2
-       y0 = x2*sint2 + y2*cost2
-    else
-       X0 = x1*cos(LatSubsolar)-z1*sin(LatSubsolar)
-       Y0 = y1
-       Z0 = x1*sin(LatSubsolar)+z1*cos(LatSubsolar)
+    if(tSimulation /= tSimulationLast)then
+       tSimulationLast = tSimulation
+       if(UseMso)then
+          GeoGm_DD = transform_matrix(tSimulation, 'GSE', 'GEO')
+       else
+          GeoGm_DD = transform_matrix(tSimulation, 'GSM', 'GEO')
+       end if
     end if
 
-    R0 = sqrt(X0**2 + Y0**2 + Z0**2)
-    rr = max(R0, 1e-6)
-    if(abs(X0) < 1e-6) then
-       if(Y0 < 0) then
-          phi = -cHalfPi
-       else
-          phi = cHalfPi
-       endif
-    else
-       if(X0 > 0) then
-          phi = atan(Y0/X0)
-       else
-          phi = cPi + atan(Y0/X0)
-       endif
-    endif
+    ! Convert to GEO coordinates
+    XyzGeo_D = matmul(GeoGm_DD, [x, y, z])
 
-    if(RotPeriodSi > 0.0) then
-       ! delta = LonSubsolar-tSimulation*VRad, Vrad=cTwoPi/RotPeriodSi
-       delta = LonSubsolar - tSimulation/RotPeriodSi*cTwoPi
-    else
-       ! RotPeriodSi=0.0 if not using rotation
-       delta = LonSubsolar
-    end If
+    ! Convert to sherical coordinates
+    call xyz_to_sph(XyzGeo_D, r, Theta, Phi)
 
-    theta = acos(max(-1.0, min(1.0, Z0/rr)))
-
+    ! Get the magnetic field in spherical components
     if(UseB0Old)then
-       call set_mars_b0_old(R0, theta, phi+delta, bb)
+       call set_mars_b0_old(r, Theta, Phi, bSph_D)
     else
-       call set_mars_b0(R0, Z0/rr, phi+delta, bb)
+       call set_mars_b0(r, Theta, Phi, bSph_D)
     endif
-    sint = sin(theta)
-    cost = cos(theta)
-    sinp = sin(phi)
-    cosp = cos(phi)
 
-    B0(1) = bb(1)*sint*cosp+bb(2)*cost*cosp-bb(3)*sinp
-    B0(2) = bb(1)*sint*sinp+bb(2)*cost*sinp+bb(3)*cosp
-    B0(3) = bb(1)*cost-bb(2)*sint
+    ! Convert to Cartesian components
+    XyzSph_DD = rot_xyz_sph(XyzGeo_D)
+    bGeo_D = matmul(XyzSph_DD, bSph_D)
 
-    if(UseMso)then  ! change from GEO to MSO
-       B1(1) = B0(1)*cost2+B0(2)*sint2
-       B1(2) = -B0(1)*sint2+B0(2)*cost2
-       B1(3) = B0(3)
+    ! Convert back to GM coordinates
+    b_D = matmul(bGeo_D, GeoGm_DD)
 
-       B2(1) = w*B1(1) + uv*B1(3)
-       B2(2) = B1(2)
-       B2(3) = -uv*B1(1) + w*B1(3)
-
-       B1(1) = B2(1)*cost1 - B2(2)*sint1
-       B1(2) = B2(1)*sint1 + B2(2)*cost1
-       B1(3) = B2(3)
-
-    else
-       B1(1) = B0(1)*cos(LatSubsolar)+B0(3)*sin(LatSubsolar)
-       B1(2) = B0(2)
-       B1(3) = -B0(1)*sin(LatSubsolar)+B0(3)*cos(LatSubsolar)
-    end if
-
-    ! Normalize the crustal magnetic field
-    B1(1)=B1(1)*Io2No_V(UnitB_)
-    B1(2)=B1(2)*Io2No_V(UnitB_)
-    B1(3)=B1(3)*Io2No_V(UnitB_)
-
-    ! if(abs(x1 - xTest) + abs(y1 - yTest) + abs(z1 - zTest) < 0.001)then
-    !
-    !   write(*,*)'user_get_b0 called with x1,y1,z1=',x1, y1, z1
-    !   write(*,*)'user_get_b0: sint1, cost1, sint2, cost2=', &
-    !        sint1, cost1, sint2, cost2
-    !   write(*,*)'user_get_b0: u,v,w,uv,uvw=', u,v,w,uv,uvw
-    !   write(*,*)'user_get_b0: x0,y0,z0=', x0,y0,z0
-    !   write(*,*)'user_get_b0: r0, z0/rr, phi, delta=', R0, Z0/rr, phi+delta
-    !   write(*,*)'user_get_b0: bb=', bb
-    !   write(*,*)'user_get_b0: b0=', b0
-    !   write(*,*)'user_get_b0: b1=', b1
-    ! end if
-
+    ! Normalize units
+    b_D = b_D*Io2No_V(UnitB_)
+  
     call timing_stop('user_get_b0')
   end subroutine user_get_b0
   !============================================================================
-  subroutine set_mars_b0(r, xtcos, phi, bb)
+  subroutine set_mars_b0(r, theta, phi, bb)
 
     integer, parameter:: nMax=111
-    real, intent(in) :: r, xtcos, phi
+    real, intent(in) :: r, theta, phi
     real, dimension(1:3),intent(out) :: bb
     ! real :: Rlgndr, dRlgndr
     integer :: NN, n, m, im, l
-    real :: dRnm, signsx, Rmm
-    real :: xtsin,xtabs, xx
+    real :: dRnm
+    real :: xtcos, xtsin
     real, dimension(0:nMax-1) :: xpcos, xpsin
-    real :: a, arr, arrn, arrm, somx2, fact, temp
-    real,dimension(0:nMax,0:nMax) :: Rnm, Pnm
+    real :: arr
+    real,dimension(0:nMax,0:nMax) :: Rnm
     real,dimension(0:nMax+2), save  :: aorn_I
-    logical :: DoSetFactor = .true., UseDebug=.false.
+    logical :: UseDebug=.false.
     !--------------------------------------------------------------------------
     NN = NNm - 1
-!    xtcos=cos(theta)
-!    xtsin=sin(theta)
-    xtsin=sqrt(max(0.0, 1.0-xtcos*xtcos))
+    xtcos=cos(theta)
+    xtsin=sin(theta)
 
     do im=0,NN
        xpcos(im)=cos(im*phi)
@@ -1898,7 +1817,7 @@ contains
   !============================================================================
   subroutine ua_input(iBlock)
 
-    use ModPhysics, ONLY: rBody, No2Si_V, UnitT_, Si2No_V, UnitN_
+    use ModPhysics, ONLY: No2Si_V, UnitT_, Si2No_V, UnitN_
 
     integer, intent(in) :: iBlock
 
@@ -2129,10 +2048,8 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_
     use ModPhysics, ONLY: No2Io_V, UnitN_, UnitT_, UnitTemperature_, &
          NameTecUnit_V, NameIdlUnit_V
-    use ModAdvance, ONLY: State_VGB, Rho_
 
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
