@@ -130,8 +130,6 @@ T			UseHotO
 #MARSB0
 T			UseMarsB0
 60			NNm
--149.6			Rot
-21.65608		Thetilt
 Param/MARS/marsmgsp.txt		NameFileB0
 
 #MSO
