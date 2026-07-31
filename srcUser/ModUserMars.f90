@@ -1449,7 +1449,7 @@ contains
 
     real:: tSimulationLast = -1.0
     real:: GeoGm_DD(3,3) = 0.0 ! has to be saved
-    
+
     real:: XyzGeo_D(3), bGeo_D(3), bSph_D(3)
     real:: XyzSph_DD(3,3)
     !--------------------------------------------------------------------------
@@ -1457,7 +1457,7 @@ contains
        b_D = 0.0
        RETURN
     end if
-    
+
     call timing_start('user_get_b0')
 
     if(tSimulation /= tSimulationLast)then
@@ -1491,7 +1491,7 @@ contains
 
     ! Normalize units
     b_D = b_D*Io2No_V(UnitB_)
-  
+
     call timing_stop('user_get_b0')
   end subroutine user_get_b0
   !============================================================================
