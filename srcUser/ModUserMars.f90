@@ -19,7 +19,6 @@ module ModUser
   use ModUtilities, ONLY: open_file, close_file, upper_case
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
   use ModIoUnit, ONLY: UnitTmp_
-  use CON_axes, ONLY: get_axes, PlanetDistance
   use ModUserEmpty, &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -179,7 +178,7 @@ module ModUser
   real :: RotAxisMso_D(3) ! rotation axis in MSO coordinate
   real :: u, v, w, uv, uvw, sint1, cost1, sint2, cost2
 
-  real :: Rot = 1.0, Thetilt = 0.0
+  real:: LonSubsolar = -10.0, LatSubsolar = -10.0
   logical :: UseHotO = .false.
   logical :: UseImpactIon = .false.
   logical :: UseChargeEx = .true.
@@ -225,14 +224,17 @@ contains
           call read_var('UseMarsB0',UseMarsB0)
           if(UseMarsB0) then
              call read_var('NNm', NNm)
-             call read_var('Rot', Rot)
-             call read_var('Thetilt', Thetilt)
              call read_var('NameFileB0', NameFileB0)
-             rot= rot*cDegToRad
-             thetilt= thetilt*cDegToRad
              cmars = 0.0
              dmars = 0.0
           endif
+
+       case("#SUBSOLAR")
+          ! Subsolar longitude and latitude to orient B0
+          call read_var('LonSubsolar', LonSubsolar)
+          call read_var('LatSubsolar', LatSubsolar)
+          LonSubsolar = LonSubsolar*cDegToRad
+          LatSubsolar =	LatSubsolar*cDegToRad
 
        case("#MSO", "#USEMSO")
           ! Rotate the crustal field in the MSO system
@@ -652,6 +654,8 @@ contains
     use ModPhysics
     use ModVarIndexes
     use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
+    use CON_axes, ONLY: get_axes, PlanetDistance, GeoGse_DD
+    use ModCoordTransform, ONLY: xyz_to_lonlat
 
     integer:: iBoundary, i, j, k, m, n
     character(len=100):: StringLine
@@ -676,6 +680,13 @@ contains
     end if
 
     if(SMDist < 0.0) SMDist = PlanetDistance/cAU
+
+    if(LonSubsolar < -9.0 .or. LatSubsolar < -9.0)then
+       ! Get subsolar position in GEO
+       call xyz_to_lonlat(GeoGse_DD(:,x_), LonSubsolar, LatSubsolar)
+       write(*,*) NameSub, ': Lon,LatSubsolar=', &
+            LonSubsolar*cRadToDeg, LatSubsolar*cRadToDeg
+    end if
 
     if(UseMso) then
        call get_axes(0.0, RotAxisGseOut_D=RotAxisMso_D)
@@ -1479,9 +1490,9 @@ contains
        z0 = z2
        y0 = x2*sint2 + y2*cost2
     else
-       X0 = x1*cos(thetilt)-z1*sin(thetilt)
+       X0 = x1*cos(LatSubsolar)-z1*sin(LatSubsolar)
        Y0 = y1
-       Z0 = x1*sin(thetilt)+z1*cos(thetilt)
+       Z0 = x1*sin(LatSubsolar)+z1*cos(LatSubsolar)
     end if
 
     R0 = sqrt(X0**2 + Y0**2 + Z0**2)
@@ -1500,12 +1511,12 @@ contains
        endif
     endif
 
-    ! RotPeriodSi=0.0 if not use rotation
-    ! delta=rot-tSimulation*VRad  !(Vrad=cTwoPi/RotPeriodSi)
-    delta = rot
-
-    If(RotPeriodSi > 0.0) then
-       delta=rot - tSimulation/RotPeriodSi*cTwoPi
+    if(RotPeriodSi > 0.0) then
+       ! delta = LonSubsolar-tSimulation*VRad, Vrad=cTwoPi/RotPeriodSi
+       delta = LonSubsolar - tSimulation/RotPeriodSi*cTwoPi
+    else
+       ! RotPeriodSi=0.0 if not using rotation
+       delta = LonSubsolar
     end If
 
     theta = acos(max(-1.0, min(1.0, Z0/rr)))
@@ -1538,9 +1549,9 @@ contains
        B1(3) = B2(3)
 
     else
-       B1(1) = B0(1)*cos(thetilt)+B0(3)*sin(thetilt)
+       B1(1) = B0(1)*cos(LatSubsolar)+B0(3)*sin(LatSubsolar)
        B1(2) = B0(2)
-       B1(3) = -B0(1)*sin(thetilt)+B0(3)*cos(thetilt)
+       B1(3) = -B0(1)*sin(LatSubsolar)+B0(3)*cos(LatSubsolar)
     end if
 
     ! Normalize the crustal magnetic field
