@@ -684,7 +684,7 @@ contains
     if(LonSubsolar < -9.0 .or. LatSubsolar < -9.0)then
        ! Get subsolar position in GEO
        call xyz_to_lonlat(GeoGse_DD(:,x_), LonSubsolar, LatSubsolar)
-       write(*,*) NameSub, ': Lon,LatSubsolar=', &
+       if(iProc == 0) write(*,*) NameSub, ': Lon,LatSubsolar=', &
             LonSubsolar*cRadToDeg, LatSubsolar*cRadToDeg
     end if
 
