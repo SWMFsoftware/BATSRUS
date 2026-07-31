@@ -7,9 +7,8 @@ Param/MARS/PARAM.in.ta: time-accurate Mars test		StringDescription
 #PLANET
 Mars			NamePlanet
 
-#ROTATION
-T			UseRotation
-24.65523		RotationPeriod
+#TEST
+init_axes		StringTest
 
 #UPDATEB0
 10.0			DtUpdateB0
