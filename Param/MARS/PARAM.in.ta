@@ -134,9 +134,6 @@ Param/MARS/marsmgsp.txt		NameFileB0
 #MSO
 T			UseMso
 
-#SMDIST
-1.6464906		SMDist
-
 #SOLARCONDITION
 solarmin		TypeSolarCond
 
