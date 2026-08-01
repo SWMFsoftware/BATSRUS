@@ -7,9 +7,8 @@ Param/MARS/PARAM.in.ta: time-accurate Mars test		StringDescription
 #PLANET
 Mars			NamePlanet
 
-#ROTATION
-T			UseRotation
-24.65523		RotationPeriod
+#TEST
+init_axes		StringTest
 
 #UPDATEB0
 10.0			DtUpdateB0
@@ -130,15 +129,10 @@ T			UseHotO
 #MARSB0
 T			UseMarsB0
 60			NNm
--149.6			Rot
-21.65608		Thetilt
 Param/MARS/marsmgsp.txt		NameFileB0
 
 #MSO
 T			UseMso
-
-#SMDIST
-1.6464906		SMDist
 
 #SOLARCONDITION
 solarmin		TypeSolarCond
