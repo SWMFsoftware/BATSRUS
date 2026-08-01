@@ -4,6 +4,11 @@ Param/MARS/PARAM.in.restartsave: Mars test		StringDescription
 #PLANET
 Mars			NamePlanet
 
+#IDEALAXES
+
+#MERIDIAN
+180.0			MeridianGeo
+
 #ROTATION
 F			UseRotation
 
