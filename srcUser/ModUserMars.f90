@@ -169,7 +169,7 @@ module ModUser
   integer :: NNm
   real :: SMDist = -1.0
 
-  logical :: UseMarsB0 = .false., UseMso = .false., UseB0Old
+  logical :: UseMarsB0 = .false., UseB0Old
   character(len=100):: NameFileB0 = '???'
   character(len=*), parameter:: NameFileB0Old = 'marsmgsp.txt'
 
@@ -222,10 +222,6 @@ contains
              cmars = 0.0
              dmars = 0.0
           endif
-
-       case("#MSO", "#USEMSO")
-          ! Rotate the crustal field in the MSO system
-          call read_var('UseMso', UseMso)
 
        case ("#SMDIST")
           ! Set an artificial distance (default is the true distance)
@@ -1419,9 +1415,8 @@ contains
   !============================================================================
   subroutine user_get_b0(x, y, z, b_D)
 
-    use ModMain
-    use ModPhysics
-    use ModNumConst
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use ModPhysics, ONLY: Io2No_V, UnitB_
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: xyz_to_sph, rot_xyz_sph
 
@@ -1447,11 +1442,7 @@ contains
 
     if(tSimulation /= tSimulationLast)then
        tSimulationLast = tSimulation
-       if(UseMso)then
-          GeoGm_DD = transform_matrix(tSimulation, 'GSE', 'GEO')
-       else
-          GeoGm_DD = transform_matrix(tSimulation, 'GSM', 'GEO')
-       end if
+       GeoGm_DD = transform_matrix(tSimulation, TypeCoordSystem, 'GEO')
     end if
 
     ! Convert to GEO coordinates
