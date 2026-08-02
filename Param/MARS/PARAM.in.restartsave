@@ -94,10 +94,6 @@ T			UseMarsB0
 60			NNm
 Param/MARS/marsmgsp.txt		NameFileB0
 
-#SUBSOLAR
--180			LonSubsolar
-0.0			LatSubsolar
-
 #SOLARCONDITION
 solarmax		TypeSolarCond
 
