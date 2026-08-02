@@ -451,6 +451,17 @@ length of the astronomical day.
 The default is to use rotation with the real rotation period of the planet.
 </command>
 
+<command name="#MERIDIAN" if="$_IsStandAlone">
+  <parameter name="MeridianGeo" type="real" min="0" max="360"/>
+
+#MERIDIAN
+180.0			MeridianGeo [deg]
+
+Set the longitude of the subsolar point at the start time.
+
+The default depends on the start time and the planet rotation data.
+</command>
+
 <command name="MAGNETICAXIS" if="$_IsStandAlone">
   <parameter name="IsMagAxisPrimary" type="logical" default="T" />
   <if expr="$IsMagAxisPrimary">
@@ -461,8 +472,8 @@ The default is to use rotation with the real rotation period of the planet.
 
 #MAGNETICAXIS
 T			IsMagAxisPrimary (rest of parameters read if true)
-34.5			MagAxisTheta [degree]
-0.0			MagAxisPhi   [degree]
+34.5			MagAxisTheta [deg]
+0.0			MagAxisPhi   [deg]
 
 If the IsMagAxisPrimary variable is false, the magnetic axis
 is aligned with the rotational axis. If it is true, the other two variables

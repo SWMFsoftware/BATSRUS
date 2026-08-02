@@ -4,6 +4,11 @@ Param/MARS/PARAM.in: Mars test		StringDescription
 #PLANET
 Mars			NamePlanet
 
+#IDEALAXES
+
+#MERIDIAN
+180.0			MeridianGeo
+
 #ROTATION
 F			UseRotation
 
@@ -13,6 +18,9 @@ T			UseGravity
 
 #INCLUDE
 Param/MARS/Grid
+
+#TEST
+init_axes set_axes		StringTest
 
 #TESTXYZ
 1.2			xTest

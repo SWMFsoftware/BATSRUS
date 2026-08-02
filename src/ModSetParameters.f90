@@ -2628,7 +2628,7 @@ contains
           call read_var('BdpDimBody2z', BdpDimBody2_D(3))
 
        case('#PLANET', '#MOON', '#COMET', '#ORBIT', &
-            '#IDEALAXES', '#ROTATIONAXIS', '#ROTATION', &
+            '#IDEALAXES', '#ROTATIONAXIS', '#ROTATION', '#MERIDIAN', &
             '#MAGNETICAXIS', '#MAGNETICCENTER', &
             '#DIPOLE', '#NONDIPOLE', '#MULTIPOLEB0', '#UPDATEB0')
 

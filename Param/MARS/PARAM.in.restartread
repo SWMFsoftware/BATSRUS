@@ -7,6 +7,9 @@ Param/MARS/PARAM.in.restartread: Mars test		StringDescription
 #ROTATION
 F			UseRotation
 
+#MERIDIAN
+180.0			MeridianGeo
+
 #GRAVITY
 T			UseGravity
 0			iDirGravity
