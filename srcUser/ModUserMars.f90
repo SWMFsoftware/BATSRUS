@@ -169,11 +169,10 @@ module ModUser
   integer :: NNm
   real :: SMDist = -1.0
 
-  logical :: UseMarsB0 = .false., UseMso = .false., UseB0Old
+  logical :: UseMarsB0 = .false., UseB0Old
   character(len=100):: NameFileB0 = '???'
   character(len=*), parameter:: NameFileB0Old = 'marsmgsp.txt'
 
-  real:: LonSubsolar = -10.0, LatSubsolar = -10.0
   logical :: UseHotO = .false.
   logical :: UseImpactIon = .false.
   logical :: UseChargeEx = .true.
@@ -223,17 +222,6 @@ contains
              cmars = 0.0
              dmars = 0.0
           endif
-
-       case("#SUBSOLAR")
-          ! Subsolar longitude and latitude to orient B0
-          call read_var('LonSubsolar', LonSubsolar)
-          call read_var('LatSubsolar', LatSubsolar)
-          LonSubsolar = LonSubsolar*cDegToRad
-          LatSubsolar =	LatSubsolar*cDegToRad
-
-       case("#MSO", "#USEMSO")
-          ! Rotate the crustal field in the MSO system
-          call read_var('UseMso', UseMso)
 
        case ("#SMDIST")
           ! Set an artificial distance (default is the true distance)
@@ -674,13 +662,6 @@ contains
     end if
 
     if(SMDist < 0.0) SMDist = PlanetDistance/cAU
-
-    if(LonSubsolar < -9.0 .or. LatSubsolar < -9.0)then
-       ! Get subsolar position in GEO
-       call xyz_to_lonlat(GeoGse_DD(:,x_), LonSubsolar, LatSubsolar)
-       if(iProc == 0) write(*,*) NameSub, ': Lon,LatSubsolar=', &
-            LonSubsolar*cRadToDeg, LatSubsolar*cRadToDeg
-    end if
 
     if(UseMarsB0)then
        ! Read B0
@@ -1434,9 +1415,8 @@ contains
   !============================================================================
   subroutine user_get_b0(x, y, z, b_D)
 
-    use ModMain
-    use ModPhysics
-    use ModNumConst
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use ModPhysics, ONLY: Io2No_V, UnitB_
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: xyz_to_sph, rot_xyz_sph
 
@@ -1462,11 +1442,7 @@ contains
 
     if(tSimulation /= tSimulationLast)then
        tSimulationLast = tSimulation
-       if(UseMso)then
-          GeoGm_DD = transform_matrix(tSimulation, 'GSE', 'GEO')
-       else
-          GeoGm_DD = transform_matrix(tSimulation, 'GSM', 'GEO')
-       end if
+       GeoGm_DD = transform_matrix(tSimulation, TypeCoordSystem, 'GEO')
     end if
 
     ! Convert to GEO coordinates

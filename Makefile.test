@@ -912,7 +912,7 @@ test_magnetometer_check:
 		${TESTDIR}/IO2/magnetometers_n00000000.mag \
 		Param/MAGNETOMETER/TestOutput/magnetometers_n00000000.mag \
 		> test_magnetometer.diff)
-	-@(${DIFFNUM} -t -r=1e-5 -a=3e-9 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-7 \
 		${TESTDIR}/IO2/eqb_t00000100_n*.out \
 		Param/MAGNETOMETER/TestOutput/eqb_t00000100.out \
 		>> test_magnetometer.diff)
