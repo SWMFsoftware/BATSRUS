@@ -29,6 +29,9 @@ F			UseFullImplicit
 spherical_genr		TypeGeometry
 Param/MARS/grid_stretch.dat		NameGridFile
 
+#GRIDBLOCKALL
+6000			MaxBlock
+
 #GRID
 10			nRootBlock1
 8			nRootBlock2
@@ -39,9 +42,6 @@ Param/MARS/grid_stretch.dat		NameGridFile
  16.			yMax
 -16.			zMin
  16.			zMax
-
-#GRIDBLOCKALL
-6000			MaxBlock
 
 #LIMITRADIUS
 1.0294464		rMin
@@ -141,7 +141,7 @@ solarmin		TypeSolarCond
 T			UseImpactIon
 T			UseChargeEx
 
-#USECHAPMAN
+#CHAPMAN
 T			UseChapman
 
 PHOTOIONIZATION
