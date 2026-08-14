@@ -188,7 +188,7 @@ contains
 
     use ModB0, ONLY: UseB0, add_b0, subtract_b0
     use BATL_lib, ONLY: Used_GB
-    use ModMain, ONLY: UseFieldLineThreads, UseBufferGrid
+    use ModMain, ONLY: UseFieldLineThreads, DoThreadRestart, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
     use ModBuffer, ONLY: save_buffer_restart
 
@@ -220,7 +220,7 @@ contains
          call string_append_iter(NameFile,nIteration)
     call write_tree_file(NameFile)
     ! Save the solution on threads if present
-    if(UseFieldLineThreads)call save_thread_restart
+    if(UseFieldLineThreads.and.DoThreadRestart)call save_thread_restart
     ! Save the buffer grid state if present (at zeroth proc only!)
     if(UseBufferGrid .and. iProc == 0)call save_buffer_restart
     if(iProc == 0) call write_restart_header
@@ -373,7 +373,7 @@ contains
     use ModReadParam, ONLY: i_line_command
     use ModUtilities, ONLY: cTab, write_string_tabs_name
     use ModIO, ONLY: NameMaxTimeUnit
-    use ModMain, ONLY: UseFieldLineThreads
+    use ModMain, ONLY: UseFieldLineThreads, DoThreadRestart
     use ModBuffer, ONLY: write_buffer_restart_header
     use EEE_ModCommonVariables, ONLY: tStartCme
     use BATL_lib, ONLY: nRoot_D
@@ -558,9 +558,9 @@ contains
             tStartCme, cTab//cTab//'tStartCme'
        write(UnitTmp_,*)
     end if
-    if(UseFieldLineThreads)then
+    if(UseFieldLineThreads.and.DoThreadRestart)then
        write(UnitTmp_,'(a)')'#THREADRESTART'
-       write(UnitTmp_,'(l1,a)')UseFieldLineThreads,&
+       write(UnitTmp_,'(l1,a)')DoThreadRestart,&
             cTab//cTab//cTab//'DoThreadRestart'
        write(UnitTmp_,*)
     end if

@@ -62,7 +62,6 @@ contains
 
     IsRestartCoupler = IsRestart
     IsRestart = .false.
-    DoThreadRestart = .false.
     call test_stop(NameSub, DoTest)
 
   contains
