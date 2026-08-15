@@ -548,6 +548,7 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use ModPhysics, ONLY: No2Si_V, UnitTemperature_, UnitX_, UnitB_
     use ModMain, ONLY: DoThreadRestart
+    use ModIo, ONLY: IsRestart
     use ModGeometry, ONLY: Xyz_DGB
     use ModNumConst, ONLY: cTolerance
     use ModTurbulence, ONLY:PoyntingFluxPerBSi
@@ -842,7 +843,7 @@ contains
             IntegralBdS, BoundaryThreads_B(iBlock)%TMax_II(j, k))
 
     end do; end do
-    if(DoThreadRestart)call read_thread_restart(iBlock)
+    if(IsRestart.and.DoThreadRestart)call read_thread_restart(iBlock)
 
     if(DoTest.and.iBlock==iBlockTest)then
        write(*,'(a,3es18.10)')'Thread starting at the point  ',&
