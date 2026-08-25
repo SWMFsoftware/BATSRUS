@@ -112,7 +112,7 @@ contains
 
     character(len=500):: StringInputVar
 
-    integer :: iError, i , iVar, jVar, iYear, iVectorVar
+    integer :: iError, i , iVar, jVar, iYear, iVectorVar, nTime
     logical :: UseZeroBx
 
     ! One line of input
@@ -120,7 +120,7 @@ contains
     character (len=20) :: String
 
     real    :: TmpData_V(nVar)
-    integer :: iTime_I(nTimeVar)
+    integer :: iTime_I(nTimeVar) = 0
 
     ! Tilt angle of the plane of the input data
     real :: PlaneAngleXY=0.0, PlaneAngleXZ=0.0
@@ -153,9 +153,15 @@ contains
        write(iUnitOut,*) NameSub,' reading ',trim(NameSolarwindFile)
     end if
 
+    ! Default number of time related columns
+    nTime = nTimeVar
     ! Read header information
     do
        read(UnitTmp_,'(a)', iostat = iError ) StringLine
+       if(StringLine(1:4) == "MIDL")then
+          nTime = 5
+          write(*,*)'!!! nTime =', nTime
+       end if
        if (iError /= 0) call stop_mpi(NameSub// &
             ': could not find #START in '//trim(NameSolarwindFile))
 
@@ -261,11 +267,18 @@ contains
     ! Get the number of input lines
     nData = 0
     do
-       read(UnitTmp_, *, IOSTAT=iError) iTime_I, TmpData_V(1:nVarInput)
+       read(UnitTmp_, *, IOSTAT=iError) iTime_I(1:nTime), &
+            TmpData_V(1:nVarInput)
        if(iError /= 0) EXIT
        nData = nData + 1
     end do
 
+    if(nData == 0) then
+       call stop_mpi(NameSub// &
+            ' could not read data from '//trim(NameSolarwindFile))
+    else
+       if(DoTest) write(*,*) NameSub,': lines of data=', nData
+    end if
     ! For reading a new input file
     if(allocated(Solarwind_VI)) deallocate(Solarwind_VI, Time_I)
     allocate(Solarwind_VI(nVar,nData), Time_I(nData))
@@ -283,7 +296,7 @@ contains
     ! Read the data
     nData = 0
     do
-       read(UnitTmp_, *, IOSTAT=iError) iTime_I, TmpData_V(1:nVarInput)
+       read(UnitTmp_,*,IOSTAT=iError) iTime_I(1:nTime), TmpData_V(1:nVarInput)
        if(iError /= 0) EXIT
 
        nData = nData + 1
@@ -330,20 +343,12 @@ contains
     ! Check if the start time is within 1 day of the input data
     if( StartTime + tSimulation < Time_I(1) - cDay .or. &
          StartTime > Time_I(nData)+cDay) then
-       write(*,*) "**********************************************************"
-       write(*,*) "*                                                        *"
-       write(*,*) "*      Warning! Warning! Warning! Warning! Warning!      *"
-       write(*,*) "*                                                        *"
-       write(*,*) "*  Time dependent solar wind file disagrees with the     *"
-       write(*,*) "*  starting time of the simulation by more than 24 hours.*"
-       write(*,*) "*  This could cause results which you may not enjoy.     *"
-       write(*,*) "*                                                        *"
-       if (UseStrict) call stop_mpi('Correct PARAM.in or the INPUT data file')
+       write(*,*) NameSub, &
+            ' WARDNING: solar wind file disagrees with start time'
+       write(*,*) NameSub, ' StartTime=', StartTime
+       write(*,*) 'nData, Time_I(nData)=', nData, Time_I(nData)
 
-       write(*,*) "*  I am assuming that you are smarter than I am.         *"
-       write(*,*) "*  Continuing with simulation.                           *"
-       write(*,*) "*                                                        *"
-       write(*,*) "**********************************************************"
+       if (UseStrict) call stop_mpi('Correct PARAM.in or the INPUT data file')
     endif
 
     if(lVerbose>0 .and. iProc==0)then
