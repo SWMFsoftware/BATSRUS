@@ -1599,7 +1599,7 @@ contains
   subroutine user_initial_perturbation
 
     use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
-         XyzCmeBottomSi_D, &
+         XyzCmeBottomSi_D, DoAddMagCone, &
          bAmbientCenterSi_D, bAmbientApexSi_D, bAmbientBottomSi_D
     use EEE_ModMain, ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
          EEE_get_state_init, EEE_init_cme_parameters
@@ -1707,17 +1707,19 @@ contains
                   bAmbientApexSi_D*1e4,' [Gs]'
           end if
        end if
-       x_D = XyzCmeBottomSi_D*Si2No_V(UnitX_)
-       call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            B_D, IsFound)
-       if(IsFound)then
-          call get_b0(x_D, B0_D)
-          bAmbientBottomSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
-          if(iProc == 0)then
-             write(*,'(a,3es12.4)')'EEE: At the CME bottom at Xyz=', x_D
-             write(*,'(a,3es12.4,a)')&
-                  'EEE: An ambient magnetic field (prior to CME) is: ',&
-                  bAmbientBottomSi_D*1e4,' [Gs]'
+       if(DoAddMagCone)then
+          x_D = XyzCmeBottomSi_D*Si2No_V(UnitX_)
+          call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
+               B_D, IsFound)
+          if(IsFound)then
+             call get_b0(x_D, B0_D)
+             bAmbientBottomSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
+             if(iProc == 0)then
+                write(*,'(a,3es12.4)')'EEE: At the CME bottom at Xyz=', x_D
+                write(*,'(a,3es12.4,a)')&
+                     'EEE: An ambient magnetic field (prior to CME) is: ',&
+                     bAmbientBottomSi_D*1e4,' [Gs]'
+             end if
           end if
        end if
 

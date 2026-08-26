@@ -1704,7 +1704,8 @@ contains
           end if
        case('divb')
           if(.not.UseConstrainB)then
-             call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,iBlock), &
+             call calc_divergence(&
+                  iBlock, State_VGB(Bx_:Bx_+nDim-1,:,:,:,iBlock), &
                   nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
           else
              ! Div B from face fluxes

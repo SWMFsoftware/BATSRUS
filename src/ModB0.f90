@@ -548,6 +548,7 @@ contains
 
     integer:: i, j, k
     real:: DxInv, DyInv, DzInv
+    real:: Normal_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_source'
@@ -641,10 +642,14 @@ contains
        if(UseB0Source)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              DivB0_C(i,j,k) = &
-                  + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*B0_DX(:,i+1,j,k)) &
-                  - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*B0_DX(:,i  ,j,k)) &
-                  + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*B0_DY(:,i,j+1,k)) &
-                  - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*B0_DY(:,i,j  ,k))
+                  + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*&
+                  B0_DX(1:nDim,i+1,j,k)) &
+                  - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*&
+                  B0_DX(1:nDim,i  ,j,k)) &
+                  + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*&
+                  B0_DY(1:nDim,i,j+1,k)) &
+                  - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*&
+                  B0_DY(1:nDim,i,j  ,k))
 
              if(nDim == 3) DivB0_C(i,j,k) = DivB0_C(i,j,k) &
                   + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*B0_DZ(:,i,j,k+1)) &
@@ -653,16 +658,19 @@ contains
              DivB0_C(i,j,k) = DivB0_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        end if
+       Normal_D = 0.0
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          CurlB0_DC(:,i,j,k) =                                          &
-               + cross_product(                                         &
-               FaceNormal_DDFB(:,1,i+1,j,k,iBlock), B0_DX(:,i+1,j,k))   &
-               - cross_product(                                         &
-               FaceNormal_DDFB(:,1,i  ,j,k,iBlock), B0_DX(:,i  ,j,k))   &
-               + cross_product(                                         &
-               FaceNormal_DDFB(:,2,i,j+1,k,iBlock), B0_DY(:,i,j+1,k))   &
-               - cross_product(                                         &
-               FaceNormal_DDFB(:,2,i,j  ,k,iBlock), B0_DY(:,i,j  ,k))
+          Normal_D(1:nDim) = FaceNormal_DDFB(:,1,i+1,j,k,iBlock)
+          CurlB0_DC(:,i,j,k) = cross_product(Normal_D, B0_DX(:,i+1,j,k))
+          Normal_D(1:nDim) = FaceNormal_DDFB(:,1,i  ,j,k,iBlock)
+          CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k) - &
+               cross_product(Normal_D, B0_DX(:,i,j,k))
+          Normal_D(1:nDim) = FaceNormal_DDFB(:,2,i,j+1,k,iBlock)
+          CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k) + &
+               cross_product(Normal_D, B0_DY(:,i,j+1,k))
+          Normal_D(1:nDim) = FaceNormal_DDFB(:,2,i,j,k,iBlock)
+          CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k) - &
+               cross_product(Normal_D, B0_DY(:,i,j,k))
 
           if(nDim == 3) CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k)         &
                + cross_product(                                         &
