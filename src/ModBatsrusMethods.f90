@@ -1220,6 +1220,7 @@ contains
             IsFirstWriteSat_I(iSat) = .true.
 
             tSimulationBackup = tSimulation
+            iPointCurrentSat_I(iSat) = 1
             tSimulation = StartTimeTraj_I(iSat)
 
             do while (tSimulation <= EndTimeTraj_I(iSat))
