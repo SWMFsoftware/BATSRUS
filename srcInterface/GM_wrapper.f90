@@ -295,8 +295,9 @@ contains
   !============================================================================
   subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
-    use BATL_lib, ONLY: MaxDim, find_grid_block
+    use BATL_lib, ONLY: MaxDim, find_grid_block, nDim
     use ModPhysics, ONLY: Si2No_V, UnitX_
+    use ModGeometry, ONLY: RadiusMin
 
     integer, intent(in) :: nDimIn ! dimension of position vectors
     integer, intent(in) :: nPoint ! number of positions
@@ -307,13 +308,29 @@ contains
     ! Could be generalized to return multiple processors...
 
     real:: Xyz_D(MaxDim) = 0.0
+    real:: XyzClamped_D(MaxDim) = 0.0
+    real:: r, rClamp
     integer:: iPoint, iBlock
 
     character(len=*), parameter:: NameSub = 'GM_find_points'
     !--------------------------------------------------------------------------
     do iPoint = 1, nPoint
        Xyz_D(1:nDimIn) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
-       call find_grid_block(Xyz_D, iProc_I(iPoint), iBlock)
+       call find_grid_block(Xyz_D, iProc_I(iPoint), iBlock, &
+            UseGhostCell = .true.)
+
+       ! If the point is inside the body, clamp it to just above the inner
+       ! boundary and retry. This returns the near-surface state for
+       ! body-interior PIC nodes.
+       if(iProc_I(iPoint) < 0 .and. RadiusMin > 0) then
+          r = sqrt(sum(Xyz_D(1:nDimIn)**2))
+          if(r < RadiusMin .and. r > 0.0) then
+             rClamp = 1.001 * RadiusMin
+             XyzClamped_D(1:nDimIn) = Xyz_D(1:nDimIn) * (rClamp / r)
+             call find_grid_block(XyzClamped_D, iProc_I(iPoint), iBlock, &
+                  UseGhostCell = .true.)
+          end if
+       end if
     end do
 
   end subroutine GM_find_points
