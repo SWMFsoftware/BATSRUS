@@ -377,6 +377,7 @@ contains
     integer :: i, n, iPos
     integer, allocatable :: iTmp_I(:)
 
+    !--------------------------------------------------------------------------
     if (allocated(iRegionExclude_I)) deallocate(iRegionExclude_I)
 
     ! Count negative entries
@@ -384,7 +385,7 @@ contains
     do i = 1, size(iRegion_I)
        if (iRegion_I(i) < 0) n = n + 1
     end do
-    if (n == 0) return
+    if (n == 0) RETURN
 
     allocate(iTmp_I(n))
     iPos = 0
@@ -801,8 +802,8 @@ contains
     integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
          iPatchMin_D(3) = 0, iPatchMax_D(3) = 0
 
-    logical:: DoTest
     logical:: IsAnyCellExcluded
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
