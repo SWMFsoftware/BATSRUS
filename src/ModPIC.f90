@@ -86,6 +86,11 @@ module ModPIC
   ! Vars of regions defined with the #REGION commands
   integer, allocatable:: iRegionPic_I(:)
   integer, allocatable:: iRegionPicLimit_I(:)
+
+  ! Exclusion regions: the negative terms in #PICREGIONMIN.
+  ! A patch is not activated if any of its cells is inside one of them.
+  integer, allocatable:: iRegionPicExclude_I(:)
+
   real, allocatable:: InsidePicRegion_C(:,:,:)
   real, allocatable:: InsidePicRegionLimit_C(:,:,:)
 
@@ -217,6 +222,7 @@ contains
             IsLowerCase=.true.)
        if (StringPicRegion /= 'none') then
             call get_region_indexes(StringPicRegion, iRegionPic_I)
+            call get_exclusion_regions(iRegionPic_I, iRegionPicExclude_I)
             ! if PICREGIONMIN is presented, set PICADAPT=True
             AdaptPic % DoThis = .true.
        end if
@@ -359,6 +365,39 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine pic_read_param
+  !============================================================================
+  subroutine get_exclusion_regions(iRegion_I, iRegionExclude_I)
+
+    ! Return the positive indexes of the negative-signed regions,
+    ! e.g. -planetbody in "+picbox -planetbody".
+
+    integer, intent(in)   :: iRegion_I(:)
+    integer, allocatable, intent(inout) :: iRegionExclude_I(:)
+
+    integer :: i, n, iPos
+    integer, allocatable :: iTmp_I(:)
+
+    !--------------------------------------------------------------------------
+    if (allocated(iRegionExclude_I)) deallocate(iRegionExclude_I)
+
+    ! Count negative entries
+    n = 0
+    do i = 1, size(iRegion_I)
+       if (iRegion_I(i) < 0) n = n + 1
+    end do
+    if (n == 0) RETURN
+
+    allocate(iTmp_I(n))
+    iPos = 0
+    do i = 1, size(iRegion_I)
+       if (iRegion_I(i) < 0) then
+          iPos = iPos + 1
+          iTmp_I(iPos) = -iRegion_I(i)   ! store as positive index
+       end if
+    end do
+    call move_alloc(iTmp_I, iRegionExclude_I)
+
+  end subroutine get_exclusion_regions
   !============================================================================
   subroutine pic_init_region
 
@@ -763,6 +802,7 @@ contains
     integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
          iPatchMin_D(3) = 0, iPatchMax_D(3) = 0
 
+    logical:: IsAnyCellExcluded
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
     !--------------------------------------------------------------------------
@@ -828,6 +868,27 @@ contains
                    iPatch_D = [iP, jP, kP]
                    call patch_index_to_coord(iRegion, iPatch_D, "Mhd",&
                         XyzPatchMhd_D)
+
+                   ! Skip the patch if any of its cells is inside an
+                   ! exclusion region (patch status is all-or-nothing).
+                   if(allocated(iRegionPicExclude_I)) then
+                      IsAnyCellExcluded = .false.
+                      do i=0,nCellPerPatch-1; do j=0,nCellPerPatch-1;&
+                           do k=0,nCellPerPatch-1
+                         iPatchCell_D = [i, j, k]
+                         XyzMhd_D(1:nDim) = XyzPatchMhd_D(1:nDim)+&
+                              (iPatchCell_D(1:nDim)+0.5)*&
+                              DxyzPic_DI(1:nDim, iRegion)
+                         if(is_point_inside_regions(iRegionPicExclude_I,&
+                              XyzMhd_D)) then
+                            IsAnyCellExcluded = .true.
+                            EXIT
+                         endif
+                      end do; if(IsAnyCellExcluded) EXIT; end do
+                      if(IsAnyCellExcluded) EXIT
+                      end do
+                      if(IsAnyCellExcluded) CYCLE
+                   end if
 
                    ! loop through cells in this patch
                    do i=0,nCellPerPatch-1;do j=0,nCellPerPatch-1;&
