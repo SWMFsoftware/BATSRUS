@@ -189,7 +189,6 @@ contains
     use BATL_lib, ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
     use ModInterpolate, ONLY: interpolate_vector
     use ModIO, ONLY: iUnitOut
-    use ModGeometry, ONLY: RadiusMin
 
     logical,          intent(in):: IsNew   ! true for new point array
     character(len=*), intent(in):: NameVar ! List of variables
@@ -208,8 +207,6 @@ contains
     real,    allocatable, save:: Dist_DI(:,:)
 
     integer:: iPoint, iBlock, iProcFound
-    real:: r, rClamp
-    real:: XyzClamped_D(MaxDim) = 0.0
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_get_for_pc'
@@ -231,18 +228,6 @@ contains
           Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
           call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
                UseGhostCell = .true.)
-
-          ! If the point is inside the body, clamp it to just above the inner
-          ! boundary and retry. This must be consistent with GM_find_points.
-          if(iProcFound < 0 .and. RadiusMin > 0) then
-             r = sqrt(sum(Xyz_D(1:nDim)**2))
-             if(r < RadiusMin .and. r > 0.0) then
-                rClamp = 1.001 * RadiusMin
-                XyzClamped_D(1:nDim) = Xyz_D(1:nDim) * (rClamp / r)
-                call find_grid_block(XyzClamped_D, iProcFound, iBlock, &
-                     iCell_D, Dist_D, UseGhostCell = .true.)
-             end if
-          end if
 
           if(iProcFound /= iProc)then
              write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
