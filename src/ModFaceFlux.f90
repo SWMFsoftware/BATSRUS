@@ -3211,7 +3211,7 @@ contains
       end if
 
       ! Fast speed multiplied by the face area
-      if(UseBorisSimple .or. (UseEfield))then
+      if(UseBorisSimple .or. UseEfield)then
          Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*InvClight2Face) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
