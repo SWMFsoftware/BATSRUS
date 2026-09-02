@@ -1416,7 +1416,7 @@ contains
   subroutine user_get_b0(x, y, z, b_D)
 
     use ModMain, ONLY: tSimulation, TypeCoordSystem
-    use ModPhysics, ONLY: Io2No_V, UnitB_, rBody
+    use ModPhysics, ONLY: Io2No_V, UnitB_
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: xyz_to_sph, rot_xyz_sph
 
@@ -1450,11 +1450,6 @@ contains
 
     ! Convert to sherical coordinates
     call xyz_to_sph(XyzGeo_D, r, Theta, Phi)
-
-    ! The spherical harmonic expansion below grows like (Rp/r)^(n+2) with n up
-    ! to NNm, so it must never be evaluated inside the body. Hold the field at
-    ! its surface value (same angular direction) for r < rBody.
-    if(r < rBody) r = rBody
 
     ! Get the magnetic field in spherical components
     if(UseB0Old)then
