@@ -2850,9 +2850,12 @@ contains
            + (5.*X**3+6.*X**5)*erf(X)
     end function h2
     !==========================================================================
-    real function h5(X)
-      real, intent(in):: X
+    real function h5(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
+      X = max(XIn, 1E-4)
       h5 = 2./sqrt(cPi)*exp(-X**2) + (1./X + 2.*X)*erf(X)
     end function h5
     !==========================================================================
@@ -2870,17 +2873,23 @@ contains
            + (5.*X+2.*X**3)*erf(X)
     end function h7
     !==========================================================================
-    real function h8(X)
-      real, intent(in):: X
+    real function h8(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
-      h8 = exp(-X**2)/sqrt(cPi) + (0.5/(X+1e-32)+X)*erf(X)
+      X = max(XIn, 1E-4)
+      h8 = exp(-X**2)/sqrt(cPi) + (0.5/X+X)*erf(X)
     end function h8
     !==========================================================================
-    real function h9(X)
-      real, intent(in):: X
+    real function h9(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
+      X = max(XIn, 1E-4)
       h9 = (0.5/X**2+1)/sqrt(cPi)*exp(-X**2) &
-           + (-0.25/X**3+1./X+X)*erf(X)
+           + (-0.25/(X)**3+1./(X)+X)*erf(X)
     end function h9
     !==========================================================================
     real function h10(X)
@@ -2889,9 +2898,12 @@ contains
       h10 = 3. + 2.*X**2
     end function h10
     !==========================================================================
-    real function h11(X)
-      real, intent(in):: X
+    real function h11(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
+      X = max(XIn, 1E-4)
       h11 = (5.+2.*X**2)/sqrt(cPi)*exp(-X**2) &
            + (1.5/X+6.*X+2.*X**3)*erf(X)
     end function h11
