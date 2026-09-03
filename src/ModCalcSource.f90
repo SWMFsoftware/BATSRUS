@@ -174,7 +174,8 @@ contains
     use ModViscosity, ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
-    use ModPUI, ONLY: DivUpui_C, Pu3_
+    use ModPUI, ONLY: DivUpui_C, Pu3_, AlphaPui_I, &
+         UseModulateCompression, DoModulateCompressionBlock_B
     use ModUserInterface, ONLY: user_calc_sources_expl, user_calc_sources_impl
     use ModUtilities, ONLY: i_gang
 
@@ -682,9 +683,24 @@ contains
 
           DivUpui_C(i,j,k) = div_u(UnFirst_+Pu3_-1, i, j, k)
 
-          Source_VC(PuiFirst_:PuiLast_,i,j,k) = &
-               Source_VC(PuiFirst_:PuiLast_,i,j,k) &
-               + State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock)*DivUpui_C(i,j,k)
+          if(UseModulateCompression)then
+             if(DoModulateCompressionBlock_B(iBlock))then
+                Source_VC(PuiFirst_:PuiLast_,i,j,k) = &
+                     Source_VC(PuiFirst_:PuiLast_,i,j,k) &
+                     + State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
+                     *DivUpui_C(i,j,k)*AlphaPui_I
+             else
+                Source_VC(PuiFirst_:PuiLast_,i,j,k) = &
+                     Source_VC(PuiFirst_:PuiLast_,i,j,k) &
+                     + State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
+                     *DivUpui_C(i,j,k)
+             end if
+          else
+             Source_VC(PuiFirst_:PuiLast_,i,j,k) = &
+                  Source_VC(PuiFirst_:PuiLast_,i,j,k) &
+                  + State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
+                  *DivUpui_C(i,j,k)
+          end if
        end do; end do; end do
     end if
 
