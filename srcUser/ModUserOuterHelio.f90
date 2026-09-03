@@ -1204,7 +1204,7 @@ contains
              IsRegion3 = any(iFluidProduced_G==Ne3_)
              if(UsePuiDiffusion) then
                 DoPuiDiffusionBlock_B(iBlock) = IsRegion3
-             end if 
+             end if
              if(UseModulateCompression) &
                   DoModulateCompressionBlock_B(iBlock) = &
                        IsRegion2 .and. IsRegion3
