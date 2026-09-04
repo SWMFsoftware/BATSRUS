@@ -2813,7 +2813,7 @@ contains
              end do
           end if
 
-       case("#PUIGRID", "#PUIDIFFUSION")
+       case("#PUIGRID", "#PUIDIFFUSION", '#PUICOMPRESSION')
           call read_pui_param(NameCommand)
 
           ! CORONA SPECIFIC COMMANDS

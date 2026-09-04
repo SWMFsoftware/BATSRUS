@@ -35,7 +35,8 @@ module ModUser
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iProc, nI, nJ, nK, &
-       nBlock, MaxBlock, Unused_B, Used_GB, Xyz_DGB
+       nBlock, MaxBlock, Unused_B, Used_GB, Xyz_DGB, MinI, MaxI, &
+       MinJ, MaxJ, MinK, MaxK
   use ModMain, ONLY: &
        body1_, tSimulation, iStartTime_I
   use ModPhysics, ONLY: &
@@ -180,8 +181,8 @@ module ModUser
   ! Level Set criterion
   real :: LevelHPLimit = 0.0
 
-  integer :: iFluidProduced_C(nI, nJ, nK)
-  !$omp threadprivate( iFluidProduced_C )
+  integer :: iFluidProduced_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+  !$omp threadprivate( iFluidProduced_G )
 
   real :: &
        Pu3Rho = 0.0, Pu3RhoDim = 0.0, &
@@ -985,7 +986,7 @@ contains
     if(UseSingleIonVelocityRegion3)then
        call select_region(iBlock)
        do k=1, nK; do j=1, nJ; do i=1, nI
-          if(Ne3_ == iFluidProduced_C(i,j,k))then
+          if(Ne3_ == iFluidProduced_G(i,j,k))then
 
              ! Calcualate average velocity from total momentum and density
              RhoInv= 1/sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
@@ -1115,7 +1116,8 @@ contains
   !============================================================================
   subroutine user_action(NameAction)
 
-    use ModPui, ONLY: UsePuiDiffusion, DoPuiDiffusion_B
+    use ModPui, ONLY: UsePuiDiffusion, DoPuiDiffusionBlock_B, &
+         UseModulateCompression, DoModulateCompressionBlock_B
     use BATL_lib, ONLY: nBlock
 
     character(len=*), intent(in):: NameAction
@@ -1123,6 +1125,7 @@ contains
     character(len=*), parameter:: StringFormat = '(10X,A19,F15.6,A11,F15.6)'
 
     integer :: iBlock
+    logical :: IsRegion2, IsRegion3
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_action'
@@ -1194,11 +1197,17 @@ contains
        end if
 
     case('load balance done')
-       if(UsePuiDiffusion)then
+       if(UsePuiDiffusion .or. UseModulateCompression)then
           do iBlock = 1, nBlock
-             ! call get_termination_shock(iBlock, DoPuiDiffusion_B(iBlock))
              call select_region(iBlock)
-             DoPuiDiffusion_B(iBlock) = any(iFluidProduced_C==Ne3_)
+             IsRegion2 = any(iFluidProduced_G==Ne2_)
+             IsRegion3 = any(iFluidProduced_G==Ne3_)
+             if(UsePuiDiffusion) then
+                DoPuiDiffusionBlock_B(iBlock) = IsRegion3
+             end if
+             if(UseModulateCompression) &
+                  DoModulateCompressionBlock_B(iBlock) = &
+                       IsRegion2 .and. IsRegion3
           end do
        end if
 
@@ -1240,7 +1249,7 @@ contains
        case('fluid')
           if(UseNeutralFluid)then
              call select_region(iBlock)
-             PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
+             PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_G(1:nI,1:nJ,1:nK)
           else
              PlotVar_G(1:nI,1:nJ,1:nK) = 0.0
           endif
@@ -1478,7 +1487,7 @@ contains
        case('fluid')
           if(UseNeutralFluid)then
              call select_region(iBlock)
-             PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
+             PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_G(1:nI,1:nJ,1:nK)
           else
              ! This is not needed when not using the 4 nutral fluids
              call CON_stop(NameSub//': no neutral fluids present')
@@ -1925,7 +1934,7 @@ contains
          ! Source terms for the ion populations
          if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
             ! Region 3: only make Pu3 in region before TS
-            if (Ne3_ == iFluidProduced_C(i,j,k)) then
+            if (Ne3_ == iFluidProduced_G(i,j,k)) then
                ! in Pop III region
                Source_V(Pu3Energy_)= HeatPu3
                Source_V(Pu3P_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
@@ -1944,7 +1953,7 @@ contains
 
          Source_V = Source_VC(:,i,j,k)
 
-         write(*,*) NameSub, ' iFluidProduced=', iFluidProduced_C(i,j,k)
+         write(*,*) NameSub, ' iFluidProduced=', iFluidProduced_G(i,j,k)
          do iVar = 1, nVar + nFLuid
             write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
          end do
@@ -1986,7 +1995,7 @@ contains
 
     ! Region 3: only make Pu3 in region before TS
     !--------------------------------------------------------------------------
-    if (Ne3_ == iFluidProduced_C(i,j,k)) then
+    if (Ne3_ == iFluidProduced_G(i,j,k)) then
        UTh_I = sqrt(UTh2Si_I)*Si2No_V(UnitU_)
        NumDens_I = NumDensSi_I*Si2No_V(UnitN_)
 
@@ -2145,7 +2154,7 @@ contains
     SourceFxpu3_II = 0
     SourceFpu3x_II = 0
 
-    iFluidProduced = iFluidProduced_C(i,j,k)
+    iFluidProduced = iFluidProduced_G(i,j,k)
     if (iFluidProduced == Ne2_ .or. iFluidProduced == Ne3_) then
        ! PUIs are produced in the solar wind
        ! The population for the current region does not produce PUIs
@@ -2296,7 +2305,7 @@ contains
     SourceCx_V = 0
 
     ! Ion source terms
-    iFluidProduced = iFluidProduced_C(i,j,k)
+    iFluidProduced = iFluidProduced_G(i,j,k)
     if (iFluidProduced == Ne2_ .or. iFluidProduced == Ne3_)then
        ! Solar wind: PUIs are created
        SourceCx_V(SwhRho_) = -sum(I0px_I) + I0xp_I(iFluidProduced) &
@@ -2841,9 +2850,12 @@ contains
            + (5.*X**3+6.*X**5)*erf(X)
     end function h2
     !==========================================================================
-    real function h5(X)
-      real, intent(in):: X
+    real function h5(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
+      X = max(XIn, 1E-4)
       h5 = 2./sqrt(cPi)*exp(-X**2) + (1./X + 2.*X)*erf(X)
     end function h5
     !==========================================================================
@@ -2861,17 +2873,23 @@ contains
            + (5.*X+2.*X**3)*erf(X)
     end function h7
     !==========================================================================
-    real function h8(X)
-      real, intent(in):: X
+    real function h8(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
-      h8 = exp(-X**2)/sqrt(cPi) + (0.5/(X+1e-32)+X)*erf(X)
+      X = max(XIn, 1E-4)
+      h8 = exp(-X**2)/sqrt(cPi) + (0.5/X+X)*erf(X)
     end function h8
     !==========================================================================
-    real function h9(X)
-      real, intent(in):: X
+    real function h9(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
+      X = max(XIn, 1E-4)
       h9 = (0.5/X**2+1)/sqrt(cPi)*exp(-X**2) &
-           + (-0.25/X**3+1./X+X)*erf(X)
+           + (-0.25/(X)**3+1./(X)+X)*erf(X)
     end function h9
     !==========================================================================
     real function h10(X)
@@ -2880,9 +2898,12 @@ contains
       h10 = 3. + 2.*X**2
     end function h10
     !==========================================================================
-    real function h11(X)
-      real, intent(in):: X
+    real function h11(XIn)
+      real, intent(in):: XIn
+
+      real :: X
       !------------------------------------------------------------------------
+      X = max(XIn, 1E-4)
       h11 = (5.+2.*X**2)/sqrt(cPi)*exp(-X**2) &
            + (1.5/X+6.*X+2.*X**3)*erf(X)
     end function h11
@@ -3364,7 +3385,7 @@ contains
     do iFluid = Neu_, Ne4_
        if(.not.UseSource_I(iFluid)) CYCLE
        call select_fluid(iFluid)
-       if (iFluid == iFluidProduced_C(i,j,k)) then
+       if (iFluid == iFluidProduced_G(i,j,k)) then
           ! iRho etc = change in density etc
           if(IsMhd)then
              ! Single Ion
@@ -3424,7 +3445,7 @@ contains
        ! Multi Ion
        if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
           ! Region 3: only make Pu3 in region before TS
-          if (Ne3_ == iFluidProduced_C(i,j,k)) then
+          if (Ne3_ == iFluidProduced_G(i,j,k)) then
              ! in Pop III region
              SourceCx_V(SWHRho_)    = -sum(I0px_I) &
                   + I0px_I(Ne3_) + I0xpu3_I(Ne3_)
@@ -3611,7 +3632,7 @@ contains
        ! Multi Ion
        if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
           ! Region 3: only make Pu3 in region before TS
-          if(Ne3_ == iFluidProduced_C(i,j,k))then
+          if(Ne3_ == iFluidProduced_G(i,j,k))then
              ! in Pop III region
              ! a source gamma*pe/ne*qphoto seems to be missing in
              ! electron pressure equation. Probably, need to be removed from SW
@@ -3809,7 +3830,7 @@ contains
     else
        ! Multi Ion
        if(UseSource_I(SWH_) .and. UseSource_I(Pu3_)) then
-          if (Ne3_ == iFluidProduced_C(i,j,k)) then
+          if (Ne3_ == iFluidProduced_G(i,j,k)) then
              ! inside region 3
 
              ! Pop 3 still creates SWH because it is already
@@ -3917,7 +3938,7 @@ contains
   subroutine get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, &
        MachPUI2, MachSW2, LevelHP, DoReIndexIn)
 
-    ! set the global variabls iFluidProduced_C
+    ! set the global variabls iFluidProduced_G
     ! to select which neutral fluid is produced in each cell of the block
 
     integer,          intent(out) :: iRegion
@@ -4117,7 +4138,7 @@ contains
   !============================================================================
   subroutine select_region(iBlock)
 
-    ! set the global variabls iFluidProduced_C
+    ! set the global variabls iFluidProduced_G
     ! to select which neutral fluid is produced in each cell of the block
 
     integer, intent(in):: iBlock
@@ -4139,7 +4160,7 @@ contains
          ': no neutral fluids present')
 
     call test_start(NameSub, DoTest, iBlock)
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
 
        if(IsMhd) then
           ! Single ion
@@ -4195,7 +4216,7 @@ contains
 
        call get_region(iRegion, r_GB(i,j,k,iBlock), RhoDim, &
             U2Dim, TempDim, Mach2, MachPUI2, MachSW2, LevelHP)
-       iFluidProduced_C(i,j,k) = iRegion
+       iFluidProduced_G(i,j,k) = iRegion
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -4767,8 +4788,8 @@ contains
     IsFound = .true.
 
     call select_region(iBlock)
-    IsRegion2 = any(iFluidProduced_C==Ne2_)
-    IsRegion3 = any(iFluidProduced_C==Ne3_)
+    IsRegion2 = any(iFluidProduced_G==Ne2_)
+    IsRegion3 = any(iFluidProduced_G==Ne3_)
     if(IsRegion2 .and. IsRegion3) UserCriteria = 1.0
 
   end subroutine user_amr_criteria

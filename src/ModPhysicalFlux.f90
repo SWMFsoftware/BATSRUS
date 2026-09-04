@@ -106,7 +106,7 @@ contains
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
          IsIon_I, nIonFluid, UseMultiIon, ElectronPerMass_I, select_fluid
-    use ModPUI, ONLY: UsePuiDiffusion, DoPuiDiffusion_B
+    use ModPUI, ONLY: UsePuiDiffusion, DoPuiDiffusionBlock_B
     use ModGeometry, ONLY: r_GB
     use ModPUI, ONLY: Pu3_
     use BATL_lib, ONLY: nDim, x_, y_, z_
@@ -334,7 +334,8 @@ contains
 
     if(EradFlux /= 0) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
     if(UsePuiDiffusion)then
-       if(DoPuiDiffusion_B(iBlockFace)) Flux_V(PuiFirst_:PuiLast_) = &
+       if(DoPuiDiffusionBlock_B(iBlockFace)) &
+            Flux_V(PuiFirst_:PuiLast_) = &
             Flux_V(PuiFirst_:PuiLast_) + FpuiFlux_I
     end if
     if(HeatFlux /= 0)then

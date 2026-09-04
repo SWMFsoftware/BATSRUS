@@ -36,13 +36,22 @@ module ModPUI
 
   ! For spatial diffusion at the termination shock
   logical, public :: UsePuiDiffusion = .false.
-  logical, allocatable, public :: DoPuiDiffusion_B(:)
+  logical, allocatable, public :: DoPuiDiffusionBlock_B(:)
   real, public :: PuiDiffCoefSi = 1.E17   ! m^2/s
   real, public :: PuiDiffCoef = 0.0
   real, public :: PuiDiffV0Si
   real, public :: PuiDiffV0
   real, public :: PuiDiffSlope
   real, allocatable :: Fpui_IG(:,:,:,:)
+
+  ! For modulating adiabatic compression
+  logical, public :: UseModulateCompression = .false.
+  logical, allocatable, public :: DoModulateCompressionBlock_B(:)
+  real, public :: AlphaPui_I(nPui)
+  real, public :: AlphaPuiMin
+  real, public :: VpuiAlphaMinSi
+  real, public :: VpuiAlphaMin
+  real, public :: FactorAlphaPuiWidth
 
 contains
   !============================================================================
@@ -68,6 +77,13 @@ contains
           call read_var('PuiDiffV0Si', PuiDiffV0Si)
           call read_var('PuiDiffSlope', PuiDiffSlope)
        end if
+    case("#PUICOMPRESSION")
+       call read_var('UseModulateCompression', UseModulateCompression)
+       if(UseModulateCompression)then
+          call read_var('AlphaPuiMin', AlphaPuiMin)
+          call read_var('VpuiAlphaMinSi', VpuiAlphaMinSi)
+          call read_var('FactorAlphaPuiWidth', FactorAlphaPuiWidth)
+       end if
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -80,6 +96,7 @@ contains
     use ModWaves, ONLY: WaveFirst_
     use ModPhysics, ONLY: Si2No_V, UnitU_, UnitX_
     use BATL_size, ONLY: MaxBlock
+    use BATL_lib, ONLY: iProc
 
     integer ::  iPui
 
@@ -107,15 +124,32 @@ contains
     if (UsePuiDiffusion)then
        PuiDiffCoef = PuiDiffCoefSi * Si2No_V(UnitU_)*Si2No_V(UnitX_)
        PuiDiffV0 = PuiDiffV0Si *Si2No_V(UnitU_)
-       if (.not. allocated(DoPuiDiffusion_B)) &
-            allocate(DoPuiDiffusion_B(MaxBlock))
+       if (.not. allocated(DoPuiDiffusionBlock_B)) &
+            allocate(DoPuiDiffusionBlock_B(MaxBlock))
        if (.not. allocated(Fpui_IG)) &
             allocate(Fpui_IG(PuiFirst_:PuiLast_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
     else
-       if(allocated(DoPuiDiffusion_B)) &
-            deallocate(DoPuiDiffusion_B)
+       if(allocated(DoPuiDiffusionBlock_B)) &
+            deallocate(DoPuiDiffusionBlock_B)
        if(allocated(Fpui_IG)) &
             deallocate(Fpui_IG)
+    end if
+
+    if (UseModulateCompression)then
+       if (.not. allocated(DoModulateCompressionBlock_B)) &
+            allocate(DoModulateCompressionBlock_B(MaxBlock))
+       VpuiAlphaMin = VpuiAlphaMinSi * Si2No_V(UnitU_)
+       AlphaPui_I = exp(log(AlphaPuiMin) &
+            *exp(-((log(Vpui_I/VpuiAlphaMin)**2 &
+            /log(FactorAlphaPuiWidth)**2))))
+       if(DoTest .and. iProc==0)then
+            write(*,*) "AlphaPuiMin, VpuiAlphaMinSi, FactorAlphaPuiWidth = ", &
+                    AlphaPuiMin, VpuiAlphaMinSi, FactorAlphaPuiWidth
+            write(*,*) "AlphaPui_I = ", AlphaPui_I
+       end if
+    else
+       if(allocated(DoModulateCompressionBlock_B)) &
+            deallocate(DoModulateCompressionBlock_B)
     end if
 
     call test_stop(NameSub, DoTest)
@@ -200,7 +234,11 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pui_advection_diffusion'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoTest .and. UseModulateCompression) &
+         write(*,*) "DoModulateCompression_B(iBlock) = ", &
+         DoModulateCompressionBlock_B(iBlock)
 
     ! Boundary conditions
     F_I(0) = 0.0; F_I(nPui+1) = 0.0
@@ -208,7 +246,12 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
-       Cfl_I = abs(DivUpui_C(i,j,k))/3/DeltaLogVpui*Cfl*DtMax_CB(i,j,k,iBlock)
+       Cfl_I = abs(DivUpui_C(i,j,k))/3/DeltaLogVpui*Cfl &
+           *DtMax_CB(i,j,k,iBlock)
+       if(UseModulateCompression)then
+          if(DoModulateCompressionBlock_B(iBlock)) &
+              Cfl_I = Cfl_I*AlphaPui_I
+       end if
 
        F_I(1:nPui) = max(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock), 1e-30)
 
@@ -254,8 +297,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_pui_flux'
     !--------------------------------------------------------------------------
 
-    if(.not. DoPuiDiffusion_B(iBlock))then
-       IsNewBlockPuiDiffusion = .false.
+    if(.not. DoPuiDiffusionBlock_B(iBlock))then
        PuiDiffCoefOut = 0.0
        FpuiFlux_I = 0
        RETURN
