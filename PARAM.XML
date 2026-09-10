@@ -10017,8 +10017,8 @@ The default value is -1, i.e. no threshold is applied.
 T			UseElectronEntropy
 T                       UseElectronEnergy
 
-This command only has an effect when the equation module contains the
-electron pressure.
+This command should only be used when the equation module contains the
+isotropic electron pressure.
 
 If UseElectronEntropy is true, solve for the electron entropy Se defined as
 Se = Pe**(1/GammaE). The electron entropy, unlike electron pressure,

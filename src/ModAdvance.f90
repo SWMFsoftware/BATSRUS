@@ -86,11 +86,12 @@ module ModAdvance
 
   ! Use the conservative electron entropy equation instead of pressure.
   ! This should provide more robust results near strong shocks.
-  logical:: UseElectronEntropy = UseElectronPressure
+  ! Only works for isotropic electron pressure
+  logical:: UseElectronEntropy = UseElectronPressure .and. .not. UseAnisoPe
   !$acc declare create(UseElectronEntropy)
 
   ! Include electron energy into the total energy conservation?
-  logical:: UseElectronEnergy = UseElectronPressure
+  logical:: UseElectronEnergy = UseElectronPressure .and. .not. UseAnisoPe
   !$acc declare create(UseElectronEnergy)
 
   ! This should provide more robust results near strong shocks.
