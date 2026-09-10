@@ -569,20 +569,16 @@ contains
        if(IsMhd .and. UseMultiIon)then
           Solarwind_V(p_) = sum(Solarwind_V(iPIon_I))
           if(.not.UseElectronPressure) &
-               Solarwind_V(p_) = (1+ElectronPressureRatio)*Solarwind_V(p_)
+               Solarwind_V(p_) = (1 + ElectronPressureRatio)*Solarwind_V(p_)
        end if
 
        if(UseAnisoPressure .and. .not. IsInput_V(Ppar_)) &
             Solarwind_V(pPar_) = Solarwind_V(p_)
 
-       if(UseElectronPressure .and. .not. IsInput_V(Pe_))then
-          if(ElectronPressureRatio > 0.0)then
+       if(UseElectronPressure)then
+          if(.not.IsInput_V(Pe_))then
              Solarwind_V(Pe_) = Solarwind_V(p_)*ElectronPressureRatio
-          else
-             Solarwind_V(Pe_) = Solarwind_V(p_)
-          end if
-       elseif(UseElectronPressure .and. IsInput_V(Pe_))then
-          if(UseElectronTemperature) then
+          elseif(UseElectronTemperature) then
              Solarwind_V(Pe_) = max(Solarwind_V(Te_), SwTMinDim) &
                   *Io2No_V(UnitTemperature_)*Solarwind_V(Rho_)
           else

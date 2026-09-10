@@ -3853,6 +3853,14 @@ contains
               SpeedHypDim, ' ClightDim =', ClightDim, ''
       end if
 
+      if (UseElectronPressure .and. ElectronPressureRatio == 0.0)then
+         ! Electrons should have a finite temperature in the initial
+         ! conditions and at the upstream boundary
+         ElectronTemperatureRatio = 1.0
+         ElectronPressureRatio = 1.0
+         PePerPtotal = 0.5
+      end if
+
       if (UseAnisoPe .and. .not. UseAnisoPressure)  call stop_mpi(NameSub//  &
            ' UseAnisoPe cannot be applied without UseAnisoPressure')
 
