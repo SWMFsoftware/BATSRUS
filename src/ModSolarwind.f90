@@ -583,10 +583,10 @@ contains
           end if
        elseif(UseElectronPressure .and. IsInput_V(Pe_))then
           if(UseElectronTemperature) then
-              Solarwind_V(Pe_) = max(Solarwind_V(Te_), SwTMinDim) &
-                   *Io2No_V(UnitTemperature_)*Solarwind_V(Rho_)
+             Solarwind_V(Pe_) = max(Solarwind_V(Te_), SwTMinDim) &
+                  *Io2No_V(UnitTemperature_)*Solarwind_V(Rho_)
           else
-            Solarwind_V(Pe_) = Solarwind_V(Pe_)*Io2No_V(UnitP_)
+             Solarwind_V(Pe_) = Solarwind_V(Pe_)*Io2No_V(UnitP_)
           end if
        end if
        if(UseAnisoPe .and. .not. IsInput_V(Pepar_)) &
