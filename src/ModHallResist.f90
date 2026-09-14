@@ -112,7 +112,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_hall_resist
   !============================================================================
-
   subroutine read_hall_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
@@ -143,7 +142,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_hall_param
   !============================================================================
-
   subroutine set_ion_mass_per_charge(iBlock)
 
     use ModAdvance, ONLY: State_VGB, UseIdealEos, UseMultiSpecies
@@ -171,7 +169,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_ion_mass_per_charge
   !============================================================================
-
   subroutine set_ion_mass_per_charge_point(State_V, IonMassPerChargeOut)
 
     use ModAdvance, ONLY: UseIdealEos, UseMultiSpecies
@@ -214,7 +211,6 @@ contains
 
   end subroutine set_ion_mass_per_charge_point
   !============================================================================
-
   subroutine set_hall_factor_cell(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions
@@ -320,6 +316,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_hall_factor_face
   !============================================================================
-
 end module ModHallResist
 !==============================================================================
