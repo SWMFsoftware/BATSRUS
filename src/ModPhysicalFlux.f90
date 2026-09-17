@@ -397,9 +397,9 @@ contains
 
       ! Calculate energy and total pressure
       e = InvGammaMinus1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
+      if(UseElectronEnergy) e = e + InvGammaElectronMinus1*State_V(Pe_)
 
       pTotal  = 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
-
       if(UseElectronPressure) pTotal = pTotal + PeAdd
 
       if(UseWavePressure)then
