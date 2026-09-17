@@ -127,15 +127,16 @@ coney tapered		StringShape
 2.0			Taper
 
 #REGION
-r6			NameRegion
-box_gen			StringShape
-15.0			Coord1MinBox
-337.5			Coord2MinBox
--10.0			Coord1MaxBox
-25.0			Coord2MaxBox
+r9			NameRegion
+box_gen tapered		StringShape
+-8.0			Coord1MinBox
+20.0			Coord2MinBox
+ 8.0			Coord1MaxBox
+22.0			Coord2MaxBox
+2.0			Taper
 
 #HALLREGION
-+r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8		StringHallRegion
++r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8 +r9		StringHallRegion
 
 #SAVEINITIAL
 T			DoSaveInitial
