@@ -1363,7 +1363,7 @@ contains
                          call stop_mpi(NameSub//': unknown satellite: '// &
                               StringInstrument_I(iInstrument))
                       end select
-      
+
                       ! setting plot file format
                       if(index(StringPlot,'idl') > 0)then
                          TypePlotFormat_I(iFileInstrument)='idl'

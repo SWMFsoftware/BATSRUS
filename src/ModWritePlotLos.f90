@@ -304,16 +304,16 @@ contains
     ! overwrite all the "file specific parameters" set above if wispr
     ! ===================================================================
     if(TypeSatPos_I(iFile) == 'psp')then
-       ! Set file specific parameters for a psp/wispr image 
+       ! Set file specific parameters for a psp/wispr image
        nPix_D(1)       = 230               ! default wispr
        nPix_D(2)       = 140                ! image resolution
        SizePix_D(1)    = 115.0 / nPix_D(1)  ! angular width of pixel (deg)
-       SizePix_D(2)    = 70.0  / nPix_D(2)  ! 
+       SizePix_D(2)    = 70.0  / nPix_D(2)  !
        HalfSizeImage_D(1) =   0.0         ! left  (x-value) in deg
        HalfSizeImage_D(2) = -44.0         ! lower (y-value) in deg
        rOccult         = cRadToDeg * atan( 1.0 / ObsDistance ) ! half-angle subtended by solar disk at PSP location in rad
        rOccult2        = rOccult**2
-       rSizeImage      = 115. 
+       rSizeImage      = 115.
        rSizeImage2     = rSizeImage**2
     end if
 
@@ -612,8 +612,8 @@ contains
          ! for wispr: bPix = elevation angle. (theta_y; y-direction)
          !            SizePix_D(2) = 70.0 deg / nPix_D(2)=700
          !            HalfSizeImage_D(2) = -44.0 degrees
-         ! bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2) 
-         ! bPix_rad = (180.0/!pi) * bPix
+         ! bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+         ! bPix_rad = (180.0/! pi) * bPix
 
          do iPix = 1, nPix_D(1)
             DoTest = iPix==iPixTest.and.jPix==jPixTest
@@ -625,11 +625,11 @@ contains
             else
                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
             endif
-            ! for wispr: aPix = elongation angle. (theta_x; x-direction) 
+            ! for wispr: aPix = elongation angle. (theta_x; x-direction)
             !            SizePix_D(2) = 115.0 deg / nPix_D(2)=1150
             !            HalfSizeImage_D(1) = 0.0 degrees
             ! aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
-            ! aPix_rad = (180.0/!pi) * aPix
+            ! aPix_rad = (180.0/! pi) * aPix
 
             if(TypeSatPos_I(iFile) == 'psp')then
                ! aPix, bPix are angles [deg] from the
@@ -640,7 +640,7 @@ contains
 
                ! Tilt the PSP line of sight vector LosPsp_D by (aPix, bPix) about the
                ! image-plane unit vectors aUnit_D/bUnit_D, which are
-               ! orthonormal with Los_D. 
+               ! orthonormal with Los_D.
                ! So, bUnit_D is aligned with Z (vertical), aUnit_D is horizontal
                LosPsp_D = sin(cDegToRad*aPix)*cos(cDegToRad*bPix)*aUnit_D &
                     + sin(cDegToRad*bPix)*bUnit_D &
