@@ -523,7 +523,7 @@ contains
        ! 3D vector pointing from the origin to the image center
        ImageCenter_D = ObsPos_D + ObsDistance*Los_D + &
             aOffsetOrig*aUnit_D + bOffsetOrig*bUnit_D
-       
+
        if(DoTest.and.iProc==0)then
           write(*,*)' ImageCenter_D (before call_integrate_image) : ', &
                ImageCenter_D
@@ -539,7 +539,7 @@ contains
 
        ! initialize image
        Image_VIII = 0.0
-       
+
        if(UseLosSimple .or. .not.IsCartesianGrid &
             .or. TypeSatPos_I(iFile) == 'psp') then
           ! Make sure that the integrate_image is used for PSP, the
