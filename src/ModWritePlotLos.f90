@@ -76,7 +76,9 @@ contains
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_
     use ModAdvance, ONLY: State_VGB
-    use ModNumConst, ONLY: cTiny, nByteReal, cUnit_DD, cTolerance, cTwoPi
+    use ModNumConst, ONLY: cTiny, nByteReal, cUnit_DD, cTolerance, cTwoPi, &
+         cDegToRad, cRadToDeg
+    use ModConst, ONLY: rSun
     use ModMpi
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: rot_matrix_z, cross_product
@@ -125,6 +127,7 @@ contains
     real    :: aUnit_D(3), bUnit_D(3) ! unit vectors for the image coordinates
     real    :: LosPix_D(3)            ! unit vector from observer to pixel
     real    :: XyzPix_D(3)            ! pixel location in 3D
+    real    :: LosPsp_D(3)            ! PSP/WISPR :line of sight tilted toward the pixel
     real    :: rBlockSize, rBlockCenter
     real    :: SizePix_D(2), r2Pix
     real    :: BlockDistance, ObsDistance, Ratio
@@ -264,7 +267,7 @@ contains
     SizePix_D = 2*HalfSizeImage_D/(nPix_D - 1)
 
     select case(TypeSatPos_I(iFile))
-    case('sta', 'stb', 'earth')
+    case('sta', 'stb', 'earth', 'psp')
 
        ! determine the index of the sta/stb satellite file
        do iSatLoop = 1, nSatellite
@@ -296,14 +299,43 @@ contains
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
 
-    if(DoTest.and.iProc==0) then
-       write(*,'(a,3es14.6)') 'ObsPos         =', ObsPos_D
-       write(*,'(a,3es14.6)') 'Los_D          =', Los_D
-       write(*,'(a,3es14.6)') 'HalfSizeImage_D =', HalfSizeImage_D
-       write(*,'(a,2es14.6)') 'aOffset,bOffset =', aOffsetOrig, bOffsetOrig
-       write(*,'(a,3es14.6)') 'SizePix_D        =', SizePix_D
-       write(*,'(a,2i5)') 'nPix_D           =', nPix_D
+    ! begin psp/wispr edits
+    ! ===================================================================
+    ! overwrite all the "file specific parameters" set above if wispr
+    ! ===================================================================
+    if(TypeSatPos_I(iFile) == 'psp')then
+       ! Set file specific parameters for a psp/wispr image
+       nPix_D(1)       = 230               ! default wispr
+       nPix_D(2)       = 140                ! image resolution
+       SizePix_D(1)    = 115.0 / nPix_D(1)  ! angular width of pixel (deg)
+       SizePix_D(2)    = 70.0  / nPix_D(2)  !
+       HalfSizeImage_D(1) =   0.0         ! left  (x-value) in deg
+       HalfSizeImage_D(2) = -44.0         ! lower (y-value) in deg
+       rOccult         = cRadToDeg * atan( 1.0 / ObsDistance ) ! half-angle subtended by solar disk at PSP location in rad
+       rOccult2        = rOccult**2
+       rSizeImage      = 115.
+       rSizeImage2     = rSizeImage**2
     end if
+
+    if(DoTest.and.iProc==0) then
+       write(*,'(a,a,a,a,a)') TypeSatPos_I(iFile),' : ', &
+            TypePlot_I(iFile),' : ',   &
+            StringPlotVar_I(iFile)
+       write(*,'(a)') '============================================='
+       write(*,'(a,3es14.6)') 'ObsPos      ( r_psp ) =', ObsPos_D
+       write(*,'(a,3es14.6)') 'ObsDistance (|r_psp|) =', ObsDistance
+       write(*,'(a,3es14.6)') 'Los_D      (rhat_psp) =', Los_D
+       write(*,'(a,3es14.6)') 'HalfSizeImage_D (deg) =', HalfSizeImage_D
+       write(*,'(a,3es14.6)') 'rSizeImage      (Rs?) =', rSizeImage
+       write(*,'(a,3es14.6)') 'rSizeImage2    (Rs2?) =', rSizeImage2
+       write(*,'(a,2es14.6)') 'aOffset,bOffset       =', aOffsetOrig, bOffsetOrig
+       write(*,'(a,3es14.6)') 'SizePix_D       (deg) =', SizePix_D
+       write(*,'(a,2i5)') 'nPix_D                    =', nPix_D
+       write(*,'(a,1es14.6)') 'rOccult = rSun      (deg) =', rOccult
+       write(*,'(a,1es14.6)') 'rOccult2 = rSun2   (deg2) =', rOccult2
+       write(*,'(a)') '============================================='
+    end if
+    ! end psp/wispr edits
 
     StringUnitTec = ''
     StringUnitIdl = ''
@@ -490,6 +522,12 @@ contains
        ImageCenter_D = ObsPos_D + ObsDistance*Los_D + &
             aOffsetOrig*aUnit_D + bOffsetOrig*bUnit_D
 
+       if(DoTest.and.iProc==0)then
+          write(*,*)' ImageCenter_D (before call_integrate_image) : ', ImageCenter_D
+          write(*,'(a,3es14.6)') 'aUnit_D       (deg) =', aUnit_D
+          write(*,'(a,3es14.6)') 'bUnitD       (deg) =', bUnit_D
+       endif
+
        ! Make offset to be relative to the Sun (and not the projected observer)
        aOffset = dot_product(ImageCenter_D, aUnit_D)
        bOffset = dot_product(ImageCenter_D, bUnit_D)
@@ -499,7 +537,10 @@ contains
        ! initialize image
        Image_VIII = 0.0
 
-       if(UseLosSimple .or. .not.IsCartesianGrid)then
+       if(UseLosSimple .or. .not.IsCartesianGrid &
+            .or. TypeSatPos_I(iFile) == 'psp') then
+          ! Make sure that the integrate_image is used for PSP, the alternate is
+          ! integrate_block where no PSP handling exists.
           if(DoTest.and.iProc==0)write(*,'(a)')'Start call_integrate_image'
           call integrate_image
        else
@@ -563,31 +604,72 @@ contains
       do jPix = 1, nPix_D(2)
 
          ! Y position of the pixel on the image plane
-         bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+         if(TypeSatPos_I(iFile) == 'psp')then
+            bPix = (jPix - 1) * SizePix_D(2) + HalfSizeImage_D(2)
+         else
+            bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+         endif
+         ! for wispr: bPix = elevation angle. (theta_y; y-direction)
+         !            SizePix_D(2) = 70.0 deg / nPix_D(2)=700
+         !            HalfSizeImage_D(2) = -44.0 degrees
+         ! bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+         ! bPix_rad = (180.0/! pi) * bPix
 
          do iPix = 1, nPix_D(1)
             DoTest = iPix==iPixTest.and.jPix==jPixTest
             DoTestPe0 = DoTest.and.iProc==0
+
             ! X position of the pixel on the image plane
-            aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+            if(TypeSatPos_I(iFile) == 'psp')then
+               aPix = (iPix - 1) * SizePix_D(1) + HalfSizeImage_D(1)
+            else
+               aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+            endif
+            ! for wispr: aPix = elongation angle. (theta_x; x-direction)
+            !            SizePix_D(2) = 115.0 deg / nPix_D(2)=1150
+            !            HalfSizeImage_D(1) = 0.0 degrees
+            ! aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+            ! aPix_rad = (180.0/! pi) * aPix
 
-            r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
-            ! Check if pixel is within occultation radius
-            if( r2Pix  <= rOccult2 ) CYCLE
+            if(TypeSatPos_I(iFile) == 'psp')then
+               ! aPix, bPix are angles [deg] from the
+               ! PSP line of sight (elongation-like in a, elevation-like in b),
+               r2Pix = aPix**2 + bPix**2    ! in degrees, not pixels
+               ! Check if pixel is within occultation radius
+               if( r2Pix <= rOccult2 ) CYCLE
 
-            r2Pix = aPix**2 + bPix**2
-            ! Check if pixel is outside the circular region
-            if( r2Pix > rSizeImage2 .and. .not. UseSpm )CYCLE
+               ! Tilt the PSP line of sight vector LosPsp_D by (aPix, bPix) about the
+               ! image-plane unit vectors aUnit_D/bUnit_D, which are
+               ! orthonormal with Los_D.
+               ! So, bUnit_D is aligned with Z (vertical), aUnit_D is horizontal
+               LosPsp_D = sin(cDegToRad*aPix)*cos(cDegToRad*bPix)*aUnit_D &
+                    + sin(cDegToRad*bPix)*bUnit_D &
+                    + cos(cDegToRad*aPix)*cos(cDegToRad*bPix)*Los_D
 
-            ! Get the 3D location of the pixel
-            XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
+               XyzPix_D = ObsPos_D + ObsDistance*LosPsp_D
+               LosPix_D = -LosPsp_D
+               DistancePixToObs = ObsDistance
+            else
+               r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
+               ! Check if pixel is within occultation radius
+               if( r2Pix  <= rOccult2 ) CYCLE
 
-            ! Vector from pixel center to observer
-            LosPix_D = - XyzPix_D + ObsPos_D
-            DistancePixToObs = norm2(LosPix_D)
-            ! Unit vector pointing from pixel center to observer
-            LosPix_D = LosPix_D/DistancePixToObs
-            ! Unit vector in the direction of integration (+/-LosPix_D)
+               r2Pix = aPix**2 + bPix**2
+               ! Check if pixel is outside the circular region
+               if( r2Pix > rSizeImage2 .and. .not. UseSpm )CYCLE
+
+               ! normal case for everything else
+               ! Get the 3D location of the pixel
+               XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
+               ! Vector from pixel center to observer
+               LosPix_D = - XyzPix_D + ObsPos_D
+
+               DistancePixToObs = norm2(LosPix_D)
+               ! Unit vector pointing from pixel center to observer
+               LosPix_D = LosPix_D/DistancePixToObs
+               ! Unit vector in the direction of integration (+/-LosPix_D)
+            endif
+
             LosDir_D = LosPix_D
 
             ! Calculate whether there are intersections with the rInner sphere
@@ -1880,6 +1962,10 @@ contains
 
       integer:: iTime_I(7)
 
+      ! Output coordinate axis bounds
+      ! since PSP/WISPR's aPix/bPix range is not +/-Half around 0.
+      real:: CoordMin2_D(2), CoordMax2_D(2)
+
       character(len=*), parameter:: NameSub = 'save_los_file'
       !------------------------------------------------------------------------
       if(DoTiming)call timing_start(NameSub)
@@ -2062,6 +2148,17 @@ contains
                   end do
                end do
             end do
+         elseif(TypeSatPos_I(iFile) == 'psp')then
+            ! PSP/WISPR pixels start at +HalfSizeImage_D and are angles
+            ! in degrees, so they are not scaled by the length unit
+            do iPix = 1, nPix_D(1)
+               aPix = (iPix - 1) * SizePix_D(1) + HalfSizeImage_D(1)
+               do jPix = 1, nPix_D(2)
+                  bPix = (jPix - 1) * SizePix_D(2) + HalfSizeImage_D(2)
+                  write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
+                       Image_VIII(1:nPlotVar,iPix,jPix,1)
+               end do
+            end do
          else
             do iPix = 1, nPix_D(1)
                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
@@ -2133,6 +2230,18 @@ contains
             bPix = HalfSizeImage_D(2)
          end if
 
+         if(TypeSatPos_I(iFile) == 'psp')then
+            ! PSP/WISPR's aPix/bPix extends from
+            ! HalfSizeImage_D to HalfSizeImage_D + (nPix_D-1)*SizePix_D,
+            ! not +/-aPix/+/-bPix around (0,0)
+            CoordMin2_D = HalfSizeImage_D
+            CoordMax2_D = HalfSizeImage_D + (nPix_D - 1)*SizePix_D
+         else
+            ! aPix, bPix are the independent half-widths in x, y
+            CoordMin2_D = [-aPix, -bPix]
+            CoordMax2_D = [+aPix, +bPix]
+         end if
+
          ! If one line is to be used only, fux needs an artificial wvlinterval
          if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
             LambdaMax = LambdaMax_I(iFile) + nLambda*0.5*DLambda_I(IFile)
@@ -2194,8 +2303,8 @@ contains
                     ParamIn_I = Param_I(1:neqpar), &
                     NameVarIn = NameAllVar, &
                     nDimIn = 2, &
-                    CoordMinIn_D = [-aPix, -aPix], &
-                    CoordMaxIn_D = [+aPix, +aPix], &
+                    CoordMinIn_D = CoordMin2_D, &
+                    CoordMaxIn_D = CoordMax2_D, &
                     VarIn_VII = Image_VIII(:,:,:,1))
             endif
          case('hdf')
@@ -2208,8 +2317,8 @@ contains
                  NameVarIn_I = NamePlotVar_V, &
                  NameUnitsIn = StringUnitIdl,&
                  nDimIn = 2, &
-                 CoordMinIn_D = [-aPix, -aPix], &
-                 CoordMaxIn_D = [+aPix, +aPix], &
+                 CoordMinIn_D = CoordMin2_D, &
+                 CoordMaxIn_D = CoordMax2_D, &
                  VarIn_VII = Image_VIII(:,:,:,1))
          end select
       end if

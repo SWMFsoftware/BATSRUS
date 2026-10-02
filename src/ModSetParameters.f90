@@ -1347,6 +1347,18 @@ contains
                             call stop_mpi(NameSub//': unknown INS: '//  &
                                  StringInstrument_I(iInstrument))
                          end select
+                      case('psp')
+                         TypeSatPos_I(iFileInstrument) = 'psp'
+                         nPixel_I(iFileInstrument)         = 512
+                         MuLimbDarkening                   = 0.5
+                         select case(trim(NameInstrument))
+                         case('wispr')
+                            rSizeImage_I(iFileInstrument)  = 20.0
+                            rOccult_I(iFileInstrument)     = 3.0
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '//  &
+                                 StringInstrument_I(iInstrument))
+                         end select
                       case default
                          call stop_mpi(NameSub//': unknown satellite: '// &
                               StringInstrument_I(iInstrument))
