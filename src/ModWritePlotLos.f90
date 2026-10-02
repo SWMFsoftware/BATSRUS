@@ -127,8 +127,7 @@ contains
     real    :: aUnit_D(3), bUnit_D(3) ! unit vectors for the image coordinates
     real    :: LosPix_D(3)            ! unit vector from observer to pixel
     real    :: XyzPix_D(3)            ! pixel location in 3D
-    real    :: LosPsp_D(3)            ! PSP/WISPR :line of sight tilted
-    ! toward the pixel
+    real    :: LosPsp_D(3)            ! PSP/WISPR:LOS tilted towards the pixel
     real    :: rBlockSize, rBlockCenter
     real    :: SizePix_D(2), r2Pix
     real    :: BlockDistance, ObsDistance, Ratio
@@ -524,7 +523,7 @@ contains
        ! 3D vector pointing from the origin to the image center
        ImageCenter_D = ObsPos_D + ObsDistance*Los_D + &
             aOffsetOrig*aUnit_D + bOffsetOrig*bUnit_D
-
+       
        if(DoTest.and.iProc==0)then
           write(*,*)' ImageCenter_D (before call_integrate_image) : ', &
                ImageCenter_D
@@ -540,7 +539,7 @@ contains
 
        ! initialize image
        Image_VIII = 0.0
-
+       
        if(UseLosSimple .or. .not.IsCartesianGrid &
             .or. TypeSatPos_I(iFile) == 'psp') then
           ! Make sure that the integrate_image is used for PSP, the
