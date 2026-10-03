@@ -127,7 +127,7 @@ contains
     real    :: aUnit_D(3), bUnit_D(3) ! unit vectors for the image coordinates
     real    :: LosPix_D(3)            ! unit vector from observer to pixel
     real    :: XyzPix_D(3)            ! pixel location in 3D
-    real    :: LosPsp_D(3)            ! PSP/WISPR :line of sight tilted toward the pixel
+    real    :: LosPsp_D(3)            ! PSP/WISPR:LOS tilted towards the pixel
     real    :: rBlockSize, rBlockCenter
     real    :: SizePix_D(2), r2Pix
     real    :: BlockDistance, ObsDistance, Ratio
@@ -311,7 +311,8 @@ contains
        SizePix_D(2)    = 70.0  / nPix_D(2)  !
        HalfSizeImage_D(1) =   0.0         ! left  (x-value) in deg
        HalfSizeImage_D(2) = -44.0         ! lower (y-value) in deg
-       rOccult         = cRadToDeg * atan( 1.0 / ObsDistance ) ! half-angle subtended by solar disk at PSP location in rad
+       ! half-angle subtended by solar disk at PSP location in rad
+       rOccult         = cRadToDeg * atan( 1.0 / ObsDistance )
        rOccult2        = rOccult**2
        rSizeImage      = 115.
        rSizeImage2     = rSizeImage**2
@@ -328,7 +329,8 @@ contains
        write(*,'(a,3es14.6)') 'HalfSizeImage_D (deg) =', HalfSizeImage_D
        write(*,'(a,3es14.6)') 'rSizeImage      (Rs?) =', rSizeImage
        write(*,'(a,3es14.6)') 'rSizeImage2    (Rs2?) =', rSizeImage2
-       write(*,'(a,2es14.6)') 'aOffset,bOffset       =', aOffsetOrig, bOffsetOrig
+       write(*,'(a,2es14.6)') 'aOffset,bOffset       =', &
+            aOffsetOrig, bOffsetOrig
        write(*,'(a,3es14.6)') 'SizePix_D       (deg) =', SizePix_D
        write(*,'(a,2i5)') 'nPix_D                    =', nPix_D
        write(*,'(a,1es14.6)') 'rOccult = rSun      (deg) =', rOccult
@@ -523,7 +525,8 @@ contains
             aOffsetOrig*aUnit_D + bOffsetOrig*bUnit_D
 
        if(DoTest.and.iProc==0)then
-          write(*,*)' ImageCenter_D (before call_integrate_image) : ', ImageCenter_D
+          write(*,*)' ImageCenter_D (before call_integrate_image) : ', &
+               ImageCenter_D
           write(*,'(a,3es14.6)') 'aUnit_D       (deg) =', aUnit_D
           write(*,'(a,3es14.6)') 'bUnitD       (deg) =', bUnit_D
        endif
@@ -539,8 +542,8 @@ contains
 
        if(UseLosSimple .or. .not.IsCartesianGrid &
             .or. TypeSatPos_I(iFile) == 'psp') then
-          ! Make sure that the integrate_image is used for PSP, the alternate is
-          ! integrate_block where no PSP handling exists.
+          ! Make sure that the integrate_image is used for PSP, the
+          ! alternate is integrate_block where no PSP handling exists.
           if(DoTest.and.iProc==0)write(*,'(a)')'Start call_integrate_image'
           call integrate_image
        else
@@ -638,10 +641,11 @@ contains
                ! Check if pixel is within occultation radius
                if( r2Pix <= rOccult2 ) CYCLE
 
-               ! Tilt the PSP line of sight vector LosPsp_D by (aPix, bPix) about the
-               ! image-plane unit vectors aUnit_D/bUnit_D, which are
-               ! orthonormal with Los_D.
-               ! So, bUnit_D is aligned with Z (vertical), aUnit_D is horizontal
+               ! Tilt the PSP line of sight vector LosPsp_D by (aPix, bPix)
+               ! about the image-plane unit vectors aUnit_D/bUnit_D,
+               ! which are orthonormal with Los_D.
+               ! So, bUnit_D is aligned with Z (vertical),
+               ! aUnit_D is horizontal
                LosPsp_D = sin(cDegToRad*aPix)*cos(cDegToRad*bPix)*aUnit_D &
                     + sin(cDegToRad*bPix)*bUnit_D &
                     + cos(cDegToRad*aPix)*cos(cDegToRad*bPix)*Los_D
@@ -829,7 +833,7 @@ contains
             call stop_mpi(NameSub//&
                  ': Algorithm failed: zero integration step')
          end if
-	 ! Stop if reached maximum length
+         ! Stop if reached maximum length
          if(Length > LengthMax) RETURN
          ! Store location at the beginning of time step
          XyzLos_D   = XyzLosNew_D
@@ -849,7 +853,7 @@ contains
          if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D,iDimMin)) &
               then
             ! If the line leaves the comp. domain, stop integration.
-	    if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
+            if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
             call find_block(XyzLosNew_D, iProcFound, iBlock, &
                  CoordMinBlock_D, CoordMaxBlock_D, CellSize_D, &
                  IsThreadedGap)
