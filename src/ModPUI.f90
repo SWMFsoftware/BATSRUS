@@ -143,9 +143,9 @@ contains
             *exp(-((log(Vpui_I/VpuiAlphaMin)**2 &
             /log(FactorAlphaPuiWidth)**2))))
        if(DoTest .and. iProc==0)then
-            write(*,*) "AlphaPuiMin, VpuiAlphaMinSi, FactorAlphaPuiWidth = ", &
-                    AlphaPuiMin, VpuiAlphaMinSi, FactorAlphaPuiWidth
-            write(*,*) "AlphaPui_I = ", AlphaPui_I
+          write(*,*) "AlphaPuiMin, VpuiAlphaMinSi, FactorAlphaPuiWidth = ", &
+               AlphaPuiMin, VpuiAlphaMinSi, FactorAlphaPuiWidth
+          write(*,*) "AlphaPui_I = ", AlphaPui_I
        end if
     else
        if(allocated(DoModulateCompressionBlock_B)) &
@@ -247,10 +247,10 @@ contains
        if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
        Cfl_I = abs(DivUpui_C(i,j,k))/3/DeltaLogVpui*Cfl &
-           *DtMax_CB(i,j,k,iBlock)
+            *DtMax_CB(i,j,k,iBlock)
        if(UseModulateCompression)then
           if(DoModulateCompressionBlock_B(iBlock)) &
-              Cfl_I = Cfl_I*AlphaPui_I
+               Cfl_I = Cfl_I*AlphaPui_I
        end if
 
        F_I(1:nPui) = max(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock), 1e-30)
@@ -307,7 +307,7 @@ contains
        do iPui = PuiFirst_,PuiLast_
           Fpui_GI(:,:,:,iPui) = State_VGB(iPui,:,:,:,iBlock)
        end do
-    end if 
+    end if
     IsNewBlockPuiDiffusion_I = IsNewBlockPuiDiffusion
     do iPui = PuiFirst_,PuiLast_
        call get_face_gradient(iDir, i, j, k, iBlock, &
