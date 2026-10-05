@@ -79,7 +79,7 @@ contains
        end if
     case("#PUICOMPRESSION")
        call read_var('UseModulateCompression', UseModulateCompression)
-       if(UseModulateCompression)then 
+       if(UseModulateCompression)then
           call read_var('AlphaPuiMin', AlphaPuiMin)
           call read_var('VpuiAlphaMinSi', VpuiAlphaMinSi)
           call read_var('FactorAlphaPuiWidth', FactorAlphaPuiWidth)
