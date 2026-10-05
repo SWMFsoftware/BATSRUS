@@ -42,7 +42,7 @@ module ModPUI
   real, public :: PuiDiffV0Si
   real, public :: PuiDiffV0
   real, public :: PuiDiffSlope
-  real, allocatable :: Fpui_IG(:,:,:,:)
+  real, allocatable :: Fpui_GI(:,:,:,:)
 
   ! For modulating adiabatic compression
   logical, public :: UseModulateCompression = .false.
@@ -79,7 +79,7 @@ contains
        end if
     case("#PUICOMPRESSION")
        call read_var('UseModulateCompression', UseModulateCompression)
-       if(UseModulateCompression)then
+       if(UseModulateCompression)then 
           call read_var('AlphaPuiMin', AlphaPuiMin)
           call read_var('VpuiAlphaMinSi', VpuiAlphaMinSi)
           call read_var('FactorAlphaPuiWidth', FactorAlphaPuiWidth)
@@ -126,13 +126,13 @@ contains
        PuiDiffV0 = PuiDiffV0Si *Si2No_V(UnitU_)
        if (.not. allocated(DoPuiDiffusionBlock_B)) &
             allocate(DoPuiDiffusionBlock_B(MaxBlock))
-       if (.not. allocated(Fpui_IG)) &
-            allocate(Fpui_IG(PuiFirst_:PuiLast_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       if (.not. allocated(Fpui_GI)) &
+            allocate(Fpui_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,PuiFirst_:PuiLast_))
     else
        if(allocated(DoPuiDiffusionBlock_B)) &
             deallocate(DoPuiDiffusionBlock_B)
-       if(allocated(Fpui_IG)) &
-            deallocate(Fpui_IG)
+       if(allocated(Fpui_GI)) &
+            deallocate(Fpui_GI)
     end if
 
     if (UseModulateCompression)then
@@ -303,12 +303,15 @@ contains
        RETURN
     end if
 
-    if(IsNewBlockPuiDiffusion) &
-         Fpui_IG = State_VGB(PuiFirst_:PuiLast_,:,:,:,iBlock)
+    if(IsNewBlockPuiDiffusion)then
+       do iPui = PuiFirst_,PuiLast_
+          Fpui_GI(:,:,:,iPui) = State_VGB(iPui,:,:,:,iBlock)
+       end do
+    end if 
     IsNewBlockPuiDiffusion_I = IsNewBlockPuiDiffusion
     do iPui = PuiFirst_,PuiLast_
        call get_face_gradient(iDir, i, j, k, iBlock, &
-            IsNewBlockPuiDiffusion_I(iPui), Fpui_IG(iPui,:,:,:), FaceGrad_D)
+            IsNewBlockPuiDiffusion_I(iPui), Fpui_GI(:,:,:,iPui), FaceGrad_D)
        PuiDiffCoefOut = &
             PuiDiffCoef*(Vpui_I(iPui-PuiFirst_+1)/PuiDiffV0)**(PuiDiffSlope)
        FpuiFlux_I(iPui) = -PuiDiffCoefOut*sum(Normal_D*FaceGrad_D)
