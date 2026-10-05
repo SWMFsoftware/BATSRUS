@@ -977,7 +977,7 @@ contains
 
     integer:: i, j, k
     real :: RhoInv, Ux, Uy, Uz
-    real :: RhoPui1, PPui1, UPui1, E1, DeltaP 
+    real :: RhoPui1, PPui1, UPui1, E1, DeltaP
     real :: RhoPui2, PPui2, UPui2, E2, RhoPui2Temp
     real :: Upui1_D(3), Upui2_D(3)
     logical :: IsTerminationShock
@@ -1023,12 +1023,19 @@ contains
        call select_region(iBlock)
        IsTerminationShock = any(iFluidProduced_G==Ne2_) &
             .and. any(iFluidProduced_G==Ne3_)
+
+       if(DoTest)then
+          write(*,*) "Before overwriting from distribution:"
+          write(*,*) "Pu3Rho = ", State_VGB(Pu3Rho_,iTest,jTest,kTest,iBlock)
+          write(*,*) "Pu3P = ", State_VGB(Pu3P_,iTest,jTest,kTest,iBlock)
+          write(*,*) "P = ", State_VGB(P_,iTest,jTest,kTest,iBlock)
+       end if
+
        do k=1,nk; do j=1,nJ; do i=1,nI
           RhoPui1 = State_VGB(Pu3Rho_,i,j,k,iBlock)
           PPui1 = State_VGB(Pu3P_,i,j,k,iBlock)
           UPui1_D = State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock)/RhoPui1
           UPui1 = norm2(UPui1_D)
-
 
           ! Correct PUI density for full velocity distribution
           RhoPui2Temp = &
@@ -1070,6 +1077,13 @@ contains
           State_VGB(Pu3Rho_,i,j,k,iBlock) = RhoPui2
           State_VGB(Pu3P_,i,j,k,iBlock) = PPui2
        end do; end do; end do
+
+       if(DoTest)then
+          write(*,*) "After overwriting from distribution:"
+          write(*,*) "Pu3Rho = ", State_VGB(Pu3Rho_,iTest,jTest,kTest,iBlock)
+          write(*,*) "Pu3P = ", State_VGB(Pu3P_,iTest,jTest,kTest,iBlock)
+          write(*,*) "P = ", State_VGB(P_,iTest,jTest,kTest,iBlock)
+       end if
     end if
 
     ! No need to check blocks outside:
