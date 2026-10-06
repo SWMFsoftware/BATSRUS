@@ -968,6 +968,7 @@ contains
     use ModAdvance, ONLY: StateOld_VGB, State_VGB
     use ModGeometry, ONLY: rMin_B
     use ModPui, ONLY: Vpui_I, DeltaVpui_I
+    use ModPhysics, ONLY: RhoMin_I
 
     ! merav
     ! C.P. edited
@@ -976,6 +977,10 @@ contains
 
     integer:: i, j, k
     real :: RhoInv, Ux, Uy, Uz
+    real :: RhoPui1, PPui1, UPui1, E1, DeltaP
+    real :: RhoPui2, PPui2, UPui2, E2, RhoPui2Temp
+    real :: Upui1_D(3), Upui2_D(3)
+    logical :: IsTerminationShock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_update_states'
@@ -1015,16 +1020,70 @@ contains
     end if
 
     if(nPui > 1)then
+       call select_region(iBlock)
+       IsTerminationShock = any(iFluidProduced_G==Ne2_) &
+            .and. any(iFluidProduced_G==Ne3_)
+
+       if(DoTest)then
+          write(*,*) "Before overwriting from distribution:"
+          write(*,*) "Pu3Rho = ", State_VGB(Pu3Rho_,iTest,jTest,kTest,iBlock)
+          write(*,*) "Pu3P = ", State_VGB(Pu3P_,iTest,jTest,kTest,iBlock)
+          write(*,*) "P = ", State_VGB(P_,iTest,jTest,kTest,iBlock)
+       end if
+
        do k=1,nk; do j=1,nJ; do i=1,nI
+          RhoPui1 = State_VGB(Pu3Rho_,i,j,k,iBlock)
+          PPui1 = State_VGB(Pu3P_,i,j,k,iBlock)
+          UPui1_D = State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock)/RhoPui1
+          UPui1 = norm2(UPui1_D)
+
           ! Correct PUI density for full velocity distribution
-          State_VGB(Pu3Rho_,i,j,k,iBlock) = &
+          RhoPui2Temp = &
                4*cPi*sum(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
                *Vpui_I**2*DeltaVpui_I)
+
+          ! Check minimum density
+          if(RhoMin_I(Pu3_) > 0.0)then
+             RhoPui2 = max(RhoMin_I(Pu3_), RhoPui2Temp)
+             State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = &
+                  State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
+                  *RhoPui2/RhoPui2Temp
+          end if
+
           ! Correct PUI pressure for full velocity distribution
-          State_VGB(Pu3P_,i,j,k,iBlock) = &
+          PPui2 = &
                4*cPi/3*sum(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
                *Vpui_I**4*DeltaVpui_I)
+          ! Correct PUI velocity to conserve momentum
+          UPui2_D = State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock)/RhoPui2
+          UPui2 = norm2(UPui2_D)
+
+          ! Conserve energy near the termination shock
+          if (IsTerminationShock) then
+             ! PUI energy before overwriting
+             E1 = 0.5*RhoPui1*UPui1**2 + InvGammaMinus1_I(Pu3_)*PPui1
+
+             ! PUI energy after overwriting
+             E2 = 0.5*RhoPui2*UPui2**2 + InvGammaMinus1_I(Pu3_)*PPui2
+
+             ! Add energy difference to solar wind and electrons
+             DeltaP = (E2-E1)/(InvGammaMinus1_I(Swh_)+InvGammaElectronMinus1)
+             State_VGB(SwhP_,i,j,k,iBlock) = &
+                  State_VGB(SwhP_,i,j,k,iBlock) - DeltaP
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  State_VGB(Pe_,i,j,k,iBlock) - DeltaP
+          end if
+
+          State_VGB(Pu3Rho_,i,j,k,iBlock) = RhoPui2
+          State_VGB(Pu3P_,i,j,k,iBlock) = PPui2
        end do; end do; end do
+
+       if(DoTest)then
+          write(*,*) "After overwriting from distribution:"
+          write(*,*) "Pu3Rho = ", State_VGB(Pu3Rho_,iTest,jTest,kTest,iBlock)
+          write(*,*) "Pu3P = ", State_VGB(Pu3P_,iTest,jTest,kTest,iBlock)
+          write(*,*) "P = ", State_VGB(P_,iTest,jTest,kTest,iBlock)
+       end if
     end if
 
     ! No need to check blocks outside:
@@ -1207,7 +1266,7 @@ contains
              end if
              if(UseModulateCompression) &
                   DoModulateCompressionBlock_B(iBlock) = &
-                       IsRegion2 .and. IsRegion3
+                  IsRegion2 .and. IsRegion3
           end do
        end if
 
@@ -2621,9 +2680,6 @@ contains
            + UThSwh**2/URel2 &
            *sum(Umean_D*URel_D)*IntegralpxU &
            + InvUTh2Sum**2*UThSwh**4*IntegralpxP)
-
-      Kxp = InvGammaMinus1*SourcePxp &
-           + sum(UPui_D*Jxp_D) - 0.5*UPui**2*I0xp
 
       Kxp = NumDensSwh*NumDensNeu &
            *sqrt(InvUTh2Sum/cPi)/URel*( &
