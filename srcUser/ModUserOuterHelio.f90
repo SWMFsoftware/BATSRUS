@@ -1038,16 +1038,17 @@ contains
           UPui1 = norm2(UPui1_D)
 
           ! Correct PUI density for full velocity distribution
-          RhoPui2Temp = &
+          RhoPui2 = &
                4*cPi*sum(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
                *Vpui_I**2*DeltaVpui_I)
 
           ! Check minimum density
           if(RhoMin_I(Pu3_) > 0.0)then
-             RhoPui2 = max(RhoMin_I(Pu3_), RhoPui2Temp)
+             RhoPui2Temp = max(RhoMin_I(Pu3_), RhoPui2)
              State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = &
                   State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
-                  *RhoPui2/RhoPui2Temp
+                  *RhoPui2Temp/RhoPui2
+             RhoPui2 = RhoPui2Temp
           end if
 
           ! Correct PUI pressure for full velocity distribution
