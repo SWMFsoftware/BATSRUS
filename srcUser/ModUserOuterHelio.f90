@@ -2582,7 +2582,7 @@ contains
            IntegralpxU, IntegralpxU1, IntegralpxU2, &
            IntegralpxP, IntegralpxP1, IntegralpxP2, &
            g0pxRhoSi, g0pxUSi, g0pxPSi, &
-           SourceRhoxp, SourcePxp, SourcePxpPrime, &
+           SourceRhoxp, SourcePxp, SourcePxpBins, &
            DeltaSourcePxp, DeltaSourceFxpV2
       real:: g0xpFSi, FStarNeu
       !------------------------------------------------------------------------
@@ -2633,7 +2633,7 @@ contains
       end do
 
       SourceRhoxp = 4*cPi*sum(SourceFxp_I*Vpui_I**2*DeltaVpui_I)
-      SourcePxpPrime = 4*cPi/3*sum(SourceFxp_I*Vpui_I**4*DeltaVpui_I)
+      SourcePxpBins = 4*cPi/3*sum(SourceFxp_I*Vpui_I**4*DeltaVpui_I)
 
       XSwh = URel/sqrt(UTh2Sum)
 
@@ -2693,17 +2693,16 @@ contains
       SourcePxp = GammaMinus1*(Kxp - sum(Upui_D*Jxp_D) + 0.5*UPui**2*I0xp)
 
       ! We need to correct SourceFxp_I to be consistent with SourcePxp
-      DeltaSourcePxp = SourcePxp - SourcePxpPrime
+      DeltaSourcePxp = SourcePxp - SourcePxpBins
 
       iPuiSubtract = &
-           min(2, max(nPui-1, nint(log(URel/Vpui_I(1))/DeltaLogVpui) + 1))
+           max(2, min(nPui-1, nint(log(URel/Vpui_I(1))/DeltaLogVpui) + 1))
 
       iPuiAdd = iPuiSubtract + nint(sign(1., DeltaSourcePxp))
 
-      DeltaSourceFxpV2 = min(SourceFxp_I(iPuiSubtract) &
-           *Vpui_I(iPuiSubtract)**2*DeltaVpui_I(iPuiSubtract), &
+      DeltaSourceFxpV2 = &
            0.75/cPi*DeltaSourcePxp &
-           /(Vpui_I(iPuiAdd)**2-Vpui_I(iPuiSubtract)**2))
+           /(Vpui_I(iPuiAdd)**2-Vpui_I(iPuiSubtract)**2)
 
       SourceFxp_I(iPuiAdd) = SourceFxp_I(iPuiAdd) &
            + DeltaSourceFxpV2/Vpui_I(iPuiAdd)**2 &
@@ -2712,6 +2711,12 @@ contains
       SourceFxp_I(iPuiSubtract) = SourceFxp_I(iPuiSubtract)&
            -DeltaSourceFxpV2/Vpui_I(iPuiSubtract)**2 &
            /DeltaVpui_I(iPuiSubtract)
+
+      if(DoTest)then
+         write(*,*) "SourcePxp, SourcePxpBins = ", SourcePxp, SourcePxpBins
+         write(*,*) "Updated SourcePxpBins = ", &
+              4.*cPi/3.*sum(SourceFxp_I*Vpui_I**4*DeltaVpui_I)
+      end if
     end subroutine calc_charge_exchange_sw_to_pui
     !==========================================================================
     subroutine calc_charge_exchange_pui( &
