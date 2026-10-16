@@ -103,49 +103,75 @@ contains
 
     type(DomainType),intent(inout)::Domain
 
-    integer:: iNode, iNodeParent, iChild
+    integer:: iNodeBatl, iNodeDd, iRoot, jRoot, kRoot
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
-
-    ! Here we assume that there are no holes in the BATL tree
-    do iNode = 1, nNode
-
-       iNodeParent = iTree_IA(ParentBatl_,iNode)
-       if(iNodeParent == Unset_)then
-          ! For root blocks coupling toolkit seems to set parent to itself
-          Domain%iDD_II(Parent_,iNode) = iNode
-          ! For root blocks coupling toolkit seems to set child index to 0
-          Domain%iDD_II(MyNumberAsAChild_,iNode) = 0
-       else
-          Domain%iDD_II(Parent_,iNode) = iNodeParent
-          ! Find child index
-          do iChild = 1, nChild
-             if(iTree_IA(Child0_+iChild,iNodeParent) == iNode) then
-                Domain%iDD_II(MyNumberAsAChild_,iNode)&
-                     =iChild
-                EXIT
-             end if
+    iNodeDd = 0
+    do kRoot = 1, nRoot_D(3)
+       do jRoot = 1, nRoot_D(2)
+          do iRoot = 1, nRoot_D(1)
+             ! Root nodes are the first ones
+             iNodeDd   = iNodeDd   + 1
+             Domain%iDD_II(Parent_,iNodeDd) = iNodeDd
           end do
-       end if
-
-       if(iTree_IA(Status_,iNode) == Unused_)then
-          do iChild = 1, nChild
-             ! iChildOrder_II may be required here !!!
-             Domain%iDD_II(iChild,iNode) = &
-                  iTree_IA(Child0_+iChild,iNode)
-          end do
-       else
-          Domain%iDD_II(FirstChild_,iNode)  = None_
-          Domain%iDD_II(ProcToolkit_,iNode) = iTree_IA(Proc_,iNode)
-          Domain%iDD_II(BLK_,iNode) = iTree_IA(Block_,iNode)
-       end if
+       end do
     end do
-    ! Check 04/11/2021: routine works as it should. Igor.
+    iNodeBatl = 0
+    do kRoot = 1, nRoot_D(3)
+       do jRoot = 1, nRoot_D(2)
+          do iRoot = 1, nRoot_D(1)
+             ! Root nodes are the first ones
+             iNodeBatl   = iNodeBatl   + 1
+             call order_children(iNodeBatl, iNodeBatl)
+          end do
+       end do
+    end do
+    Domain%nTreeNode = iNodeDd
     ! call complete(Domain)
     ! call show_domain_decomp(Domain)
+  contains
+    recursive subroutine order_children(iNodeBatl, iNodeDdIn, iChildIn)
+
+      integer, intent(in) :: iNodeBatl, iNodeDdIn
+      integer, optional, intent(in) :: iChildIn
+      integer :: iChild, iParentNodeDd
+      !------------------------------------------------------------------------
+      if(.not.present(iChildIn))then
+         ! Root block, no new node is created
+         if(iTree_IA(Status_, iNodeBatl) /= unused_)then
+            Domain%iDD_II(FirstChild_,iNodeDdIn)  = None_
+            Domain%iDD_II(ProcToolkit_,iNodeDdIn) = iTree_IA(Proc_,iNodeBatl)
+            Domain%iDD_II(BLK_,iNodeDdIn) = iTree_IA(Block_,iNodeBatl)
+            RETURN
+         else
+            do iChild = 1, nChild
+               call order_children(&
+                    iTree_IA(Child0_+iChild, iNodeBatl), iNodeDdIn, iChild)
+            end do
+         end if
+      else
+         ! Create new DD child node
+         iNodeDd = iNodeDd + 1
+         Domain%iDD_II(Parent_,iNodeDd) = iNodeDdIn
+         Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
+         Domain%iDD_II(iChildIn, iNodeDdIn) = iNodeDd
+         if(iTree_IA(Status_, iNodeBatl) /= unused_)then
+            Domain%iDD_II(FirstChild_,iNodeDd)  = None_
+            Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatl)
+            Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatl)
+            RETURN
+         else
+            iParentNodeDd = iNodeDd
+            do iChild = 1, nChild
+               call order_children(&
+                    iTree_IA(Child0_+iChild, iNodeBatl), iParentNodeDd, iChild)
+            end do
+         end if
+      end if
+    end subroutine order_children
   end subroutine get_batl_tree
   !============================================================================
   subroutine MH_get_roots_dd(Domain)
