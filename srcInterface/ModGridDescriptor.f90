@@ -133,6 +133,7 @@ contains
     ! call complete(Domain)
     ! call show_domain_decomp(Domain)
   contains
+    !==========================================================================
     recursive subroutine order_children(iNodeBatl, iNodeDdIn, iChildIn)
 
       integer, intent(in) :: iNodeBatl, iNodeDdIn
@@ -172,6 +173,7 @@ contains
          end if
       end if
     end subroutine order_children
+    !==========================================================================
   end subroutine get_batl_tree
   !============================================================================
   subroutine MH_get_roots_dd(Domain)
