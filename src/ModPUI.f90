@@ -42,6 +42,8 @@ module ModPUI
   real, public :: PuiDiffV0Si
   real, public :: PuiDiffV0
   real, public :: PuiDiffSlope
+  real, public :: PuiDiffMaxSi
+  real, public :: PuiDiffMax
   real, allocatable :: Fpui_GI(:,:,:,:)
 
   ! For modulating adiabatic compression
@@ -76,6 +78,7 @@ contains
           call read_var('PuiDiffCoefSi', PuiDiffCoefSi)
           call read_var('PuiDiffV0Si', PuiDiffV0Si)
           call read_var('PuiDiffSlope', PuiDiffSlope)
+          call read_var('PuiDiffMaxiSi', PuiDiffMaxSi)
        end if
     case("#PUICOMPRESSION")
        call read_var('UseModulateCompression', UseModulateCompression)
@@ -124,6 +127,7 @@ contains
     if (UsePuiDiffusion)then
        PuiDiffCoef = PuiDiffCoefSi * Si2No_V(UnitU_)*Si2No_V(UnitX_)
        PuiDiffV0 = PuiDiffV0Si *Si2No_V(UnitU_)
+       PuiDiffMax = PuiDiffMaxSi * Si2No_V(UnitU_)*Si2No_V(UnitX_)
        if (.not. allocated(DoPuiDiffusionBlock_B)) &
             allocate(DoPuiDiffusionBlock_B(MaxBlock))
        if (.not. allocated(Fpui_GI)) &
@@ -312,8 +316,8 @@ contains
     do iPui = PuiFirst_,PuiLast_
        call get_face_gradient(iDir, i, j, k, iBlock, &
             IsNewBlockPuiDiffusion_I(iPui), Fpui_GI(:,:,:,iPui), FaceGrad_D)
-       PuiDiffCoefOut = &
-            PuiDiffCoef*(Vpui_I(iPui-PuiFirst_+1)/PuiDiffV0)**(PuiDiffSlope)
+       PuiDiffCoefOut = min(PuiDiffMax, &
+            PuiDiffCoef*(Vpui_I(iPui-PuiFirst_+1)/PuiDiffV0)**(PuiDiffSlope))
        FpuiFlux_I(iPui) = -PuiDiffCoefOut*sum(Normal_D*FaceGrad_D)
     end do
     IsNewBlockPuiDiffusion = .false.
