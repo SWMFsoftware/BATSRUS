@@ -139,19 +139,25 @@ contains
       integer, intent(in) :: iNodeBatl, iNodeDdIn
       integer, optional, intent(in) :: iChildIn
       integer :: iChild, iParentNodeDd
+      character(len=*), parameter :: NameSub='order_children'
       !------------------------------------------------------------------------
       if(.not.present(iChildIn))then
          ! Root block, no new node is created
-         if(iTree_IA(Status_, iNodeBatl) /= unused_)then
+         if(iTree_IA(Status_, iNodeBatl) == Used_)then
             Domain%iDD_II(FirstChild_,iNodeDdIn)  = None_
             Domain%iDD_II(ProcToolkit_,iNodeDdIn) = iTree_IA(Proc_,iNodeBatl)
             Domain%iDD_II(BLK_,iNodeDdIn) = iTree_IA(Block_,iNodeBatl)
             RETURN
-         else
+         elseif(iTree_IA(Status_, iNodeBatl) == unused_)then
             do iChild = 1, nChild
                call order_children(&
                     iTree_IA(Child0_+iChild, iNodeBatl), iNodeDdIn, iChild)
             end do
+         else
+            write(*,*)'For iNodeBatl=', iNodeBatl
+            write(*,*)'For unused_=', unused_,' and for Used_=', Used_
+            write(*,*)'The root node status is ', iTree_IA(Status_, iNodeBatl)
+            call CON_stop(NameSub//': wrong root status')
          end if
       else
          ! Create new DD child node
@@ -159,17 +165,22 @@ contains
          Domain%iDD_II(Parent_,iNodeDd) = iNodeDdIn
          Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
          Domain%iDD_II(iChildIn, iNodeDdIn) = iNodeDd
-         if(iTree_IA(Status_, iNodeBatl) /= unused_)then
+         if(iTree_IA(Status_, iNodeBatl) == Used_)then
             Domain%iDD_II(FirstChild_,iNodeDd)  = None_
             Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatl)
             Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatl)
             RETURN
-         else
+         elseif(iTree_IA(Status_, iNodeBatl) == unused_)then
             iParentNodeDd = iNodeDd
             do iChild = 1, nChild
                call order_children(&
                     iTree_IA(Child0_+iChild, iNodeBatl), iParentNodeDd, iChild)
             end do
+         else
+            write(*,*)'For iNodeBatl=', iNodeBatl
+            write(*,*)'For unused_=', unused_,' and for Used_=', Used_
+            write(*,*)'The BATL node status is ', iTree_IA(Status_, iNodeBatl)
+            call CON_stop(NameSub//': wrong node status')
          end if
       end if
     end subroutine order_children
