@@ -139,7 +139,7 @@ contains
       integer, intent(in) :: iNodeBatl, iNodeDdIn
       integer, optional, intent(in) :: iChildIn
       integer :: iChild, iParentNodeDd
-      character(len=*), parameter :: NameSub='order_children'
+      character(len=*), parameter:: NameSub = 'order_children'
       !------------------------------------------------------------------------
       if(.not.present(iChildIn))then
          ! Root block, no new node is created
