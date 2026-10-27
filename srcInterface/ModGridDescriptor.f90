@@ -107,7 +107,8 @@ contains
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
-    Domain%nTreeNode = nNode
+    Domain%nTreeNode = nNode; Domain%iDD_II = None_
+    Domain%iDD_II(MyNumberAsAChild_,:) = 0
     call check_octree_allocation(Domain)
     iNodeDd = 0
     do kRoot = 1, nRoot_D(3)
@@ -130,8 +131,7 @@ contains
        end do
     end do
     Domain%nTreeNode = iNodeDd
-    ! call complete(Domain)
-    ! call show_domain_decomp(Domain)
+    call check_dd
   contains
     !==========================================================================
     recursive subroutine order_children(iNodeBatl, iNodeDdIn, iChildIn)
@@ -173,6 +173,9 @@ contains
          elseif(iTree_IA(Status_, iNodeBatl) == unused_)then
             iParentNodeDd = iNodeDd
             do iChild = 1, nChild
+               ! Check BATL parent
+               if(iTree_IA(ParentBatl_,iTree_IA(Child0_+iChild, iNodeBatl))&
+                    /= iNodeBatl)call CON_stop('Wrong parentship in BATL')
                call order_children(&
                     iTree_IA(Child0_+iChild, iNodeBatl), iParentNodeDd, iChild)
             end do
@@ -184,6 +187,22 @@ contains
          end if
       end if
     end subroutine order_children
+    !==========================================================================
+    subroutine check_dd
+      integer :: iNode, iProc, iBlock, iCount
+      integer, parameter :: iOrder_I(3)=[FirstChild_, ProcToolkit_, BLK_]
+      character(len=*), parameter:: NameSub = 'check_dd'
+      !------------------------------------------------------------------------
+      do iNode = 1, Domain%nTreeNode
+         if(Domain%iDD_II(FirstChild_,iNode)  /= None_)CYCLE
+         iProc  = Domain%iDD_II(ProcToolkit_,iNode)
+         iBlock = Domain%iDD_II(BLK_,iNode)
+         iCount = count(Domain%iDD_II(FirstChild_,1:Domain%nTreeNode) == None_&
+              .and.Domain%iDD_II(ProcToolkit_,1:Domain%nTreeNode) == iProc    &
+              .and.Domain%iDD_II(BLK_,1:Domain%nTreeNode) == iBlock)
+         if(iCount /= 1)call CON_stop('Failure in '//NameSub)
+      end do
+    end subroutine check_dd
     !==========================================================================
   end subroutine get_batl_tree
   !============================================================================
