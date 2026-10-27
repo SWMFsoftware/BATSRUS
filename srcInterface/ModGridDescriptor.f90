@@ -107,9 +107,10 @@ contains
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
-    Domain%nTreeNode = nNode; Domain%iDD_II = None_
-    Domain%iDD_II(MyNumberAsAChild_,:) = 0
+    Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
+    Domain%iDD_II = None_
+    Domain%iDD_II(MyNumberAsAChild_,:) = 0
     iNodeDd = 0
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
