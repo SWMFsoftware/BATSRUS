@@ -110,7 +110,6 @@ contains
     Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
     Domain%iDD_II = None_
-    Domain%iDD_II(MyNumberAsAChild_,:) = 0
     iNodeDd = 0; iNodeBatl = 0
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
