@@ -412,7 +412,7 @@ contains
     character(len=*), parameter:: NameSub = 'interpolate_grid_amr_gc'
     !--------------------------------------------------------------------------
     ! call interpolation routine from BATL_grid
-    call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
+    call BATL_interpolate(XyzIn_D, nCell, iCell_II, Weight_I)
 
     ! check whether all cells in the stencil are true cells
     if(IsBody_B(iBlock))then
