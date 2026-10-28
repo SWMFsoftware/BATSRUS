@@ -149,6 +149,7 @@ contains
       !------------------------------------------------------------------------
       if(.not.present(iChildIn))then
          ! Root block, no new node is created
+         Domain%iDD_II(MyNumberAsAChild_,iNodeDdIn) = 0
          if(iTree_IA(Status_, iNodeBatl) == Used_)then
             Domain%iDD_II(FirstChild_,iNodeDdIn)  = None_
             Domain%iDD_II(ProcToolkit_,iNodeDdIn) = iTree_IA(Proc_,iNodeBatl)
