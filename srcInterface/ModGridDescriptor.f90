@@ -100,7 +100,6 @@ contains
 
     ! Avoid name conflict with Parent_ in the SWMF coupling toolkit
     use BATL_tree, ParentBatl_ => Parent_
-    use BATL_lib, ONLY: iProc
     type(DomainType),intent(inout)::Domain
     ! i,j,k indexes of the root node on root map
     integer:: iRoot, jRoot, kRoot
@@ -110,28 +109,33 @@ contains
     integer:: iRootNodeDd
     ! Global node number for dd.
     integer:: iNodeDd
+    ! For checking BATL octree
+    integer:: iBatl2Dd_A(1:nNode)
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
     Domain%iDD_II = None_
+    iBatl2Dd_A = unset_
     iNodeDd = 0; iRootNumber = 0
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
-             ! Root nodes are the first ones
-             iNodeDd   = iNodeDd   + 1
-             Domain%iDD_II(Parent_,iNodeDd) = iNodeDd
-          end do
-       end do
-    end do
-    do kRoot = 1, nRoot_D(3)
-       do jRoot = 1, nRoot_D(2)
-          do iRoot = 1, nRoot_D(1)
-             ! Root nodes are the first ones
+             ! Root nodes in BATL are the first ones
              iRootNumber   = iRootNumber + 1
-             call order_root(iRootNumber, iRootNumber)
+             iRootNodeDd = iNodeDd   + 1
+             iNodeDd = iNodeDd + 1
+             if(iBatl2Dd_A(iRootNumber)==unset_)then
+                iBatl2Dd_A(iRootNumber) = iRootNodeDd
+             else
+                call CON_stop('Attempt to re-assign tree node')
+             end if
+             ! Parent number for root node is the root number
+             Domain%iDD_II(Parent_,iNodeDd) = iRootNumber
+             call order_root(&
+                  iRootNodeBatl=iRootNumber,&
+                  iRootNodeDd=iRootNodeDd)
           end do
        end do
     end do
@@ -175,6 +179,11 @@ contains
       !------------------------------------------------------------------------
       ! Create new DD child node
       iNodeDd = iNodeDd + 1
+      if(iBatl2Dd_A(iNodeBatlIn)==unset_)then
+         iBatl2Dd_A(iNodeBatlIn) = iNodeDd
+      else
+         call CON_stop('Attempt to re-assign tree node')
+      end if
       Domain%iDD_II(Parent_,iNodeDd) = iParentDdIn
       Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
       Domain%iDD_II(iChildIn, iParentDdIn) = iNodeDd
