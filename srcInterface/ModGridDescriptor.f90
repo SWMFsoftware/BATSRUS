@@ -102,15 +102,21 @@ contains
     use BATL_tree, ParentBatl_ => Parent_
     use BATL_lib, ONLY: iProc
     type(DomainType),intent(inout)::Domain
-
-    integer:: iNodeBatl, iNodeDd, iRoot, jRoot, kRoot
+    ! i,j,k indexes of the root node on root map
+    integer:: iRoot, jRoot, kRoot
+    ! enumerating root nodes in order of ijk nested loop
+    integer:: iRootNumber
+    ! enumerating root node in dd
+    integer:: iRootNodeDd
+    ! Global node number for dd.
+    integer:: iNodeDd
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
     Domain%iDD_II = None_
-    iNodeDd = 0; iNodeBatl = 0
+    iNodeDd = 0; iRootNumber = 0
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
@@ -124,8 +130,8 @@ contains
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
              ! Root nodes are the first ones
-             iNodeBatl   = iNodeBatl   + 1
-             call order_children(iNodeBatl, iNodeBatl)
+             iRootNumber   = iRootNumber + 1
+             call order_root(iRootNumber, iRootNumber)
           end do
        end do
     end do
@@ -139,58 +145,51 @@ contains
     call check_dd
   contains
     !==========================================================================
-    recursive subroutine order_children(iNodeBatl, iNodeDdIn, iChildIn)
+    subroutine order_root(iRootNodeBatl, iRootNodeDd)
 
-      integer, intent(in) :: iNodeBatl, iNodeDdIn
-      integer, optional, intent(in) :: iChildIn
+      integer, intent(in) :: iRootNodeBatl, iRootNodeDd
+      integer :: iChild
+      character(len=*), parameter:: NameSub = 'order_root'
+      !------------------------------------------------------------------------
+      Domain%iDD_II(MyNumberAsAChild_,iRootNodeDd) = 0
+      if(iTree_IA(Status_, iRootNodeBatl) == Used_)then
+         Domain%iDD_II(FirstChild_,iRootNodeDd)  = None_
+         Domain%iDD_II(ProcToolkit_,iRootNodeDd) = &
+              iTree_IA(Proc_,iRootNodeBatl)
+         Domain%iDD_II(BLK_,iRootNodeDd) = iTree_IA(Block_,iRootNodeBatl)
+      elseif(iTree_IA(Status_, iRootNodeBatl) == unused_)then
+         do iChild = 1, nChild
+            call order_children(&
+                 iNodeBatlIn=iTree_IA(Child0_+iChild, iRootNodeBatl),&
+                 iParentDdIn=iRootNodeDd,&
+                 iChildIn = iChild)
+         end do
+      end if
+    end subroutine order_root
+    !==========================================================================
+    recursive subroutine order_children(iNodeBatlIn, iParentDdIn, iChildIn)
+
+      integer, intent(in) :: iNodeBatlIn, iParentDdIn, iChildIn
       integer :: iChild, iParentNodeDd
       character(len=*), parameter:: NameSub = 'order_children'
       !------------------------------------------------------------------------
-      if(.not.present(iChildIn))then
-         ! Root block, no new node is created
-         Domain%iDD_II(MyNumberAsAChild_,iNodeDdIn) = 0
-         if(iTree_IA(Status_, iNodeBatl) == Used_)then
-            Domain%iDD_II(FirstChild_,iNodeDdIn)  = None_
-            Domain%iDD_II(ProcToolkit_,iNodeDdIn) = iTree_IA(Proc_,iNodeBatl)
-            Domain%iDD_II(BLK_,iNodeDdIn) = iTree_IA(Block_,iNodeBatl)
-            RETURN
-         elseif(iTree_IA(Status_, iNodeBatl) == unused_)then
-            do iChild = 1, nChild
-               call order_children(&
-                    iTree_IA(Child0_+iChild, iNodeBatl), iNodeDdIn, iChild)
-            end do
-         else
-            write(*,*)'For iNodeBatl=', iNodeBatl
-            write(*,*)'For unused_=', unused_,' and for Used_=', Used_
-            write(*,*)'The root node status is ', iTree_IA(Status_, iNodeBatl)
-            call CON_stop(NameSub//': wrong root status')
-         end if
-      else
-         ! Create new DD child node
-         iNodeDd = iNodeDd + 1
-         Domain%iDD_II(Parent_,iNodeDd) = iNodeDdIn
-         Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
-         Domain%iDD_II(iChildIn, iNodeDdIn) = iNodeDd
-         if(iTree_IA(Status_, iNodeBatl) == Used_)then
-            Domain%iDD_II(FirstChild_,iNodeDd)  = None_
-            Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatl)
-            Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatl)
-            RETURN
-         elseif(iTree_IA(Status_, iNodeBatl) == unused_)then
-            iParentNodeDd = iNodeDd
-            do iChild = 1, nChild
-               ! Check BATL parent
-               if(iTree_IA(ParentBatl_,iTree_IA(Child0_+iChild, iNodeBatl))&
-                    /= iNodeBatl)call CON_stop('Wrong parentship in BATL')
-               call order_children(&
-                    iTree_IA(Child0_+iChild, iNodeBatl), iParentNodeDd, iChild)
-            end do
-         else
-            write(*,*)'For iNodeBatl=', iNodeBatl
-            write(*,*)'For unused_=', unused_,' and for Used_=', Used_
-            write(*,*)'The BATL node status is ', iTree_IA(Status_, iNodeBatl)
-            call CON_stop(NameSub//': wrong node status')
-         end if
+      ! Create new DD child node
+      iNodeDd = iNodeDd + 1
+      Domain%iDD_II(Parent_,iNodeDd) = iParentDdIn
+      Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
+      Domain%iDD_II(iChildIn, iParentDdIn) = iNodeDd
+      if(iTree_IA(Status_, iNodeBatlIn) == Used_)then
+         Domain%iDD_II(FirstChild_,iNodeDd)  = None_
+         Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatlIn)
+         Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatlIn)
+      elseif(iTree_IA(Status_, iNodeBatlIn) == unused_)then
+         iParentNodeDd = iNodeDd
+         do iChild = 1, nChild
+            call order_children(&
+                 iNodeBatlIn=iTree_IA(Child0_+iChild, iNodeBatlIn),&
+                 iParentDdIn = iParentNodeDd, &
+                 iChildIn = iChild)
+         end do
       end if
     end subroutine order_children
     !==========================================================================
