@@ -109,15 +109,12 @@ contains
     integer:: iRootNodeDd
     ! Global node number for dd.
     integer:: iNodeDd
-    ! For checking BATL octree
-    integer:: iBatl2Dd_A(1:nNode)
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
     Domain%iDD_II = None_
-    iBatl2Dd_A = unset_
     iNodeDd = 0; iRootNumber = 0
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
@@ -126,11 +123,6 @@ contains
              iRootNumber   = iRootNumber + 1
              iRootNodeDd = iNodeDd   + 1
              iNodeDd = iNodeDd + 1
-             if(iBatl2Dd_A(iRootNumber)==unset_)then
-                iBatl2Dd_A(iRootNumber) = iRootNodeDd
-             else
-                call CON_stop('Attempt to re-assign tree node')
-             end if
              ! Parent number for root node is the root number
              Domain%iDD_II(Parent_,iNodeDd) = iRootNumber
              call order_root(&
@@ -139,14 +131,6 @@ contains
           end do
        end do
     end do
-    Domain%nTreeNode = iNodeDd
-    if(iNodeDd/=nNode)then
-       write(*,*)'Octree node number, BATL=', nNode
-       write(*,*)'Octree node number, Coupler=', Domain%nTreeNode
-       call CON_stop(&
-            'Octree node number is different in BATL and in Coupler!')
-    end if
-    call check_dd
   contains
     !==========================================================================
     subroutine order_root(iRootNodeBatl, iRootNodeDd)
@@ -161,7 +145,7 @@ contains
          Domain%iDD_II(ProcToolkit_,iRootNodeDd) = &
               iTree_IA(Proc_,iRootNodeBatl)
          Domain%iDD_II(BLK_,iRootNodeDd) = iTree_IA(Block_,iRootNodeBatl)
-      elseif(iTree_IA(Status_, iRootNodeBatl) == unused_)then
+      else
          do iChild = 1, nChild
             call order_children(&
                  iNodeBatlIn=iTree_IA(Child0_+iChild, iRootNodeBatl),&
@@ -179,11 +163,6 @@ contains
       !------------------------------------------------------------------------
       ! Create new DD child node
       iNodeDd = iNodeDd + 1
-      if(iBatl2Dd_A(iNodeBatlIn)==unset_)then
-         iBatl2Dd_A(iNodeBatlIn) = iNodeDd
-      else
-         call CON_stop('Attempt to re-assign tree node')
-      end if
       Domain%iDD_II(Parent_,iNodeDd) = iParentDdIn
       Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
       Domain%iDD_II(iChildIn, iParentDdIn) = iNodeDd
@@ -191,7 +170,7 @@ contains
          Domain%iDD_II(FirstChild_,iNodeDd)  = None_
          Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatlIn)
          Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatlIn)
-      elseif(iTree_IA(Status_, iNodeBatlIn) == unused_)then
+      else
          iParentNodeDd = iNodeDd
          do iChild = 1, nChild
             call order_children(&
@@ -201,32 +180,6 @@ contains
          end do
       end if
     end subroutine order_children
-    !==========================================================================
-    subroutine check_dd
-      integer :: iNode, iProcNode, iBlock, iCount
-      integer, parameter :: iOrder_I(3)=[FirstChild_, ProcToolkit_, BLK_]
-      character(len=*), parameter:: NameSub = 'check_dd'
-      !------------------------------------------------------------------------
-      do iNode = 1, Domain%nTreeNode
-         if(Domain%iDD_II(FirstChild_,iNode)  /= None_)CYCLE
-         iProcNode  = Domain%iDD_II(ProcToolkit_,iNode)
-         iBlock = Domain%iDD_II(BLK_,iNode)
-         iCount = count(Domain%iDD_II(FirstChild_,1:Domain%nTreeNode) == None_&
-              .and.Domain%iDD_II(ProcToolkit_,1:Domain%nTreeNode) == iProcNode&
-              .and.Domain%iDD_II(BLK_,1:Domain%nTreeNode) == iBlock)
-         if(iCount /= 1)then
-            write(*,*)'nNode=',nNode
-            write(*,*)'Domain%nTreeNode=',Domain%nTreeNode
-            write(*,*) 'iNode=', iNode
-            write(*,*) 'Domain%iDD_II(FirstChild_,iNode)=',&
-                 Domain%iDD_II(FirstChild_,iNode)
-            write(*,*) 'Parent =', Domain%iDD_II(Parent_,iNode)
-            write(*,*) 'iProc=', iProcNode
-            write(*,*) 'iBlock=', iBlock
-            call CON_stop('Failure in '//NameSub)
-         end if
-      end do
-    end subroutine check_dd
     !==========================================================================
   end subroutine get_batl_tree
   !============================================================================
