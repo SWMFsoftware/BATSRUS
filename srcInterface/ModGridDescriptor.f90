@@ -100,79 +100,133 @@ contains
 
     ! Avoid name conflict with Parent_ in the SWMF coupling toolkit
     use BATL_tree, ParentBatl_ => Parent_
-
     type(DomainType),intent(inout)::Domain
-
-    integer:: iNodeBatl, iNodeDd, iRoot, jRoot, kRoot
+    ! i,j,k indexes of the root node on root map
+    integer:: iRoot, jRoot, kRoot
+    ! enumerating root nodes in order of ijk nested loop
+    integer:: iRootNumber
+    ! enumerating root node in dd
+    integer:: iRootNodeDd
+    ! Global node number for dd.
+    integer:: iNodeDd
+    ! For checking BATL octree
+    integer:: iBatl2Dd_A(1:nNode)
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
-    iNodeDd = 0
+    Domain%iDD_II = None_
+    iBatl2Dd_A = unset_
+    iNodeDd = 0; iRootNumber = 0
     do kRoot = 1, nRoot_D(3)
        do jRoot = 1, nRoot_D(2)
           do iRoot = 1, nRoot_D(1)
-             ! Root nodes are the first ones
-             iNodeDd   = iNodeDd   + 1
-             Domain%iDD_II(Parent_,iNodeDd) = iNodeDd
-          end do
-       end do
-    end do
-    iNodeBatl = 0
-    do kRoot = 1, nRoot_D(3)
-       do jRoot = 1, nRoot_D(2)
-          do iRoot = 1, nRoot_D(1)
-             ! Root nodes are the first ones
-             iNodeBatl   = iNodeBatl   + 1
-             call order_children(iNodeBatl, iNodeBatl)
+             ! Root nodes in BATL are the first ones
+             iRootNumber   = iRootNumber + 1
+             iRootNodeDd = iNodeDd   + 1
+             iNodeDd = iNodeDd + 1
+             if(iBatl2Dd_A(iRootNumber)==unset_)then
+                iBatl2Dd_A(iRootNumber) = iRootNodeDd
+             else
+                call CON_stop('Attempt to re-assign tree node')
+             end if
+             ! Parent number for root node is the root number
+             Domain%iDD_II(Parent_,iNodeDd) = iRootNumber
+             call order_root(&
+                  iRootNodeBatl=iRootNumber,&
+                  iRootNodeDd=iRootNodeDd)
           end do
        end do
     end do
     Domain%nTreeNode = iNodeDd
-    ! call complete(Domain)
-    ! call show_domain_decomp(Domain)
+    if(iNodeDd/=nNode)then
+       write(*,*)'Octree node number, BATL=', nNode
+       write(*,*)'Octree node number, Coupler=', Domain%nTreeNode
+       call CON_stop(&
+            'Octree node number is different in BATL and in Coupler!')
+    end if
+    call check_dd
   contains
     !==========================================================================
-    recursive subroutine order_children(iNodeBatl, iNodeDdIn, iChildIn)
+    subroutine order_root(iRootNodeBatl, iRootNodeDd)
 
-      integer, intent(in) :: iNodeBatl, iNodeDdIn
-      integer, optional, intent(in) :: iChildIn
-      integer :: iChild, iParentNodeDd
+      integer, intent(in) :: iRootNodeBatl, iRootNodeDd
+      integer :: iChild
+      character(len=*), parameter:: NameSub = 'order_root'
       !------------------------------------------------------------------------
-      if(.not.present(iChildIn))then
-         ! Root block, no new node is created
-         if(iTree_IA(Status_, iNodeBatl) /= unused_)then
-            Domain%iDD_II(FirstChild_,iNodeDdIn)  = None_
-            Domain%iDD_II(ProcToolkit_,iNodeDdIn) = iTree_IA(Proc_,iNodeBatl)
-            Domain%iDD_II(BLK_,iNodeDdIn) = iTree_IA(Block_,iNodeBatl)
-            RETURN
-         else
-            do iChild = 1, nChild
-               call order_children(&
-                    iTree_IA(Child0_+iChild, iNodeBatl), iNodeDdIn, iChild)
-            end do
-         end if
+      Domain%iDD_II(MyNumberAsAChild_,iRootNodeDd) = 0
+      if(iTree_IA(Status_, iRootNodeBatl) == Used_)then
+         Domain%iDD_II(FirstChild_,iRootNodeDd)  = None_
+         Domain%iDD_II(ProcToolkit_,iRootNodeDd) = &
+              iTree_IA(Proc_,iRootNodeBatl)
+         Domain%iDD_II(BLK_,iRootNodeDd) = iTree_IA(Block_,iRootNodeBatl)
+      elseif(iTree_IA(Status_, iRootNodeBatl) == unused_)then
+         do iChild = 1, nChild
+            call order_children(&
+                 iNodeBatlIn=iTree_IA(Child0_+iChild, iRootNodeBatl),&
+                 iParentDdIn=iRootNodeDd,&
+                 iChildIn = iChild)
+         end do
+      end if
+    end subroutine order_root
+    !==========================================================================
+    recursive subroutine order_children(iNodeBatlIn, iParentDdIn, iChildIn)
+
+      integer, intent(in) :: iNodeBatlIn, iParentDdIn, iChildIn
+      integer :: iChild, iParentNodeDd
+      character(len=*), parameter:: NameSub = 'order_children'
+      !------------------------------------------------------------------------
+      ! Create new DD child node
+      iNodeDd = iNodeDd + 1
+      if(iBatl2Dd_A(iNodeBatlIn)==unset_)then
+         iBatl2Dd_A(iNodeBatlIn) = iNodeDd
       else
-         ! Create new DD child node
-         iNodeDd = iNodeDd + 1
-         Domain%iDD_II(Parent_,iNodeDd) = iNodeDdIn
-         Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
-         Domain%iDD_II(iChildIn, iNodeDdIn) = iNodeDd
-         if(iTree_IA(Status_, iNodeBatl) /= unused_)then
-            Domain%iDD_II(FirstChild_,iNodeDd)  = None_
-            Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatl)
-            Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatl)
-            RETURN
-         else
-            iParentNodeDd = iNodeDd
-            do iChild = 1, nChild
-               call order_children(&
-                    iTree_IA(Child0_+iChild, iNodeBatl), iParentNodeDd, iChild)
-            end do
-         end if
+         call CON_stop('Attempt to re-assign tree node')
+      end if
+      Domain%iDD_II(Parent_,iNodeDd) = iParentDdIn
+      Domain%iDD_II(MyNumberAsAChild_,iNodeDd) = iChildIn
+      Domain%iDD_II(iChildIn, iParentDdIn) = iNodeDd
+      if(iTree_IA(Status_, iNodeBatlIn) == Used_)then
+         Domain%iDD_II(FirstChild_,iNodeDd)  = None_
+         Domain%iDD_II(ProcToolkit_,iNodeDd) = iTree_IA(Proc_,iNodeBatlIn)
+         Domain%iDD_II(BLK_,iNodeDd)         = iTree_IA(Block_,iNodeBatlIn)
+      elseif(iTree_IA(Status_, iNodeBatlIn) == unused_)then
+         iParentNodeDd = iNodeDd
+         do iChild = 1, nChild
+            call order_children(&
+                 iNodeBatlIn=iTree_IA(Child0_+iChild, iNodeBatlIn),&
+                 iParentDdIn = iParentNodeDd, &
+                 iChildIn = iChild)
+         end do
       end if
     end subroutine order_children
+    !==========================================================================
+    subroutine check_dd
+      integer :: iNode, iProcNode, iBlock, iCount
+      integer, parameter :: iOrder_I(3)=[FirstChild_, ProcToolkit_, BLK_]
+      character(len=*), parameter:: NameSub = 'check_dd'
+      !------------------------------------------------------------------------
+      do iNode = 1, Domain%nTreeNode
+         if(Domain%iDD_II(FirstChild_,iNode)  /= None_)CYCLE
+         iProcNode  = Domain%iDD_II(ProcToolkit_,iNode)
+         iBlock = Domain%iDD_II(BLK_,iNode)
+         iCount = count(Domain%iDD_II(FirstChild_,1:Domain%nTreeNode) == None_&
+              .and.Domain%iDD_II(ProcToolkit_,1:Domain%nTreeNode) == iProcNode&
+              .and.Domain%iDD_II(BLK_,1:Domain%nTreeNode) == iBlock)
+         if(iCount /= 1)then
+            write(*,*)'nNode=',nNode
+            write(*,*)'Domain%nTreeNode=',Domain%nTreeNode
+            write(*,*) 'iNode=', iNode
+            write(*,*) 'Domain%iDD_II(FirstChild_,iNode)=',&
+                 Domain%iDD_II(FirstChild_,iNode)
+            write(*,*) 'Parent =', Domain%iDD_II(Parent_,iNode)
+            write(*,*) 'iProc=', iProcNode
+            write(*,*) 'iBlock=', iBlock
+            call CON_stop('Failure in '//NameSub)
+         end if
+      end do
+    end subroutine check_dd
     !==========================================================================
   end subroutine get_batl_tree
   !============================================================================
