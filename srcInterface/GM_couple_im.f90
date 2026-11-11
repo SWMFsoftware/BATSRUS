@@ -144,7 +144,7 @@ contains
 
     integer:: nVarExtract, nPoint, iPoint, iStartPoint
     real, allocatable:: Buffer_VI(:,:)
-    integer:: iLat,iLon,iLine,iLocBmin
+    integer:: iLat,iLon,iLine,iLocBmin,iMid
     real:: SmGm_DD(3,3), XyzBminSm_D(3), XyzEndSm_D(3), XyzEndSmIono_D(3)
     real:: SolarWind_V(nVar)
     character(len=100):: NameOut
@@ -246,11 +246,18 @@ contains
                   atan2(XyzEndSm_D(2),XyzEndSmIono_D(1))*cRadToDeg
 
              ! pass 5 xyz points around minB for curvature calc in cimi
-             Buffer_IIV(iLat,iLon,6:8)= Buffer_VI(2:4,iLocBmin-2)
-             Buffer_IIV(iLat,iLon,9:11)= Buffer_VI(2:4,iLocBmin-1)
-             Buffer_IIV(iLat,iLon,12:14)= Buffer_VI(2:4,iLocBmin)
-             Buffer_IIV(iLat,iLon,15:17)= Buffer_VI(2:4,iLocBmin+1)
-             Buffer_IIV(iLat,iLon,18:20)= Buffer_VI(2:4,iLocBmin+2)
+             ! Shift the stencil if needed to avoid segfault
+             iMid = max(iStartPoint+2, min(iPoint-2, iLocBmin))
+             if(iPoint - iStartPoint < 4) iMid = -1 ! fewer than 5 points
+             if(iMid > 0)then
+                Buffer_IIV(iLat,iLon,6:8)  = Buffer_VI(2:4,iMid-2)
+                Buffer_IIV(iLat,iLon,9:11) = Buffer_VI(2:4,iMid-1)
+                Buffer_IIV(iLat,iLon,12:14)= Buffer_VI(2:4,iMid)
+                Buffer_IIV(iLat,iLon,15:17)= Buffer_VI(2:4,iMid+1)
+                Buffer_IIV(iLat,iLon,18:20)= Buffer_VI(2:4,iMid+2)
+             else
+                Buffer_IIV(iLat,iLon,6:20) = NoValue
+             end if
 
              ! Put coupled variables (densities and pressures) into buffer
              Buffer_IIV(iLat,iLon,21:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
