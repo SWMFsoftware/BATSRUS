@@ -1,22 +1,22 @@
 #DESCRIPTION
-Param/EARTH/PARAM.in.2D: Two dimensional Earth simulation
+Param/EARTH/PARAM.in.2D: Two dimensional Earth simulation		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
 
 #DIPOLE
--3.11e-6                DipoleStrength [Tesla]
+-3.11e-6		DipoleStrengthSi [Tesla]
 
 #IDEALAXES
 
 MAGNETICAXIS
-T                       IsMagAxisPrimary (rest of parameters read if true)
-15.0                    MagAxisTheta [degree]
-0.0                     MagAxisPhi   [degree]
+T			IsMagAxisPrimary (rest of parameters read if true)
+15.0			MagAxisTheta [degree]
+0.0			MagAxisPhi   [degree]
 
 #PROGRESS
-10			DnShowProgressShort
-100			DnShowProgressLong
+10			DnProgressShort
+100			DnProgressLong
 
 #ROTATION
 F			UseRotation
@@ -25,29 +25,32 @@ F			UseRotation
 GSE			TypeCoordSystem
 
 #SOLARWIND
-5.0                     SwNDim  [n/cc]
-100000.0                SwTDim  [K]   
--400.0                  SwUxDim [km/s]
-0.0                     SwUyDim [km/s]
-0.0                     SwUzDim [km/s]
-0.0                     SwBxDim [nT]  
--5.0                    SwByDim [nT]  
-0.0                     SwBzDim [nT]  
+5.0			SwNDim  [n/cc]
+100000.0		SwTDim  [K]
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+-5.0			SwByDim [nT]
+0.0			SwBzDim [nT]
 
 #MINIMUMPRESSURE
-1.0e-15
+1.0e-15			pMinDim
 
 #MAGNETOSPHERE
-T                       UseBody
-2.5                     rBody
-3.5                     rCurrents
-28.0			BodyRhoDim
+T			UseBody
+2.5			rBody
+3.5			rCurrents
+28.0			BodyNDim
 100000.0		BodyTDim
 
+#GRIDBLOCKALL
+10000			MaxBlock
+
 #GRID
-2			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+2			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -384.			xMin
  128.			xMax
 -128.			yMin
@@ -56,36 +59,36 @@ T                       UseBody
  1.			zMax
 
 #GRIDRESOLUTION
-1.0                     Resolution
-initial                 NameArea
+1.0			Resolution
+initial			StringShape
 
 AMRREGION
 earthbox
-box                     NameArea
--10.0                   xMinBox
--10.0                   yMinBox
- 10.0                   xMaxBox
- 10.0                   yMaxBox
+box			NameArea
+-10.0			xMinBox
+-10.0			yMinBox
+ 10.0			xMaxBox
+ 10.0			yMaxBox
 
 #AMRREGION
-bigearthbox
-box                     NameArea
--50.0                   xMinBox
--50.0                   yMinBox
- 50.0                   xMaxBox
- 50.0                   yMaxBox
+bigearthbox		NameRegion
+box			StringShape
+-50.0			xMinBox
+-50.0			yMinBox
+ 50.0			xMaxBox
+ 50.0			yMaxBox
 
 #AMRCRITERIARESOLUTION
-1			nCriteria
-dx +bigearthbox		TypeCriteria
+1			nRefineCrit
+dx +bigearthbox		StringRefine
 0.25			RefineTo
 0.125			CoarsenFrom
 
 #DOAMR
-T                       DoAmr
-200                     DnAmr
--1                      DtAmr
-T                       IsStrictAmr
+T			DoAmr
+200			DnAmr
+-1			DtAmr
+T			IsStrictAmr
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -94,7 +97,7 @@ float			TypeBc3
 float			TypeBc4
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere		TypeBcBody
 
 #TIMESTEPPING
 1			nStage
@@ -105,35 +108,35 @@ ionosphere		TypeBcInner
 Rusanov			TypeFlux
 
 #HYPERBOLICDIVB
-T                       UseHyperbolicDivb
-500.0                   SpeedHypDim
-0.1                     HypDecay
+T			UseHyperbolicDivb
+500.0			SpeedHypDim
+0.1			HypDecay
 
 BORIS
-T                       UseBorisCorrection
-1.0                     BorisClightFactor !Only if UseBorisCorrection is true
+T			UseBorisCorrection
+1.0			BorisClightFactor !Only if UseBorisCorrection is true
 
 #SAVEINITIAL
-T
+T			DoSaveInitial
 
 #SAVELOGFILE
-T
-RAW			StringLogfile
+T			DoSaveLogfile
+RAW			StringLog
 100			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-1                      nPlotFile
-z=0 VAR idl            StringPlot
-100 		       DnSavePlot
--1.		       DtSavePlot
--1.		       DxSavePlot (resolution, 0. maximum, -1. unstructured)
-rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz absdivb dx dt
-g rbody
+1			nPlotFile
+z=0 VAR idl		StringPlot
+100 			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+{MHD} B1x B1y B1z absdivb dx dt		NameVars
+{default}		NamePars
 
 #STOP
 500			MaxIteration
--5.0			tSimulationMax
+-1.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -147,7 +150,7 @@ all
 5			nOrder
 Sokolov			TypeFlux
 mc3			TypeLimiter
-1.5
+1.5			LimiterBeta
 
 #STOP
 2000			MaxIteration
