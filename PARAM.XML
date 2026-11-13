@@ -6323,6 +6323,7 @@ Only useful if the initial condition has a non-trivial analytic form.
   <set name="RotateArea" value="0"/>
   <set name="StretchArea" value="0"/>
   <set name="TaperArea" value="0"/>
+  <set name="WeightArea" value="0"/>
   <parameter name="NameRegion" type="string"/>
   <parameter name="StringShape" type="strings" case="lower" min="1" max="4">
     <part name="NameShape" type="string" input="select" required="T">
@@ -6389,6 +6390,11 @@ Only useful if the initial condition has a non-trivial analytic form.
 	  if="$NameShape !~ /user/ and $_command =~ /REGION/">
       <option name="tapered" />
     </part>
+    <part name="WeightArea" type="string" input="select"
+	  required="F"
+	  if="$_command =~ /REGION/">
+      <option name="weight" />
+    </part>
     <part name="TypeCoord" type="string" input="select"
 	  required="F">
       <option name="hgr" />
@@ -6454,6 +6460,9 @@ Only useful if the initial condition has a non-trivial analytic form.
   </if>
   <if expr="$TaperArea =~ /tapered/">
     <parameter name="Taper" type="real" min="0" default="0"/>
+  </if>
+  <if expr="$WeightArea =~ /weight/">
+    <parameter name="Weight" type="real" default="1"/>
   </if>
   <if expr="$RotateArea =~ /rotated/">
     <parameter name="xRotate" type="real" min="-360" max="360"
@@ -6662,8 +6671,9 @@ extrinsic rotations in a fixed coordinate system or Z-Y-X
 intrinsic rotations in a rotating coordinate system.
 
 If the word 'weight' is used in StringShape, the parameter Weight 
-is read. The weight is the Hall factor when this region 
-is used by the #HALLREGION command. 
+is read and sets a multiplicative factor for the shape.
+The weight is the Hall factor when this region is used by the
+#HALLREGION command, for example.
 
 If NameShape starts with 'user', the shape is defined by the subroutine
 user_specify_region. Any parameters for the user region should be read
@@ -8414,7 +8424,8 @@ the semi-relativistic equations are solved with the true speed
 of light, while inside the Boris region the speed of light
 is reduced. It is probably a good idea to use tapering (see
 the #REGION command) so that the speed of light changes gradually
-at the edges of the region.
+at the edges of the region. The 'weight' option can set
+different multiplicative factors for different regions.
 
 The default is to use the reduced speed of light everywhere.
 </command>
@@ -9711,7 +9722,8 @@ the #VISCOSITY command.
 The StringViscoRegion string can specify the region(s) where
 viscosity is used.  The regions must be described with the #REGION
 commands.  Note the 'tapered' option in the shape desciption that can
-be used to make the transition smoother.
+be used to make the transition smoother and the 'weight' option can set
+different multiplicative factors for different regions.
 
 The default is to apply viscosity everywhere if the it is switched on.
 </command>
@@ -9832,7 +9844,8 @@ the #RESISTIVITY command.
 The StringResistRegion string can specify the region(s) where
 resistivity is used.  The regions must be described with the #REGION
 commands.  Note the 'tapered' option in the shape desciption that can
-be used to make the transition smoother.
+be used to make the transition smoother and the 'weight' option can set
+different multiplicative factors for different regions.
 
 The default is to apply the resistive MHD scheme everywhere if it is switched on.
 </command>
